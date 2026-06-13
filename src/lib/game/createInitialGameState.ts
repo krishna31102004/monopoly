@@ -44,7 +44,7 @@ export function createSetupGameState(): GameState {
 
 export function createInitialGameState(players: StartGamePlayer[]): GameState {
   const gamePlayers: Player[] = players.map((player, index) => ({
-    id: `player-${index + 1}`,
+    id: player.id ?? `player-${index + 1}`,
     name: player.name.trim(),
     token: player.token,
     tokenLabel: player.tokenLabel,

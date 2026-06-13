@@ -42,6 +42,7 @@ export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction,
 
   const actorId = getActorId(gameState);
   const isMyTurn = myPlayerId === actorId;
+  const myPlayer = gameState.players.find((p) => p.id === myPlayerId);
 
   // Wrap sendAction into a GameAction dispatch.
   // ROLL_DICE/ROLL_IN_JAIL: strip client dice (server rolls authoritatively).
@@ -55,6 +56,8 @@ export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction,
       ) {
         return;
       }
+      // Block turn-gated actions client-side when it isn't this player's turn
+      if (!isMyTurn) return;
       if (action.type === "ROLL_DICE") {
         sendAction({ type: "ROLL_DICE" });
         return;
@@ -65,7 +68,7 @@ export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction,
       }
       sendAction(action as GameActionIntent);
     },
-    [sendAction],
+    [sendAction, isMyTurn],
   );
 
   const winner = gameState.winnerId
@@ -122,6 +125,9 @@ export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction,
           ) : (
             <span>Waiting for {currentActor?.name ?? "another player"}…</span>
           )}
+          {myPlayer ? (
+            <span className="text-xs font-normal text-slate-400">You: {myPlayer.name}</span>
+          ) : null}
           <span className="ml-auto text-xs font-normal text-slate-400">
             {room.roomCode}
           </span>
@@ -161,7 +167,7 @@ export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction,
         {/* Sidebar */}
         <aside className="min-w-0 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto">
           <div className="mb-3 grid gap-3">
-            <GameControls state={gameState} dispatch={dispatch} />
+            <GameControls state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} />
             {gameState.phase === "awaitingJailDecision" ? (
               <JailActionPanel state={gameState} dispatch={dispatch} />
             ) : null}

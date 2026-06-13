@@ -6,6 +6,7 @@ import type { GameAction, GameState } from "@/types/game";
 type GameControlsProps = {
   state: GameState;
   dispatch: React.Dispatch<GameAction>;
+  isMyTurn?: boolean;
 };
 
 function getTurnStatus(state: GameState) {
@@ -41,10 +42,10 @@ function getTurnStatus(state: GameState) {
   return { label: "Roll the dice to move", color: "text-slate-500" };
 }
 
-export function GameControls({ state, dispatch }: GameControlsProps) {
+export function GameControls({ state, dispatch, isMyTurn = true }: GameControlsProps) {
   const currentPlayer = state.players[state.currentPlayerIndex];
-  const canRoll = state.phase === "readyToRoll";
-  const canEndTurn = state.phase === "turnComplete" && state.currentPlayerHasRolled;
+  const canRoll = state.phase === "readyToRoll" && isMyTurn;
+  const canEndTurn = state.phase === "turnComplete" && state.currentPlayerHasRolled && isMyTurn;
   const isGameOver = state.phase === "gameOver";
   const status = getTurnStatus(state);
 

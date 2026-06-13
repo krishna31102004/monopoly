@@ -122,6 +122,7 @@ export type GameState = {
 };
 
 export type StartGamePlayer = {
+  id?: string;
   name: string;
   token: Player["token"];
   tokenLabel: string;

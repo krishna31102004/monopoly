@@ -209,6 +209,7 @@ export class RoomManager {
     if (activePlayers.length > MAX_PLAYERS) return { ok: false, error: "Too many players." };
 
     const startPlayers = activePlayers.map((p) => ({
+      id: p.playerId,
       name: p.displayName,
       token: p.token,
       tokenLabel: p.tokenLabel,
