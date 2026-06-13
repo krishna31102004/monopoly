@@ -1,6 +1,69 @@
 # Phase 4: Private Friends-Only Multiplayer Architecture
 
-## Status: Phase 4B.3 COMPLETE (4A = planning, 4B.1 = room/lobby, 4B.2 = gameplay actions, 4B.3 = reconnect/LAN/QA)
+## Status: Phase 4C.1 COMPLETE (4A = planning, 4B.1 = room/lobby, 4B.2 = gameplay actions, 4B.3 = reconnect/LAN/QA, 4C.1 = deployment readiness)
+
+---
+
+## Phase 4C.1 — Deployment Readiness Status
+
+### What was prepared
+
+Full deployment readiness for Vercel (frontend) + Render (Socket.IO backend) without actual deployment.
+
+### Deployment model
+
+| Service | Host | Config |
+|---|---|---|
+| Next.js frontend | Vercel | Auto-deploys from `github.com/krishna31102004/monopoly` |
+| Socket.IO server | Render | `render.yaml` Blueprint in repo root |
+
+### GitHub repo
+
+`https://github.com/krishna31102004/monopoly`
+
+### Config files added
+
+| File | Purpose |
+|---|---|
+| `render.yaml` | Render Blueprint — automates backend service creation |
+| `DEPLOYMENT.md` | Full deployment guide with smoke test checklist |
+| `server/corsHelpers.ts` | Pure CORS functions extracted from server for testability |
+| `.env.example` | Updated with all env vars for local/LAN/production scenarios |
+
+### Server changes
+
+- Extracted `parseAllowedOrigins()` and `isAllowedOrigin()` into `server/corsHelpers.ts` (pure, side-effect-free, unit-testable).
+- `server/index.ts` imports from `corsHelpers.ts`.
+- Added `CLIENT_ORIGINS` env var support (comma-separated, takes priority over `CLIENT_ORIGIN`).
+- Health endpoint now returns `{ ok: true, status: "healthy", rooms: N, env: "production" }`.
+- Improved startup logging: shows port, env, and CORS mode.
+
+### Env vars documented
+
+**Vercel (frontend):** `NEXT_PUBLIC_SOCKET_URL`
+**Render (backend):** `NODE_ENV`, `CLIENT_ORIGIN`, `CLIENT_ORIGINS` (optional), `PORT` (injected by platform)
+
+### Tests added
+
+`src/__tests__/deploymentConfig.test.ts` — 31 tests covering:
+- `isAllowedOrigin` in dev mode (LAN IPs, localhost, blocking public IPs)
+- `isAllowedOrigin` in production mode (allowlist accepts/rejects)
+- `parseAllowedOrigins` env var parsing (single, multi, priority, trimming)
+- `getSocketUrl` for production/local/LAN scenarios
+- `render.yaml` content validation
+- No public room listing exposed
+- `package.json` required scripts present
+
+### Known limitations
+
+- Server restart loses all rooms (in-memory only).
+- Render free tier sleeps after 15 min inactivity.
+- No Redis adapter yet (single instance only).
+- `sessionStorage` reconnect is per-tab.
+
+### Next recommended task
+
+**Phase 4C.2: Manual deployment and production smoke testing** — deploy the backend to Render, deploy the frontend to Vercel, set env vars, run the smoke test checklist from `DEPLOYMENT.md`.
 
 ---
 

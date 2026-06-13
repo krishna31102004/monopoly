@@ -3,6 +3,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import { RoomManager } from "../src/lib/multiplayer/rooms.js";
 import { rollDice } from "../src/lib/game/dice.js";
+import { parseAllowedOrigins, isAllowedOrigin } from "./corsHelpers.js";
 import type {
   CreateRoomPayload,
   JoinRoomPayload,
@@ -10,25 +11,18 @@ import type {
 } from "../src/types/multiplayer.js";
 
 const PORT = Number(process.env.PORT ?? 3001);
-// Explicit CLIENT_ORIGIN env restricts CORS to a single origin (e.g. in production).
-// When absent, the LAN-aware check below allows localhost and private IP ranges.
-const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN ?? null;
+const NODE_ENV = process.env.NODE_ENV ?? "development";
 
-// Allow localhost, 127.x, and RFC-1918 private IP ranges so phones/tablets on the
-// same Wi-Fi can connect without having to know the host's IP in advance.
-function isAllowedOrigin(origin: string | undefined): boolean {
-  if (!origin) return true; // no-origin requests (server-to-server, curl, etc.)
-  if (CLIENT_ORIGIN) return origin === CLIENT_ORIGIN;
-  return /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?$/.test(
-    origin,
-  );
+const allowedOrigins = parseAllowedOrigins();
+function corsCheck(origin: string | undefined): boolean {
+  return isAllowedOrigin(origin, allowedOrigins);
 }
 
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: isAllowedOrigin,
+    origin: corsCheck,
     methods: ["GET", "POST"],
   },
 });
@@ -43,7 +37,7 @@ setInterval(() => {
 
 // ── Health check endpoint ─────────────────────────────────────────────────────
 app.get("/health", (_req, res) => {
-  res.json({ status: "ok", rooms: rooms.roomCount });
+  res.json({ ok: true, status: "healthy", rooms: rooms.roomCount, env: NODE_ENV });
 });
 
 // ── Socket.IO event handlers ──────────────────────────────────────────────────
@@ -260,13 +254,14 @@ io.on("connection", (socket) => {
   });
 });
 
-// Bind to 0.0.0.0 so the server is reachable from phones/tablets on the same LAN.
-// On localhost-only runs this is harmless; firewall settings control external access.
+// Bind to 0.0.0.0 so the server is reachable from phones/tablets on the same LAN
+// and from Render/Railway/Fly.io which expect the process to bind all interfaces.
 httpServer.listen(PORT, "0.0.0.0", () => {
-  console.log(`[server] World Cities multiplayer server running on port ${PORT}`);
-  if (CLIENT_ORIGIN) {
-    console.log(`[server] CORS restricted to ${CLIENT_ORIGIN}`);
+  console.log(`[server] World Cities multiplayer server`);
+  console.log(`[server] env=${NODE_ENV}  port=${PORT}`);
+  if (allowedOrigins) {
+    console.log(`[server] CORS allowlist: ${allowedOrigins.join(", ")}`);
   } else {
-    console.log(`[server] CORS: localhost + private LAN IPs allowed (dev mode)`);
+    console.log(`[server] CORS: dev mode — localhost + private LAN IPs`);
   }
 });

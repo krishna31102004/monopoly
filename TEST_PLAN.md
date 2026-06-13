@@ -120,7 +120,8 @@
 | multiplayerActions.test.ts | 11 |
 | multiplayerLanConfig.test.ts | 16 |
 | multiplayerReconnect.test.ts | 18 |
-| **Total** | **460** |
+| deploymentConfig.test.ts | 31 |
+| **Total** | **491** |
 
 ## Integration / Playthrough Coverage (Phase 2H)
 
@@ -187,6 +188,15 @@
 - Invite link can be constructed from roomCode
 - takenTokens updated after each join
 - Duplicate identity: second socket with same playerId replaces old socket
+
+### `src/__tests__/deploymentConfig.test.ts` (31 tests)
+- `isAllowedOrigin` dev mode: allows localhost, 127.0.0.1, 192.168.x.x, 10.x.x.x, blocks public IPs
+- `isAllowedOrigin` production allowlist: accepts configured Vercel origin, rejects others, accepts multiple origins
+- `parseAllowedOrigins`: returns null in dev, parses CLIENT_ORIGIN, parses comma-separated CLIENT_ORIGINS, priority, whitespace trim
+- `getSocketUrl`: NEXT_PUBLIC_SOCKET_URL for production, localhost SSR fallback, LAN hostname derivation
+- `render.yaml`: exists, specifies Node 20, references /health, sets NODE_ENV=production, CLIENT_ORIGIN marked manual
+- No public room listing: RoomManager has no getAll/listRooms/getAllRooms method
+- `package.json` has build, dev:all, dev:lan, server:dev scripts
 
 ## Intentionally Manual / Not Automated
 
