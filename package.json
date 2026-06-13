@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "server:dev": "tsx --tsconfig server/tsconfig.json server/index.ts",
+    "server:start": "tsx --tsconfig server/tsconfig.json server/index.ts",
     "dev:all": "concurrently --kill-others-on-fail --names next,server -c cyan,magenta \"npm run dev\" \"npm run server:dev\"",
     "dev:lan": "concurrently --kill-others-on-fail --names next,server -c cyan,magenta \"next dev --hostname 0.0.0.0\" \"npm run server:dev\""
   },

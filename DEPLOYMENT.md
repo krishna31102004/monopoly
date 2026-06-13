@@ -97,8 +97,8 @@ The repo contains `render.yaml` which automates the setup.
 3. Connect: `https://github.com/krishna31102004/monopoly`
 4. Settings:
    - **Runtime:** Node
-   - **Build command:** `npm ci`
-   - **Start command:** `node --loader tsx/esm --tsconfig server/tsconfig.json server/index.ts`
+   - **Build command:** `npm ci --include=dev`
+   - **Start command:** `npx tsx --tsconfig server/tsconfig.json server/index.ts`
    - **Node version:** 20
    - **Health check path:** `/health`
 5. Add env vars (see §8).

@@ -67,6 +67,49 @@ Full deployment readiness for Vercel (frontend) + Render (Socket.IO backend) wit
 
 ---
 
+## Phase 4C.2 — Manual Deployment Status
+
+### Pre-deployment fix applied
+
+Found and fixed a deployment blocker before attempting deployment:
+
+- **Bug:** `render.yaml` had incorrect start command (`node --loader tsx/esm --tsconfig` is not valid node syntax; `--tsconfig` is a tsx CLI flag, not a node flag).
+- **Bug:** Build command was `npm ci` — but with `NODE_ENV=production` set as a service env var on Render, `npm ci` skips devDependencies including `tsx` and `typescript`, causing start command to fail.
+- **Fix:** Changed `render.yaml` build command to `npm ci --include=dev` (installs devDeps regardless of NODE_ENV) and start command to `npx tsx --tsconfig server/tsconfig.json server/index.ts`.
+- **Verified locally:** Server starts, `/health` returns `{"ok":true,"status":"healthy",...}`, all 491 tests still pass.
+
+### Deployment guide
+
+See `DEPLOYMENT.md` for the full step-by-step manual guide including:
+- Render backend setup via Blueprint or manual service
+- Vercel frontend setup
+- Env var configuration order
+- CORS setup after both URLs are known
+- Smoke test checklist
+
+### Deployment order (critical — must follow this sequence)
+
+1. Deploy Socket.IO backend on Render first.
+2. Copy backend URL (e.g. `https://worldcities-monopoly-server.onrender.com`).
+3. Set `NEXT_PUBLIC_SOCKET_URL=<backend-url>` in Vercel.
+4. Deploy frontend on Vercel.
+5. Copy frontend URL (e.g. `https://your-app.vercel.app`).
+6. Set `CLIENT_ORIGIN=<frontend-url>` on Render backend.
+7. Trigger Render redeploy/restart.
+8. Run smoke tests.
+
+### Known deployment limitations
+
+- Render free tier sleeps after 15 min inactivity — first WebSocket connection after sleep takes 30–60 s.
+- Server restart (new Render deploy) loses all active rooms — in-memory only.
+- `tsx` is used at runtime on Render (JIT TypeScript compilation) — acceptable for private use; compile to JS for higher-traffic production.
+
+### Next recommended task
+
+**Phase 4D: production polish** — mobile UI refinements, room expiry UX ("server restarted, please create a new room"), optional QR code for invite links.
+
+---
+
 ## Phase 4B.3 — Reconnect, LAN/Mobile Support, and Multiplayer QA
 
 ### Reconnect behavior

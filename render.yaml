@@ -21,8 +21,10 @@ services:
     runtime: node
     region: oregon          # change to the region closest to your users
     plan: free              # free tier is fine for private use; upgrade for always-on
-    buildCommand: npm ci
-    startCommand: node --loader tsx/esm --tsconfig server/tsconfig.json server/index.ts
+    # npm ci --include=dev installs devDependencies (tsx, typescript) even when
+    # NODE_ENV=production is set, so the TypeScript server can run on Render.
+    buildCommand: npm ci --include=dev
+    startCommand: npx tsx --tsconfig server/tsconfig.json server/index.ts
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
