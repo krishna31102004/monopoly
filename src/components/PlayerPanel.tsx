@@ -1,5 +1,6 @@
 import { getBoardSpaceByIndex } from "@/data/board";
 import { getOwnedSpaceIds } from "@/lib/game/ownership";
+import { TokenIcon } from "@/components/board/TokenIcon";
 import type { BoardSpace } from "@/types/board";
 import type { PropertyOwnership } from "@/types/game";
 import type { Player } from "@/types/player";
@@ -51,12 +52,7 @@ export function PlayerPanel({
     >
       {/* Header */}
       <div className="flex items-center gap-3 px-3 py-3">
-        <span
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-white text-[11px] font-black text-white shadow"
-          style={{ backgroundColor: player.color }}
-        >
-          {player.tokenLabel.slice(0, 3)}
-        </span>
+        <TokenIcon token={player.token} color={player.color} size={40} label={player.tokenLabel} badge />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <h3 className="truncate font-black text-slate-950">{player.name}</h3>

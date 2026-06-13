@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { usePlayerMovementAnimation } from "@/hooks/usePlayerMovementAnimation";
 import { AuctionPanel } from "@/components/AuctionPanel";
 import { CardPanel } from "@/components/CardPanel";
 import { GameBoard } from "@/components/board/GameBoard";
@@ -39,6 +40,7 @@ function getActorId(gs: GameState): string {
 
 export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction, error, connectionStatus, onLeave, onRequestSync }: Props) {
   const [selectedSpace, setSelectedSpace] = useState<OwnableSpace | null>(null);
+  const { displayPositions, isAnimating } = usePlayerMovementAnimation(gameState.players);
 
   const actorId = getActorId(gameState);
   const isMyTurn = myPlayerId === actorId;
@@ -167,6 +169,7 @@ export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction,
             spaces={boardSpaces}
             players={gameState.players}
             ownerships={gameState.ownerships}
+            displayPositions={displayPositions}
             onOpenProperty={setSelectedSpace}
           />
         </section>
@@ -174,7 +177,7 @@ export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction,
         {/* Sidebar */}
         <aside className="min-w-0 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto">
           <div className="mb-3 grid gap-3">
-            <GameControls state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} />
+            <GameControls state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} isAnimating={isAnimating} />
             {gameState.phase === "awaitingJailDecision" ? (
               <JailActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} />
             ) : null}

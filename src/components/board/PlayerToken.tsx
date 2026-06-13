@@ -1,3 +1,4 @@
+import { TokenIcon } from "@/components/board/TokenIcon";
 import type { Player } from "@/types/player";
 
 type PlayerTokenProps = {
@@ -5,21 +6,25 @@ type PlayerTokenProps = {
 };
 
 export function PlayerToken({ players }: PlayerTokenProps) {
+  const count = Math.min(players.length, 6);
+  // Token size shrinks when multiple tokens share a space
+  const size = count <= 2 ? 18 : count <= 4 ? 14 : 11;
+
   return (
-    <div className="mx-auto grid max-w-[72px] grid-cols-3 gap-[2px]" aria-label="Players on this space">
+    <div
+      className="mx-auto flex flex-wrap items-center justify-center"
+      style={{ gap: 1, maxWidth: 72 }}
+      aria-label="Players on this space"
+    >
       {players.slice(0, 6).map((player) => (
-        <span
+        <TokenIcon
           key={player.id}
-          title={player.name}
-          className="flex aspect-square min-w-0 items-center justify-center rounded-full border-[1.5px] border-white font-black leading-none text-white shadow"
-          style={{
-            backgroundColor: player.color,
-            fontSize: "clamp(4px, 0.7vw, 7px)",
-          }}
-          aria-label={`${player.name} token`}
-        >
-          {player.tokenLabel.slice(0, 2)}
-        </span>
+          token={player.token}
+          color={player.color}
+          size={size}
+          label={`${player.name} (${player.tokenLabel})`}
+          badge
+        />
       ))}
     </div>
   );

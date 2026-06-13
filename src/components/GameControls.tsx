@@ -1,12 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { rollDice } from "@/lib/game/dice";
+import { TokenIcon } from "@/components/board/TokenIcon";
 import type { GameAction, GameState } from "@/types/game";
 
 type GameControlsProps = {
   state: GameState;
   dispatch: React.Dispatch<GameAction>;
   isMyTurn?: boolean;
+  isAnimating?: boolean;
 };
 
 function getTurnStatus(state: GameState) {
@@ -42,10 +45,11 @@ function getTurnStatus(state: GameState) {
   return { label: "Roll the dice to move", color: "text-slate-500" };
 }
 
-export function GameControls({ state, dispatch, isMyTurn = true }: GameControlsProps) {
+export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = false }: GameControlsProps) {
+  const [diceRolling, setDiceRolling] = useState(false);
   const currentPlayer = state.players[state.currentPlayerIndex];
-  const canRoll = state.phase === "readyToRoll" && isMyTurn;
-  const canEndTurn = state.phase === "turnComplete" && state.currentPlayerHasRolled && isMyTurn;
+  const canRoll = state.phase === "readyToRoll" && isMyTurn && !isAnimating;
+  const canEndTurn = state.phase === "turnComplete" && state.currentPlayerHasRolled && isMyTurn && !isAnimating;
   const isGameOver = state.phase === "gameOver";
   const status = getTurnStatus(state);
 
@@ -56,12 +60,7 @@ export function GameControls({ state, dispatch, isMyTurn = true }: GameControlsP
         className="flex items-center gap-3 border-b border-slate-100 px-4 py-3"
         style={{ borderLeftWidth: 4, borderLeftColor: currentPlayer.color }}
       >
-        <span
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-white text-[10px] font-black text-white shadow-sm"
-          style={{ backgroundColor: currentPlayer.color }}
-        >
-          {currentPlayer.tokenLabel.slice(0, 3)}
-        </span>
+        <TokenIcon token={currentPlayer.token} color={currentPlayer.color} size={36} label={currentPlayer.tokenLabel} badge />
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
             {isGameOver ? "Winner" : "Current Turn"}
@@ -79,18 +78,38 @@ export function GameControls({ state, dispatch, isMyTurn = true }: GameControlsP
         <p className={`text-xs font-bold ${status.color}`}>{status.label}</p>
 
         {/* Dice result */}
-        {state.diceRoll ? (
-          <div className="mt-3 flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              {[state.diceRoll.die1, state.diceRoll.die2].map((die, i) => (
-                <span
-                  key={i}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-slate-200 bg-slate-50 text-lg font-black text-slate-950 shadow-inner"
-                >
-                  {die}
-                </span>
-              ))}
-            </div>
+        <div className="mt-3 flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            {diceRolling
+              ? [1, 2].map((i) => (
+                  <span
+                    key={i}
+                    className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-slate-300 bg-slate-100 text-lg font-black text-slate-400 shadow-inner"
+                    style={{ animation: "spin 0.3s linear infinite" }}
+                    aria-hidden="true"
+                  >
+                    🎲
+                  </span>
+                ))
+              : state.diceRoll
+              ? [state.diceRoll.die1, state.diceRoll.die2].map((die, i) => (
+                  <span
+                    key={i}
+                    className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-slate-200 bg-white text-lg font-black text-slate-950 shadow-sm"
+                  >
+                    {die}
+                  </span>
+                ))
+              : [1, 2].map((i) => (
+                  <span
+                    key={i}
+                    className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-slate-200 bg-slate-50 text-lg font-black text-slate-400 opacity-40"
+                  >
+                    —
+                  </span>
+                ))}
+          </div>
+          {state.diceRoll && !diceRolling ? (
             <div className="min-w-0">
               <p className="text-xl font-black leading-none text-slate-950">
                 = {state.diceRoll.total}
@@ -101,17 +120,8 @@ export function GameControls({ state, dispatch, isMyTurn = true }: GameControlsP
                 </p>
               ) : null}
             </div>
-          </div>
-        ) : (
-          <div className="mt-3 flex items-center gap-1.5 opacity-40">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-slate-200 bg-slate-50 text-lg font-black text-slate-400">
-              —
-            </span>
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-slate-200 bg-slate-50 text-lg font-black text-slate-400">
-              —
-            </span>
-          </div>
-        )}
+          ) : null}
+        </div>
 
         {/* Landing message */}
         {state.landingMessage && state.phase !== "auction" && state.phase !== "awaitingJailDecision" ? (
@@ -125,11 +135,15 @@ export function GameControls({ state, dispatch, isMyTurn = true }: GameControlsP
           <div className="mt-4 grid gap-2">
             <button
               type="button"
-              disabled={!canRoll || isGameOver}
-              onClick={() => dispatch({ type: "ROLL_DICE", dice: rollDice() })}
+              disabled={!canRoll || isGameOver || diceRolling}
+              onClick={() => {
+                setDiceRolling(true);
+                setTimeout(() => setDiceRolling(false), 350);
+                dispatch({ type: "ROLL_DICE", dice: rollDice() });
+              }}
               className="w-full rounded-lg bg-slate-950 px-4 py-3 text-sm font-black tracking-wide text-white transition-all duration-100 hover:bg-slate-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
             >
-              Roll Dice
+              {diceRolling ? "Rolling…" : isAnimating ? "Moving…" : "Roll Dice"}
             </button>
             <button
               type="button"

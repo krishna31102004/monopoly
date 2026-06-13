@@ -43,3 +43,16 @@ button {
   outline: none;
   box-shadow: inset 0 0 0 2px #0f1a1c;
 }
+
+/* Dice roll spin animation */
+@keyframes spin {
+  from { transform: rotate(0deg) scale(1.1); }
+  to   { transform: rotate(360deg) scale(1.1); }
+}
+
+/* Token movement pulse — highlights token landing on new space */
+@keyframes token-land {
+  0%   { transform: scale(1.4); opacity: 0.7; }
+  60%  { transform: scale(0.9); opacity: 1; }
+  100% { transform: scale(1);   opacity: 1; }
+}

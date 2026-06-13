@@ -8,12 +8,16 @@ type GameBoardProps = {
   spaces: BoardSpaceType[];
   players: Player[];
   ownerships?: PropertyOwnership[];
+  /** Override display positions (used for step-by-step movement animation) */
+  displayPositions?: Record<string, number>;
   onOpenProperty: (space: OwnableSpace) => void;
 };
 
-export function GameBoard({ spaces, players, ownerships = [], onOpenProperty }: GameBoardProps) {
+export function GameBoard({ spaces, players, ownerships = [], displayPositions, onOpenProperty }: GameBoardProps) {
+  // Use animated display positions when provided, otherwise use actual positions
   const playersByPosition = players.reduce<Record<number, Player[]>>((groups, player) => {
-    groups[player.position] = [...(groups[player.position] ?? []), player];
+    const pos = displayPositions?.[player.id] ?? player.position;
+    groups[pos] = [...(groups[pos] ?? []), player];
     return groups;
   }, {});
 

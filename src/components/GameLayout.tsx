@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useReducer, useState } from "react";
+import { usePlayerMovementAnimation } from "@/hooks/usePlayerMovementAnimation";
 import { AuctionPanel } from "@/components/AuctionPanel";
 import { CardPanel } from "@/components/CardPanel";
 import { GameBoard } from "@/components/board/GameBoard";
@@ -23,6 +24,7 @@ import type { OwnableSpace } from "@/types/board";
 export function GameLayout() {
   const [state, dispatch] = useReducer(gameReducer, undefined, createSetupGameState);
   const [selectedSpace, setSelectedSpace] = useState<OwnableSpace | null>(null);
+  const { displayPositions, isAnimating } = usePlayerMovementAnimation(state.players);
   // On mount: auto-resume saved game if one exists
   useEffect(() => {
     const saved = loadGame();
@@ -68,6 +70,7 @@ export function GameLayout() {
             spaces={boardSpaces}
             players={state.players}
             ownerships={state.ownerships}
+            displayPositions={displayPositions}
             onOpenProperty={setSelectedSpace}
           />
         </section>
@@ -75,7 +78,7 @@ export function GameLayout() {
         {/* Sidebar */}
         <aside className="min-w-0 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto">
           <div className="mb-3 grid gap-3">
-            <GameControls state={state} dispatch={dispatch} />
+            <GameControls state={state} dispatch={dispatch} isAnimating={isAnimating} />
             {state.phase === "awaitingJailDecision" ? (
               <JailActionPanel state={state} dispatch={dispatch} />
             ) : null}
