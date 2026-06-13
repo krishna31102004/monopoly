@@ -56,7 +56,13 @@ export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction,
       ) {
         return;
       }
-      // Block turn-gated actions client-side when it isn't this player's turn
+      // Trade response actions (accept/decline/cancel) bypass turn order —
+      // each is authorized by recipient or initiator role, not whose turn it is.
+      if (action.type === "ACCEPT_TRADE" || action.type === "DECLINE_TRADE" || action.type === "CANCEL_TRADE") {
+        sendAction({ type: action.type });
+        return;
+      }
+      // Block all other turn-gated actions when it isn't this player's turn
       if (!isMyTurn) return;
       if (action.type === "ROLL_DICE") {
         sendAction({ type: "ROLL_DICE" });
@@ -179,7 +185,7 @@ export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction,
             ) : null}
             <LandingActionPanel state={gameState} dispatch={dispatch} />
             <BankruptcyPanel state={gameState} dispatch={dispatch} />
-            <TradePanel state={gameState} dispatch={dispatch} />
+            <TradePanel state={gameState} dispatch={dispatch} myPlayerId={myPlayerId} />
             <GameLog entries={gameState.gameLog} />
           </div>
 

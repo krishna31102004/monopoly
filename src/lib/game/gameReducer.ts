@@ -708,7 +708,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "PROPOSE_TRADE": {
-      if (state.phase === "gameOver" || state.phase === "bankruptcyPending") return state;
+      if (state.phase === "gameOver" || state.phase === "bankruptcyPending" || state.phase === "auction") return state;
+      if (state.trade) return state;
+      // Actor must be the current player and must be proposing as themselves
+      const currentActorId = state.players[state.currentPlayerIndex]?.id;
+      if (action.actorPlayerId !== currentActorId) return state;
+      if (action.actorPlayerId !== action.initiatorId) return state;
       const check = validateTrade(
         state,
         action.initiatorId,
@@ -731,6 +736,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case "ACCEPT_TRADE": {
       if (!state.trade) return state;
+      if (action.actorPlayerId !== state.trade.recipientPlayerId) return state;
       const { initiatorPlayerId, recipientPlayerId, offerFromInitiator, offerFromRecipient } =
         state.trade;
 
@@ -855,6 +861,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case "DECLINE_TRADE": {
       if (!state.trade) return state;
+      if (action.actorPlayerId !== state.trade.recipientPlayerId) return state;
       const recipient = state.players.find((p) => p.id === state.trade!.recipientPlayerId);
       const msg = `${recipient?.name ?? "Recipient"} declined the trade.`;
       return {
@@ -866,6 +873,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case "CANCEL_TRADE": {
       if (!state.trade) return state;
+      if (action.actorPlayerId !== state.trade.initiatorPlayerId) return state;
       return { ...state, trade: null };
     }
 

@@ -190,14 +190,15 @@ export type GameAction =
     }
   | {
       type: "PROPOSE_TRADE";
+      actorPlayerId: string;
       initiatorId: string;
       recipientId: string;
       offerFromInitiator: TradeOffer;
       offerFromRecipient: TradeOffer;
     }
-  | { type: "ACCEPT_TRADE" }
-  | { type: "DECLINE_TRADE" }
-  | { type: "CANCEL_TRADE" }
+  | { type: "ACCEPT_TRADE"; actorPlayerId: string }
+  | { type: "DECLINE_TRADE"; actorPlayerId: string }
+  | { type: "CANCEL_TRADE"; actorPlayerId: string }
   | { type: "DECLARE_BANKRUPTCY" }
   | { type: "RESOLVE_BANKRUPTCY_IF_SOLVENT" }
   | { type: "RESET_GAME" }

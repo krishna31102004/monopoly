@@ -251,20 +251,60 @@ export class RoomManager {
       actorId = currentPlayer.id;
     }
 
-    if (playerId !== actorId) {
-      return { ok: false, error: "It is not your turn." };
-    }
+    // Trade actions have custom per-role authorization (not just turn order).
+    // Server injects actorPlayerId from socket identity so the reducer can validate.
+    const isTradeAction =
+      intent.type === "PROPOSE_TRADE" ||
+      intent.type === "ACCEPT_TRADE" ||
+      intent.type === "DECLINE_TRADE" ||
+      intent.type === "CANCEL_TRADE";
 
-    // Build the authoritative GameAction (inject server dice where needed)
     let action: GameAction;
-    if (intent.type === "ROLL_DICE") {
-      if (!serverDice) return { ok: false, error: "Server dice missing." };
-      action = { type: "ROLL_DICE", dice: serverDice };
-    } else if (intent.type === "ROLL_IN_JAIL") {
-      if (!serverDice) return { ok: false, error: "Server dice missing." };
-      action = { type: "ROLL_IN_JAIL", dice: serverDice };
+
+    if (isTradeAction) {
+      if (intent.type === "PROPOSE_TRADE") {
+        if (playerId !== actorId) {
+          return { ok: false, error: "Only the current player can propose a trade." };
+        }
+        if (playerId !== intent.initiatorId) {
+          return { ok: false, error: "You can only propose a trade as yourself." };
+        }
+        action = { ...intent, actorPlayerId: playerId };
+      } else if (intent.type === "ACCEPT_TRADE") {
+        if (!gs.trade) return { ok: false, error: "No trade is pending." };
+        if (playerId !== gs.trade.recipientPlayerId) {
+          return { ok: false, error: "Only the trade recipient can accept." };
+        }
+        action = { type: "ACCEPT_TRADE", actorPlayerId: playerId };
+      } else if (intent.type === "DECLINE_TRADE") {
+        if (!gs.trade) return { ok: false, error: "No trade is pending." };
+        if (playerId !== gs.trade.recipientPlayerId) {
+          return { ok: false, error: "Only the trade recipient can decline." };
+        }
+        action = { type: "DECLINE_TRADE", actorPlayerId: playerId };
+      } else {
+        // CANCEL_TRADE
+        if (!gs.trade) return { ok: false, error: "No trade is pending." };
+        if (playerId !== gs.trade.initiatorPlayerId) {
+          return { ok: false, error: "Only the trade initiator can cancel." };
+        }
+        action = { type: "CANCEL_TRADE", actorPlayerId: playerId };
+      }
     } else {
-      action = intent as GameAction;
+      if (playerId !== actorId) {
+        return { ok: false, error: "It is not your turn." };
+      }
+
+      // Build the authoritative GameAction (inject server dice where needed)
+      if (intent.type === "ROLL_DICE") {
+        if (!serverDice) return { ok: false, error: "Server dice missing." };
+        action = { type: "ROLL_DICE", dice: serverDice };
+      } else if (intent.type === "ROLL_IN_JAIL") {
+        if (!serverDice) return { ok: false, error: "Server dice missing." };
+        action = { type: "ROLL_IN_JAIL", dice: serverDice };
+      } else {
+        action = intent as GameAction;
+      }
     }
 
     const newState = gameReducer(gs, action);

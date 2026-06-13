@@ -8,11 +8,12 @@ import type { GameAction, GameState, TradeOffer } from "@/types/game";
 type Props = {
   state: GameState;
   dispatch: (action: GameAction) => void;
+  myPlayerId?: string;
 };
 
 const EMPTY_OFFER: TradeOffer = { cash: 0, propertySpaceIndices: [], getOutOfJailFreeCards: 0 };
 
-export function TradePanel({ state, dispatch }: Props) {
+export function TradePanel({ state, dispatch, myPlayerId }: Props) {
   const [open, setOpen] = useState(false);
 
   const activePlayers = state.players.filter((p) => !p.isBankrupt);
@@ -66,42 +67,68 @@ export function TradePanel({ state, dispatch }: Props) {
             {descOffer(trade.offerFromRecipient, trade.recipientPlayerId)}
           </p>
         </div>
-        <div className="mt-3 flex gap-2">
-          <button
-            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700"
-            onClick={() => dispatch({ type: "ACCEPT_TRADE" })}
-          >
-            Accept
-          </button>
-          <button
-            className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700"
-            onClick={() => dispatch({ type: "DECLINE_TRADE" })}
-          >
-            Decline
-          </button>
-          <button
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
-            onClick={() => dispatch({ type: "CANCEL_TRADE" })}
-          >
-            Cancel
-          </button>
-        </div>
+        {(() => {
+          const isInitiator = !myPlayerId || myPlayerId === trade.initiatorPlayerId;
+          const isRecipient = !myPlayerId || myPlayerId === trade.recipientPlayerId;
+          const isUnrelated = myPlayerId && !isInitiator && !isRecipient;
+          if (isUnrelated) {
+            return <p className="mt-3 text-xs text-slate-500 italic">Waiting for trade to be resolved…</p>;
+          }
+          return (
+            <div className="mt-3 flex gap-2">
+              {isRecipient && !isInitiator && (
+                <button
+                  className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700"
+                  onClick={() => dispatch({ type: "ACCEPT_TRADE", actorPlayerId: trade.recipientPlayerId })}
+                >
+                  Accept
+                </button>
+              )}
+              {isRecipient && !isInitiator && (
+                <button
+                  className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700"
+                  onClick={() => dispatch({ type: "DECLINE_TRADE", actorPlayerId: trade.recipientPlayerId })}
+                >
+                  Decline
+                </button>
+              )}
+              {isInitiator && (
+                <button
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                  onClick={() => dispatch({ type: "CANCEL_TRADE", actorPlayerId: trade.initiatorPlayerId })}
+                >
+                  Cancel
+                </button>
+              )}
+              {isInitiator && !isRecipient && (
+                <p className="self-center text-xs text-slate-500 italic">Waiting for {recipient?.name}…</p>
+              )}
+            </div>
+          );
+        })()}
       </div>
     );
   }
 
+  const currentPlayerId = state.players[state.currentPlayerIndex]?.id;
+  const canPropose = !myPlayerId || myPlayerId === currentPlayerId;
+
   if (!open) {
     return (
       <button
-        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-bold text-slate-700 hover:bg-slate-50"
-        onClick={() => setOpen(true)}
+        disabled={!canPropose}
+        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+        onClick={() => { if (canPropose) setOpen(true); }}
+        title={canPropose ? undefined : "Only the current player can propose a trade"}
       >
         Propose Trade
       </button>
     );
   }
 
-  const initiatorPlayer = state.players.find((p) => p.id === initiatorId);
+  // In multiplayer, force the initiator to be the connected player (who must be current player)
+  const effectiveInitiatorId = myPlayerId ?? initiatorId;
+  const initiatorPlayer = state.players.find((p) => p.id === effectiveInitiatorId);
   const recipientPlayer = state.players.find((p) => p.id === recipientId);
 
   const initiatorOwnedIndices = [
@@ -127,8 +154,8 @@ export function TradePanel({ state, dispatch }: Props) {
   };
 
   const validation =
-    initiatorId && recipientId
-      ? validateTrade(state, initiatorId, recipientId, offerFromInitiator, offerFromRecipient)
+    effectiveInitiatorId && recipientId
+      ? validateTrade(state, effectiveInitiatorId, recipientId, offerFromInitiator, offerFromRecipient)
       : { ok: false as const, reason: "Select two players" };
 
   function toggleProp(
@@ -144,10 +171,11 @@ export function TradePanel({ state, dispatch }: Props) {
   }
 
   function handlePropose() {
-    if (!validation.ok || !initiatorId || !recipientId) return;
+    if (!validation.ok || !effectiveInitiatorId || !recipientId) return;
     dispatch({
       type: "PROPOSE_TRADE",
-      initiatorId,
+      actorPlayerId: effectiveInitiatorId,
+      initiatorId: effectiveInitiatorId,
       recipientId,
       offerFromInitiator,
       offerFromRecipient,

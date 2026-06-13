@@ -489,6 +489,7 @@ describe("Existing behavior preserved", () => {
 
     const next = gameReducer(state, {
       type: "PROPOSE_TRADE",
+      actorPlayerId: p0id,
       initiatorId: p0id,
       recipientId: p1id,
       offerFromInitiator: { cash: 0, propertySpaceIndices: [], getOutOfJailFreeCards: 0 },

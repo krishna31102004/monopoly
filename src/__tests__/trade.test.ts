@@ -186,6 +186,7 @@ describe("PROPOSE_TRADE reducer", () => {
     const state = makeGameState();
     const next = gameReducer(state, {
       type: "PROPOSE_TRADE",
+      actorPlayerId: p0Id(state),
       initiatorId: p0Id(state),
       recipientId: p1Id(state),
       offerFromInitiator: EMPTY_OFFER,
@@ -200,6 +201,7 @@ describe("PROPOSE_TRADE reducer", () => {
     const state = makeGameState();
     const next = gameReducer(state, {
       type: "PROPOSE_TRADE",
+      actorPlayerId: p0Id(state),
       initiatorId: p0Id(state),
       recipientId: p0Id(state),
       offerFromInitiator: EMPTY_OFFER,
@@ -212,6 +214,7 @@ describe("PROPOSE_TRADE reducer", () => {
     const state = { ...makeGameState(), phase: "gameOver" as const };
     const next = gameReducer(state, {
       type: "PROPOSE_TRADE",
+      actorPlayerId: p0Id(state),
       initiatorId: p0Id(state),
       recipientId: p1Id(state),
       offerFromInitiator: EMPTY_OFFER,
@@ -228,19 +231,20 @@ describe("CANCEL_TRADE reducer", () => {
     let state = makeGameState();
     state = gameReducer(state, {
       type: "PROPOSE_TRADE",
+      actorPlayerId: p0Id(state),
       initiatorId: p0Id(state),
       recipientId: p1Id(state),
       offerFromInitiator: EMPTY_OFFER,
       offerFromRecipient: EMPTY_OFFER,
     });
     expect(state.trade).not.toBeNull();
-    const next = gameReducer(state, { type: "CANCEL_TRADE" });
+    const next = gameReducer(state, { type: "CANCEL_TRADE", actorPlayerId: p0Id(state) });
     expect(next.trade).toBeNull();
   });
 
   it("is a no-op when no trade is pending", () => {
     const state = makeGameState();
-    const next = gameReducer(state, { type: "CANCEL_TRADE" });
+    const next = gameReducer(state, { type: "CANCEL_TRADE", actorPlayerId: p0Id(state) });
     expect(next).toBe(state);
   });
 });
@@ -252,19 +256,20 @@ describe("DECLINE_TRADE reducer", () => {
     let state = makeGameState();
     state = gameReducer(state, {
       type: "PROPOSE_TRADE",
+      actorPlayerId: p0Id(state),
       initiatorId: p0Id(state),
       recipientId: p1Id(state),
       offerFromInitiator: EMPTY_OFFER,
       offerFromRecipient: EMPTY_OFFER,
     });
-    const next = gameReducer(state, { type: "DECLINE_TRADE" });
+    const next = gameReducer(state, { type: "DECLINE_TRADE", actorPlayerId: p1Id(state) });
     expect(next.trade).toBeNull();
     expect(next.gameLog[0].message).toMatch(/declined/i);
   });
 
   it("is a no-op when no trade is pending", () => {
     const state = makeGameState();
-    const next = gameReducer(state, { type: "DECLINE_TRADE" });
+    const next = gameReducer(state, { type: "DECLINE_TRADE", actorPlayerId: p1Id(state) });
     expect(next).toBe(state);
   });
 });
@@ -274,7 +279,7 @@ describe("DECLINE_TRADE reducer", () => {
 describe("ACCEPT_TRADE reducer", () => {
   it("is a no-op when no trade is pending", () => {
     const state = makeGameState();
-    const next = gameReducer(state, { type: "ACCEPT_TRADE" });
+    const next = gameReducer(state, { type: "ACCEPT_TRADE", actorPlayerId: state.players[1].id });
     expect(next).toBe(state);
   });
 
@@ -290,12 +295,13 @@ describe("ACCEPT_TRADE reducer", () => {
 
     state = gameReducer(state, {
       type: "PROPOSE_TRADE",
+      actorPlayerId: pid0,
       initiatorId: pid0,
       recipientId: pid1,
       offerFromInitiator: offerA,
       offerFromRecipient: offerB,
     });
-    state = gameReducer(state, { type: "ACCEPT_TRADE" });
+    state = gameReducer(state, { type: "ACCEPT_TRADE", actorPlayerId: pid1 });
 
     expect(state.trade).toBeNull();
     expect(playerById(state, pid0).cash).toBe(before0 - 300 + 100);
@@ -313,12 +319,13 @@ describe("ACCEPT_TRADE reducer", () => {
 
     state = gameReducer(state, {
       type: "PROPOSE_TRADE",
+      actorPlayerId: pid0,
       initiatorId: pid0,
       recipientId: pid1,
       offerFromInitiator: offerA,
       offerFromRecipient: EMPTY_OFFER,
     });
-    state = gameReducer(state, { type: "ACCEPT_TRADE" });
+    state = gameReducer(state, { type: "ACCEPT_TRADE", actorPlayerId: pid1 });
 
     expect(state.trade).toBeNull();
     const ownership = state.ownerships.find((o: { spaceIndex: number }) => o.spaceIndex === BERLIN);
@@ -337,12 +344,13 @@ describe("ACCEPT_TRADE reducer", () => {
 
     state = gameReducer(state, {
       type: "PROPOSE_TRADE",
+      actorPlayerId: pid0,
       initiatorId: pid0,
       recipientId: pid1,
       offerFromInitiator: EMPTY_OFFER,
       offerFromRecipient: offerB,
     });
-    state = gameReducer(state, { type: "ACCEPT_TRADE" });
+    state = gameReducer(state, { type: "ACCEPT_TRADE", actorPlayerId: pid1 });
 
     expect(state.trade).toBeNull();
     const ownership = state.ownerships.find((o: { spaceIndex: number }) => o.spaceIndex === JFK);
@@ -363,12 +371,13 @@ describe("ACCEPT_TRADE reducer", () => {
 
     state = gameReducer(state, {
       type: "PROPOSE_TRADE",
+      actorPlayerId: pid0,
       initiatorId: pid0,
       recipientId: pid1,
       offerFromInitiator: offerA,
       offerFromRecipient: offerB,
     });
-    state = gameReducer(state, { type: "ACCEPT_TRADE" });
+    state = gameReducer(state, { type: "ACCEPT_TRADE", actorPlayerId: pid1 });
 
     expect(state.ownerships.find((o: { spaceIndex: number }) => o.spaceIndex === BERLIN)?.ownerId).toBe(pid1);
     expect(state.ownerships.find((o: { spaceIndex: number }) => o.spaceIndex === JFK)?.ownerId).toBe(pid0);
@@ -390,12 +399,13 @@ describe("ACCEPT_TRADE reducer", () => {
 
     state = gameReducer(state, {
       type: "PROPOSE_TRADE",
+      actorPlayerId: pid0,
       initiatorId: pid0,
       recipientId: pid1,
       offerFromInitiator: offerA,
       offerFromRecipient: offerB,
     });
-    state = gameReducer(state, { type: "ACCEPT_TRADE" });
+    state = gameReducer(state, { type: "ACCEPT_TRADE", actorPlayerId: pid1 });
 
     // Both gave 1 and received 1, so counts unchanged
     expect(playerById(state, pid0).getOutOfJailFreeCards).toBe(2);
@@ -411,6 +421,7 @@ describe("ACCEPT_TRADE reducer", () => {
     const offerA: TradeOffer = { cash: 1500, propertySpaceIndices: [], getOutOfJailFreeCards: 0 };
     state = gameReducer(state, {
       type: "PROPOSE_TRADE",
+      actorPlayerId: pid0,
       initiatorId: pid0,
       recipientId: pid1,
       offerFromInitiator: offerA,
@@ -420,7 +431,7 @@ describe("ACCEPT_TRADE reducer", () => {
     // Simulate p0 losing cash before accept (direct state mutation for test)
     state = withPlayer(state, 0, { cash: 100 });
 
-    const next = gameReducer(state, { type: "ACCEPT_TRADE" });
+    const next = gameReducer(state, { type: "ACCEPT_TRADE", actorPlayerId: pid1 });
     // Trade should be cancelled (recheck fails: not enough cash)
     expect(next.trade).toBeNull();
     // Cash should NOT have been transferred
@@ -437,12 +448,13 @@ describe("ACCEPT_TRADE reducer", () => {
 
     state = gameReducer(state, {
       type: "PROPOSE_TRADE",
+      actorPlayerId: pid0,
       initiatorId: pid0,
       recipientId: pid1,
       offerFromInitiator: { cash: 100, propertySpaceIndices: [], getOutOfJailFreeCards: 0 },
       offerFromRecipient: EMPTY_OFFER,
     });
-    state = gameReducer(state, { type: "ACCEPT_TRADE" });
+    state = gameReducer(state, { type: "ACCEPT_TRADE", actorPlayerId: pid1 });
 
     expect(playerById(state, pid2).cash).toBe(cashBefore);
   });
