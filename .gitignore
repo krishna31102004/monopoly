@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+dist
+build
+.env
+.env*
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+node_modules_broken_*
+# macOS duplicate files
+* 2.ts
+* 2.tsx

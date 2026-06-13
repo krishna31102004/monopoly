@@ -1,0 +1,42 @@
+{
+  "name": "city-monopoly-board",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "server:dev": "tsx --tsconfig server/tsconfig.json server/index.ts",
+    "dev:all": "concurrently --kill-others-on-fail --names next,server -c cyan,magenta \"npm run dev\" \"npm run server:dev\"",
+    "dev:lan": "concurrently --kill-others-on-fail --names next,server -c cyan,magenta \"next dev --hostname 0.0.0.0\" \"npm run server:dev\""
+  },
+  "dependencies": {
+    "express": "5.2.1",
+    "next": "15.2.4",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "socket.io": "4.8.3",
+    "socket.io-client": "4.8.3"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "3.3.1",
+    "@types/express": "5.0.6",
+    "@types/node": "20.17.57",
+    "@types/react": "19.0.12",
+    "@types/react-dom": "19.0.4",
+    "@vitest/coverage-v8": "4.1.8",
+    "autoprefixer": "10.4.21",
+    "concurrently": "10.0.3",
+    "eslint": "9.29.0",
+    "eslint-config-next": "15.2.4",
+    "postcss": "8.5.6",
+    "tailwindcss": "3.4.17",
+    "tsx": "4.22.4",
+    "typescript": "5.8.3",
+    "vitest": "4.1.8"
+  }
+}
