@@ -9,6 +9,7 @@ import type {
   JoinRoomPayload,
   GameActionPayload,
 } from "../src/types/multiplayer.js";
+import type { GameRules } from "../src/types/game.js";
 
 const PORT = Number(process.env.PORT ?? 3001);
 const NODE_ENV = process.env.NODE_ENV ?? "development";
@@ -130,7 +131,7 @@ io.on("connection", (socket) => {
   });
 
   // ── room:startGame ───────────────────────────────────────────────────────
-  socket.on("room:startGame", () => {
+  socket.on("room:startGame", (payload?: { rules?: GameRules }) => {
     try {
       const roomCode = rooms.getRoomCodeBySocketId(socket.id);
       const playerId = rooms.getPlayerIdBySocketId(socket.id);
@@ -139,7 +140,7 @@ io.on("connection", (socket) => {
         return;
       }
 
-      const result = rooms.startGame(roomCode, playerId);
+      const result = rooms.startGame(roomCode, playerId, payload?.rules);
       if (!result.ok) {
         socket.emit("game:error", { message: result.error });
         return;

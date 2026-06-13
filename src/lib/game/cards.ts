@@ -314,6 +314,8 @@ function applyCardEffect(
       if (newCash < 0) {
         log = addLogEntry(log, `${currentPlayer.name}'s cash is below $0.`);
       }
+      // freeParkingCash rule: bank payments from cards go into the pot
+      const newPot = state.rules.freeParkingCash ? state.freeParkingPot + amount : state.freeParkingPot;
       const finalState: GameState = {
         ...state,
         players: nextPlayers,
@@ -322,6 +324,7 @@ function applyCardEffect(
         phase: rolledDouble ? "readyToRoll" : "turnComplete",
         landingMessage: msg,
         landingAction: { kind: "message", spaceIndex: currentPlayer.position, message: msg },
+        freeParkingPot: newPot,
       };
       return { state: checkBankruptcy(finalState, { type: "bank" }), resolvedMessage: msg };
     }

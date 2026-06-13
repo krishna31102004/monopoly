@@ -3,7 +3,7 @@ import { gameReducer } from "@/lib/game/gameReducer";
 import { generateRoomCode } from "@/lib/multiplayer/roomCode";
 import type { RoomPlayer, RoomPublicView, RoomStatus, GameActionIntent } from "@/types/multiplayer";
 import type { PlayerToken } from "@/types/player";
-import type { GameState, GameAction, DiceRoll } from "@/types/game";
+import type { GameState, GameAction, DiceRoll, GameRules } from "@/types/game";
 
 export const MAX_PLAYERS = 6;
 const INACTIVITY_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
@@ -198,7 +198,7 @@ export class RoomManager {
 
   // ── Start game ────────────────────────────────────────────────────────────
 
-  startGame(roomCode: string, playerId: string): RoomResult<{ room: RoomPublicView; gameState: GameState }> {
+  startGame(roomCode: string, playerId: string, rules?: GameRules): RoomResult<{ room: RoomPublicView; gameState: GameState }> {
     const room = this.rooms.get(roomCode);
     if (!room) return { ok: false, error: "Room not found." };
     if (room.hostPlayerId !== playerId) return { ok: false, error: "Only the host can start the game." };
@@ -216,7 +216,7 @@ export class RoomManager {
       color: p.color,
     }));
 
-    const gameState = createInitialGameState(startPlayers);
+    const gameState = createInitialGameState(startPlayers, rules);
     room.gameState = gameState;
     room.status = "inGame";
     this.touch(room);

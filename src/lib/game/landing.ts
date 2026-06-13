@@ -13,6 +13,7 @@ type LandingResolution = {
   landingAction: LandingAction | null;
   phase: GamePhase;
   doublesCount: number;
+  freeParkingPotDelta?: number;
 };
 
 function phaseAfterResolvedLanding(rolledDouble: boolean): GamePhase {
@@ -63,6 +64,20 @@ export function resolveLanding(
       };
     }
 
+    // noRentInJail rule: if the owner is in jail and rule is ON, skip rent
+    if (state.rules.noRentInJail && owner && owner.isInJail) {
+      const message = `${currentPlayer.name} landed on ${landedSpace.name}, but ${owner.name} is in Jail. No rent collected.`;
+      nextLog = addLogEntry(nextLog, message);
+      return {
+        players: state.players,
+        gameLog: nextLog,
+        landingMessage,
+        landingAction: { kind: "message", spaceIndex: landedSpace.index, message },
+        phase: phaseAfterResolvedLanding(rolledDouble),
+        doublesCount: state.doublesCount,
+      };
+    }
+
     if (!owner) {
       const message = `${currentPlayer.name} landed on ${landedSpace.name}, but owner data is missing.`;
       nextLog = addLogEntry(nextLog, message);
@@ -104,6 +119,7 @@ export function resolveLanding(
       ownership,
       state.ownerships,
       state.diceRoll?.total ?? 0,
+      state.rules.doubleRentOnFullSet,
     );
 
     if (rent.isMortgaged) {
@@ -169,16 +185,19 @@ export function resolveLanding(
   }
 
   if (landedSpace.kind === "tax") {
+    const taxAmount = landedSpace.amount;
     const taxedPlayers = state.players.map((player, index) =>
       index === state.currentPlayerIndex
         ? {
             ...player,
-            cash: player.cash - landedSpace.amount,
+            cash: player.cash - taxAmount,
           }
         : player,
     );
-    const taxMessage = `${currentPlayer.name} paid $${landedSpace.amount} for ${landedSpace.name}.`;
+    const taxMessage = `${currentPlayer.name} paid $${taxAmount} for ${landedSpace.name}.`;
     nextLog = addLogEntry(nextLog, taxMessage);
+    // freeParkingCash rule: tax payments go into the pot
+    const potDelta = state.rules.freeParkingCash ? taxAmount : 0;
 
     return {
       players: taxedPlayers,
@@ -191,6 +210,7 @@ export function resolveLanding(
       },
       phase: phaseAfterResolvedLanding(rolledDouble),
       doublesCount: state.doublesCount,
+      freeParkingPotDelta: potDelta,
     };
   }
 
@@ -218,6 +238,25 @@ export function resolveLanding(
       },
       phase: "turnComplete",
       doublesCount: 0,
+    };
+  }
+
+  // freeParkingCash rule: when landing on free parking (index 20) and rule is ON, collect pot
+  if (landedSpace.kind === "free-parking" && state.rules.freeParkingCash && state.freeParkingPot > 0) {
+    const pot = state.freeParkingPot;
+    const message = `${currentPlayer.name} landed on Free Parking and collected the pot of $${pot}!`;
+    nextLog = addLogEntry(nextLog, message);
+    const potPlayers = state.players.map((p, i) =>
+      i === state.currentPlayerIndex ? { ...p, cash: p.cash + pot } : p,
+    );
+    return {
+      players: potPlayers,
+      gameLog: nextLog,
+      landingMessage: message,
+      landingAction: { kind: "message", spaceIndex: landedSpace.index, message },
+      phase: phaseAfterResolvedLanding(rolledDouble),
+      doublesCount: state.doublesCount,
+      freeParkingPotDelta: -pot,
     };
   }
 

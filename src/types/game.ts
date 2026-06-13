@@ -1,6 +1,24 @@
 import type { CardDefinition } from "@/data/cards";
 import type { Player } from "@/types/player";
 
+export type GameRules = {
+  doubleRentOnFullSet: boolean;
+  freeParkingCash: boolean;
+  auctions: boolean;
+  noRentInJail: boolean;
+  mortgages: boolean;
+  evenBuild: boolean;
+};
+
+export const DEFAULT_RULES: GameRules = {
+  doubleRentOnFullSet: true,
+  freeParkingCash: true,
+  auctions: true,
+  noRentInJail: true,
+  mortgages: true,
+  evenBuild: true,
+};
+
 export type GamePhase =
   | "setup"
   | "readyToRoll"
@@ -119,6 +137,8 @@ export type GameState = {
   communityChestDeck: string[];
   trade: TradeState | null;
   bankruptcy: BankruptcyState | null;
+  rules: GameRules;
+  freeParkingPot: number;
 };
 
 export type StartGamePlayer = {
@@ -133,6 +153,7 @@ export type GameAction =
   | {
       type: "START_GAME";
       players: StartGamePlayer[];
+      rules?: GameRules;
     }
   | {
       type: "ROLL_DICE";

@@ -115,6 +115,7 @@ function applyLandingResolution(
   landedSpaceKind: string,
   rolledDouble: boolean,
 ): GameState {
+  const potDelta = resolution.freeParkingPotDelta ?? 0;
   let finalState: GameState = {
     ...base,
     players: resolution.players,
@@ -123,6 +124,7 @@ function applyLandingResolution(
     landingMessage: resolution.landingMessage,
     landingAction: resolution.landingAction,
     gameLog: resolution.gameLog,
+    freeParkingPot: base.freeParkingPot + potDelta,
   };
 
   if (landedSpaceKind === "chance") {
@@ -137,7 +139,7 @@ function applyLandingResolution(
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case "START_GAME":
-      return createInitialGameState(action.players);
+      return createInitialGameState(action.players, action.rules);
 
     case "ROLL_DICE": {
       if (state.phase !== "readyToRoll") return state;
@@ -425,6 +427,20 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (!isOwnableSpace(space)) return state;
 
       const currentPlayer = state.players[state.currentPlayerIndex];
+
+      // If auctions rule is OFF, just skip to next phase without starting an auction
+      if (!state.rules.auctions) {
+        const noAuctionMessage = `${currentPlayer.name} declined to buy ${space.name}. No auction (rule disabled).`;
+        const phaseAfter = phaseAfterPurchaseDecision(state);
+        return {
+          ...state,
+          phase: phaseAfter,
+          landingAction: { kind: "message", spaceIndex: space.index, message: noAuctionMessage },
+          landingMessage: noAuctionMessage,
+          gameLog: addLogEntry(state.gameLog, noAuctionMessage),
+        };
+      }
+
       const declineMessage = `${currentPlayer.name} declined to buy ${space.name}. Auction started.`;
       const activeBidderIds = state.players.filter((p) => !p.isBankrupt).map((p) => p.id);
       const auction: AuctionState = {
@@ -658,6 +674,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case "MORTGAGE_PROPERTY": {
       if (state.phase === "gameOver") return state;
+      if (!state.rules.mortgages) return state;
       const player = state.players[state.currentPlayerIndex];
       const check = canMortgageProperty(state, action.spaceIndex, player);
       if (!check.ok) return state;
@@ -683,6 +700,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case "UNMORTGAGE_PROPERTY": {
       if (state.phase === "gameOver" || state.phase === "bankruptcyPending") return state;
+      if (!state.rules.mortgages) return state;
       const player = state.players[state.currentPlayerIndex];
       const check = canUnmortgageProperty(state, action.spaceIndex, player);
       if (!check.ok) return state;

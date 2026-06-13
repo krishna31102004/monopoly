@@ -1,4 +1,5 @@
 import type { GameState, GamePhase } from "@/types/game";
+import { DEFAULT_RULES } from "@/types/game";
 
 export const SAVE_KEY = "worldcities_monopoly_v1";
 export const SAVE_VERSION = 1;
@@ -112,7 +113,15 @@ export function deserializeGame(json: string): GameState | null {
     if (typeof envelope.version !== "number") return null;
     if (envelope.version !== SAVE_VERSION) return null;
     if (!validateGameShape(envelope.state)) return null;
-    return envelope.state as GameState;
+    const state = envelope.state as GameState;
+    // Back-fill new fields for saves that predate rules/freeParkingPot
+    if (!state.rules) {
+      (state as GameState).rules = DEFAULT_RULES;
+    }
+    if (typeof state.freeParkingPot !== "number") {
+      (state as GameState).freeParkingPot = 0;
+    }
+    return state;
   } catch {
     return null;
   }

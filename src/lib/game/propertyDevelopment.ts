@@ -50,7 +50,7 @@ export type PreconditionResult =
   | { ok: false; reason: string };
 
 export function canBuyHouse(
-  state: { ownerships: PropertyOwnership[] },
+  state: { ownerships: PropertyOwnership[]; rules?: { evenBuild: boolean } },
   spaceIndex: number,
   player: Player,
 ): PreconditionResult {
@@ -70,16 +70,19 @@ export function canBuyHouse(
   if (ownership.houses >= 4) return { ok: false, reason: "Property already has 4 houses" };
 
   // Even-building rule: cannot have more than 1 more house than any other in group
-  const groupSpaces = getColorGroupSpaces(space);
-  const minHouses = Math.min(
-    ...groupSpaces.map((s) => {
-      if (s.index === spaceIndex) return ownership.houses;
-      const o = getOwnership(state.ownerships, s.index);
-      return o?.houses ?? 0;
-    }),
-  );
-  if (ownership.houses > minHouses)
-    return { ok: false, reason: "Must build evenly across the color group" };
+  const evenBuild = state.rules?.evenBuild ?? true;
+  if (evenBuild) {
+    const groupSpaces = getColorGroupSpaces(space);
+    const minHouses = Math.min(
+      ...groupSpaces.map((s) => {
+        if (s.index === spaceIndex) return ownership.houses;
+        const o = getOwnership(state.ownerships, s.index);
+        return o?.houses ?? 0;
+      }),
+    );
+    if (ownership.houses > minHouses)
+      return { ok: false, reason: "Must build evenly across the color group" };
+  }
 
   if (player.cash < space.houseCost) return { ok: false, reason: "Insufficient funds" };
 
@@ -87,7 +90,7 @@ export function canBuyHouse(
 }
 
 export function canSellHouse(
-  state: { ownerships: PropertyOwnership[] },
+  state: { ownerships: PropertyOwnership[]; rules?: { evenBuild: boolean } },
   spaceIndex: number,
   player: Player,
 ): PreconditionResult {
@@ -100,17 +103,20 @@ export function canSellHouse(
   if (ownership.houses < 1) return { ok: false, reason: "No houses to sell" };
 
   // Even-selling rule: can only sell from the property with the most houses
-  const groupSpaces = getColorGroupSpaces(space);
-  const maxSiblingHouses = Math.max(
-    ...groupSpaces
-      .filter((s) => s.index !== spaceIndex)
-      .map((s) => {
-        const o = getOwnership(state.ownerships, s.index);
-        return o?.houses ?? 0;
-      }),
-  );
-  if (ownership.houses < maxSiblingHouses)
-    return { ok: false, reason: "Must sell evenly across the color group" };
+  const evenBuildSell = state.rules?.evenBuild ?? true;
+  if (evenBuildSell) {
+    const groupSpaces = getColorGroupSpaces(space);
+    const maxSiblingHouses = Math.max(
+      ...groupSpaces
+        .filter((s) => s.index !== spaceIndex)
+        .map((s) => {
+          const o = getOwnership(state.ownerships, s.index);
+          return o?.houses ?? 0;
+        }),
+    );
+    if (ownership.houses < maxSiblingHouses)
+      return { ok: false, reason: "Must sell evenly across the color group" };
+  }
 
   return { ok: true };
 }

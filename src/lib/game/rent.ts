@@ -29,6 +29,7 @@ function calculateCityRent(
   city: CityProperty,
   ownership: PropertyOwnership,
   ownerships: PropertyOwnership[],
+  doubleRentOnFullSet = true,
 ): RentCalculation {
   if (ownership.isMortgaged) {
     return {
@@ -58,9 +59,10 @@ function calculateCityRent(
     ? ownerOwnsFullColorGroup(city, ownerships, ownership.ownerId)
     : false;
 
+  const shouldDouble = ownsFullGroup && doubleRentOnFullSet;
   return {
-    amount: ownsFullGroup ? city.rent[0] * 2 : city.rent[0],
-    reason: ownsFullGroup ? "doubled color-set rent" : "base rent",
+    amount: shouldDouble ? city.rent[0] * 2 : city.rent[0],
+    reason: shouldDouble ? "doubled color-set rent" : ownsFullGroup ? "full color-set rent (no double)" : "base rent",
     isMortgaged: false,
   };
 }
@@ -124,6 +126,7 @@ export function calculateRent(
   ownership: PropertyOwnership,
   ownerships: PropertyOwnership[],
   diceTotal: number,
+  doubleRentOnFullSet = true,
 ): RentCalculation {
   if (!isOwnableSpace(space)) {
     return {
@@ -134,7 +137,7 @@ export function calculateRent(
   }
 
   if (space.kind === "city") {
-    return calculateCityRent(space, ownership, ownerships);
+    return calculateCityRent(space, ownership, ownerships, doubleRentOnFullSet);
   }
 
   if (space.kind === "airport") {

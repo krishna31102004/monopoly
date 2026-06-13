@@ -1,6 +1,7 @@
 import { chanceCards, communityChestCards } from "@/data/cards";
 import { createInitialOwnerships } from "@/lib/game/ownership";
-import type { GameLogEntry, GameState, StartGamePlayer } from "@/types/game";
+import type { GameLogEntry, GameRules, GameState, StartGamePlayer } from "@/types/game";
+import { DEFAULT_RULES } from "@/types/game";
 import type { Player } from "@/types/player";
 
 function shuffleIds(cards: { id: string }[]): string[] {
@@ -39,10 +40,12 @@ export function createSetupGameState(): GameState {
     communityChestDeck: [],
     trade: null,
     bankruptcy: null,
+    rules: DEFAULT_RULES,
+    freeParkingPot: 0,
   };
 }
 
-export function createInitialGameState(players: StartGamePlayer[]): GameState {
+export function createInitialGameState(players: StartGamePlayer[], rules?: GameRules): GameState {
   const gamePlayers: Player[] = players.map((player, index) => ({
     id: player.id ?? `player-${index + 1}`,
     name: player.name.trim(),
@@ -82,6 +85,8 @@ export function createInitialGameState(players: StartGamePlayer[]): GameState {
     communityChestDeck: shuffleIds(communityChestCards),
     trade: null,
     bankruptcy: null,
+    rules: rules ?? DEFAULT_RULES,
+    freeParkingPot: 0,
   };
 }
 
