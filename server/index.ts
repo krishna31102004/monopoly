@@ -14,8 +14,15 @@ const PORT = Number(process.env.PORT ?? 3001);
 const NODE_ENV = process.env.NODE_ENV ?? "development";
 
 const allowedOrigins = parseAllowedOrigins();
-function corsCheck(origin: string | undefined): boolean {
-  return isAllowedOrigin(origin, allowedOrigins);
+
+// Socket.IO (via the 'cors' package) calls origin as a Node-style callback:
+// (origin, callback) => void. A plain boolean-returning function would leave
+// the callback uncalled and cause every Socket.IO polling request to hang.
+function corsCheck(
+  origin: string | undefined,
+  callback: (err: Error | null, allow: boolean) => void,
+): void {
+  callback(null, isAllowedOrigin(origin, allowedOrigins));
 }
 
 const app = express();
@@ -24,6 +31,7 @@ const io = new Server(httpServer, {
   cors: {
     origin: corsCheck,
     methods: ["GET", "POST"],
+    credentials: true,
   },
 });
 
@@ -35,7 +43,16 @@ setInterval(() => {
   if (removed > 0) console.log(`[cleanup] Removed ${removed} inactive room(s).`);
 }, 5 * 60 * 1000);
 
-// ── Health check endpoint ─────────────────────────────────────────────────────
+// ── HTTP routes ───────────────────────────────────────────────────────────────
+app.get("/", (_req, res) => {
+  res.status(200).json({
+    ok: true,
+    service: "worldcities-monopoly-server",
+    health: "/health",
+    socket: "/socket.io",
+  });
+});
+
 app.get("/health", (_req, res) => {
   res.json({ ok: true, status: "healthy", rooms: rooms.roomCount, env: NODE_ENV });
 });
