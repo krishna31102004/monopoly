@@ -34,9 +34,9 @@ describe("Tooling / dependency regression", () => {
     expect(pkg.devDependencies["eslint-config-next"]).toBe(pkg.dependencies["next"]);
   });
 
-  it("next version is 15.2.4", () => {
+  it("next version is 15.2.9", () => {
     const pkg = readJson("package.json");
-    expect(pkg.dependencies["next"]).toBe("15.2.4");
+    expect(pkg.dependencies["next"]).toBe("15.2.9");
   });
 
   it("react version is 19.0.0", () => {
