@@ -209,20 +209,26 @@ export function TradePanel({ state, dispatch, myPlayerId }: Props) {
           <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-600">
             From
           </label>
-          <select
-            className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs"
-            value={initiatorId}
-            onChange={(e) => {
-              setInitiatorId(e.target.value);
-              setInitiatorProps([]);
-            }}
-          >
-            {activePlayers.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+          {myPlayerId ? (
+            <div className="mt-1 w-full rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">
+              {initiatorPlayer?.name ?? "You"} <span className="text-slate-400">(you)</span>
+            </div>
+          ) : (
+            <select
+              className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs"
+              value={initiatorId}
+              onChange={(e) => {
+                setInitiatorId(e.target.value);
+                setInitiatorProps([]);
+              }}
+            >
+              {activePlayers.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          )}
 
           <label className="mt-2 block text-[10px] font-bold uppercase tracking-wide text-slate-600">
             Cash

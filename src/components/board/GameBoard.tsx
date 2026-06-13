@@ -1,15 +1,17 @@
 import { BoardSpace } from "@/components/board/BoardSpace";
 import { getBoardGridPlacement } from "@/lib/board-grid";
 import type { BoardSpace as BoardSpaceType, OwnableSpace } from "@/types/board";
+import type { PropertyOwnership } from "@/types/game";
 import type { Player } from "@/types/player";
 
 type GameBoardProps = {
   spaces: BoardSpaceType[];
   players: Player[];
+  ownerships?: PropertyOwnership[];
   onOpenProperty: (space: OwnableSpace) => void;
 };
 
-export function GameBoard({ spaces, players, onOpenProperty }: GameBoardProps) {
+export function GameBoard({ spaces, players, ownerships = [], onOpenProperty }: GameBoardProps) {
   const playersByPosition = players.reduce<Record<number, Player[]>>((groups, player) => {
     groups[player.position] = [...(groups[player.position] ?? []), player];
     return groups;
@@ -44,6 +46,8 @@ export function GameBoard({ spaces, players, onOpenProperty }: GameBoardProps) {
             key={space.index}
             space={space}
             players={playersByPosition[space.index] ?? []}
+            allPlayers={players}
+            ownerships={ownerships}
             style={getBoardGridPlacement(space.index)}
             onOpenProperty={onOpenProperty}
           />

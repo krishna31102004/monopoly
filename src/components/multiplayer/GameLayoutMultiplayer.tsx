@@ -166,6 +166,7 @@ export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction,
           <GameBoard
             spaces={boardSpaces}
             players={gameState.players}
+            ownerships={gameState.ownerships}
             onOpenProperty={setSelectedSpace}
           />
         </section>
@@ -175,15 +176,15 @@ export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction,
           <div className="mb-3 grid gap-3">
             <GameControls state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} />
             {gameState.phase === "awaitingJailDecision" ? (
-              <JailActionPanel state={gameState} dispatch={dispatch} />
+              <JailActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} />
             ) : null}
             {gameState.phase === "auction" ? (
-              <AuctionPanel state={gameState} dispatch={dispatch} />
+              <AuctionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} />
             ) : null}
             {gameState.drawnCard ? (
               <CardPanel drawnCard={gameState.drawnCard} />
             ) : null}
-            <LandingActionPanel state={gameState} dispatch={dispatch} />
+            <LandingActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} />
             <BankruptcyPanel state={gameState} dispatch={dispatch} />
             <TradePanel state={gameState} dispatch={dispatch} myPlayerId={myPlayerId} />
             <GameLog entries={gameState.gameLog} />

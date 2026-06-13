@@ -6,9 +6,10 @@ import type { GameAction, GameState } from "@/types/game";
 type JailActionPanelProps = {
   state: GameState;
   dispatch: React.Dispatch<GameAction>;
+  isMyTurn?: boolean;
 };
 
-export function JailActionPanel({ state, dispatch }: JailActionPanelProps) {
+export function JailActionPanel({ state, dispatch, isMyTurn = true }: JailActionPanelProps) {
   if (state.phase !== "awaitingJailDecision") return null;
 
   const currentPlayer = state.players[state.currentPlayerIndex];
@@ -37,7 +38,7 @@ export function JailActionPanel({ state, dispatch }: JailActionPanelProps) {
         <div className="grid gap-2">
           <button
             type="button"
-            disabled={currentPlayer.cash < 50}
+            disabled={currentPlayer.cash < 50 || !isMyTurn}
             onClick={() => dispatch({ type: "PAY_JAIL_FEE" })}
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 transition-all duration-100 hover:bg-slate-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30"
           >
@@ -47,8 +48,9 @@ export function JailActionPanel({ state, dispatch }: JailActionPanelProps) {
           {hasCard ? (
             <button
               type="button"
+              disabled={!isMyTurn}
               onClick={() => dispatch({ type: "USE_JAIL_CARD" })}
-              className="w-full rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2.5 text-sm font-bold text-emerald-800 transition-all duration-100 hover:bg-emerald-100 active:scale-[0.98]"
+              className="w-full rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2.5 text-sm font-bold text-emerald-800 transition-all duration-100 hover:bg-emerald-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Use Get Out of Jail Free Card ({currentPlayer.getOutOfJailFreeCards})
             </button>
@@ -56,8 +58,9 @@ export function JailActionPanel({ state, dispatch }: JailActionPanelProps) {
 
           <button
             type="button"
+            disabled={!isMyTurn}
             onClick={() => dispatch({ type: "ROLL_IN_JAIL", dice: rollDice() })}
-            className="w-full rounded-lg bg-slate-950 px-4 py-3 text-sm font-black tracking-wide text-white transition-all duration-100 hover:bg-slate-800 active:scale-[0.98]"
+            className="w-full rounded-lg bg-slate-950 px-4 py-3 text-sm font-black tracking-wide text-white transition-all duration-100 hover:bg-slate-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
           >
             Roll for Doubles
           </button>

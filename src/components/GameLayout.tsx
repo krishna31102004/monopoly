@@ -67,6 +67,7 @@ export function GameLayout() {
           <GameBoard
             spaces={boardSpaces}
             players={state.players}
+            ownerships={state.ownerships}
             onOpenProperty={setSelectedSpace}
           />
         </section>

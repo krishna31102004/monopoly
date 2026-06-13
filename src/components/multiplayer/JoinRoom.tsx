@@ -35,10 +35,22 @@ export function JoinRoom({ initialCode = "" }: Props) {
   const [tokenLabel, setTokenLabel] = useState("");
   const [tokenColor, setTokenColor] = useState("");
   const [formError, setFormError] = useState("");
+  const [previewTokens, setPreviewTokens] = useState<import("@/types/player").PlayerToken[]>([]);
 
   useEffect(() => {
     if (initialCode) setCode(initialCode.toUpperCase());
   }, [initialCode]);
+
+  // Fetch taken tokens for the room so the TokenPicker can show them as disabled pre-join
+  useEffect(() => {
+    const trimmed = code.trim().toUpperCase();
+    if (trimmed.length < 4) { setPreviewTokens([]); return; }
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL ?? "http://localhost:3001";
+    fetch(`${socketUrl}/room/${trimmed}`)
+      .then((r) => r.json())
+      .then((d) => { if (d.ok && Array.isArray(d.takenTokens)) setPreviewTokens(d.takenTokens); })
+      .catch(() => setPreviewTokens([]));
+  }, [code]);
 
   function handleJoin() {
     const trimmedName = name.trim();
@@ -57,7 +69,7 @@ export function JoinRoom({ initialCode = "" }: Props) {
     });
   }
 
-  const takenTokens = room?.takenTokens ?? [];
+  const takenTokens = room?.takenTokens ?? previewTokens;
 
   if (room && myPlayerId && gameState && room.status === "inGame") {
     return (

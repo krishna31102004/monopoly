@@ -7,6 +7,7 @@ import type { GameAction, GameState } from "@/types/game";
 type LandingActionPanelProps = {
   state: GameState;
   dispatch: React.Dispatch<GameAction>;
+  isMyTurn?: boolean;
 };
 
 function getSpaceTypeLabel(kind: string) {
@@ -16,7 +17,7 @@ function getSpaceTypeLabel(kind: string) {
   return "Space";
 }
 
-export function LandingActionPanel({ state, dispatch }: LandingActionPanelProps) {
+export function LandingActionPanel({ state, dispatch, isMyTurn = true }: LandingActionPanelProps) {
   if (!state.landingAction) return null;
   if (state.phase === "auction") return null;
 
@@ -89,7 +90,7 @@ export function LandingActionPanel({ state, dispatch }: LandingActionPanelProps)
           <div className="mt-4 grid grid-cols-2 gap-2">
             <button
               type="button"
-              disabled={!canBuy}
+              disabled={!canBuy || !isMyTurn}
               onClick={() => dispatch({ type: "BUY_PROPERTY" })}
               className="rounded-lg bg-emerald-600 px-3 py-2.5 text-sm font-black text-white transition-all duration-100 hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
             >
@@ -97,8 +98,9 @@ export function LandingActionPanel({ state, dispatch }: LandingActionPanelProps)
             </button>
             <button
               type="button"
+              disabled={!isMyTurn}
               onClick={() => dispatch({ type: "DECLINE_PROPERTY" })}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-black text-slate-700 transition-all duration-100 hover:bg-slate-50 active:scale-[0.98]"
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-black text-slate-700 transition-all duration-100 hover:bg-slate-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Decline
             </button>

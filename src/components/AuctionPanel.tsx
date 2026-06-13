@@ -8,6 +8,7 @@ import type { GameAction, GameState } from "@/types/game";
 type AuctionPanelProps = {
   state: GameState;
   dispatch: React.Dispatch<GameAction>;
+  isMyTurn?: boolean;
 };
 
 function getSpaceTypeLabel(kind: string) {
@@ -17,7 +18,7 @@ function getSpaceTypeLabel(kind: string) {
   return "Property";
 }
 
-export function AuctionPanel({ state, dispatch }: AuctionPanelProps) {
+export function AuctionPanel({ state, dispatch, isMyTurn = true }: AuctionPanelProps) {
   const [customBid, setCustomBid] = useState("");
 
   if (state.phase !== "auction" || !state.auction) return null;
@@ -118,7 +119,7 @@ export function AuctionPanel({ state, dispatch }: AuctionPanelProps) {
         {currentBidder ? (
           <div className="mt-4 rounded-xl border border-amber-300 bg-white p-3">
             <p className="text-sm font-black text-slate-950">
-              {currentBidder.name}&apos;s turn
+              {currentBidder.name}&apos;s turn{!isMyTurn ? " — waiting…" : ""}
             </p>
             <p className="text-xs font-semibold text-slate-500">
               Cash: ${currentBidder.cash.toLocaleString()} · Min bid: ${minBid}
@@ -129,7 +130,7 @@ export function AuctionPanel({ state, dispatch }: AuctionPanelProps) {
                 <button
                   key={amount}
                   type="button"
-                  disabled={amount > currentBidder.cash}
+                  disabled={amount > currentBidder.cash || !isMyTurn}
                   onClick={() => handleQuickBid(amount)}
                   className="rounded-lg bg-amber-500 px-2 py-2 text-sm font-black text-white transition-all duration-100 hover:bg-amber-600 active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
                 >
@@ -151,6 +152,7 @@ export function AuctionPanel({ state, dispatch }: AuctionPanelProps) {
               <button
                 type="button"
                 disabled={
+                  !isMyTurn ||
                   !customBid ||
                   parseInt(customBid, 10) < minBid ||
                   parseInt(customBid, 10) > currentBidder.cash
@@ -164,8 +166,9 @@ export function AuctionPanel({ state, dispatch }: AuctionPanelProps) {
 
             <button
               type="button"
+              disabled={!isMyTurn}
               onClick={() => dispatch({ type: "PASS_AUCTION" })}
-              className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold text-slate-600 transition-all duration-100 hover:bg-white hover:border-slate-300 active:scale-[0.98]"
+              className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold text-slate-600 transition-all duration-100 hover:bg-white hover:border-slate-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Pass
             </button>

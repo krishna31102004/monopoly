@@ -57,6 +57,13 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true, status: "healthy", rooms: rooms.roomCount, env: NODE_ENV });
 });
 
+// Lightweight room preview — lets the join form show taken tokens before joining
+app.get("/room/:code", (req, res) => {
+  const room = rooms.getRoom(req.params.code.toUpperCase());
+  if (!room) { res.status(404).json({ ok: false, error: "Room not found" }); return; }
+  res.json({ ok: true, takenTokens: room.takenTokens, playerCount: room.players.filter(p => p.connected).length });
+});
+
 // ── Socket.IO event handlers ──────────────────────────────────────────────────
 io.on("connection", (socket) => {
   console.log(`[socket] connected: ${socket.id}`);

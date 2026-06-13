@@ -67,7 +67,7 @@ export class RoomManager {
       status: room.status,
       players: room.players,
       maxPlayers: room.maxPlayers,
-      takenTokens: room.players.map((p) => p.token),
+      takenTokens: room.players.filter((p) => p.connected).map((p) => p.token),
     };
   }
 
