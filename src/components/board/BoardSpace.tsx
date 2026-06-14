@@ -101,36 +101,40 @@ function SpecialMarker({ space }: { space: BoardSpaceType }) {
   }
 }
 
-/**
- * Owner name badge — sits just below the color strip, full width.
- * Shows truncated owner name in the owner's accent color.
- */
+/** Pill badge absolutely positioned over the color strip — does not affect layout flow. */
 function OwnerNameBadge({ owner }: { owner: Player }) {
-  // Truncate to ~4 chars for narrow spaces
   const label = owner.name.length > 5 ? owner.name.slice(0, 4) + "…" : owner.name;
   return (
     <div
-      className="flex w-full items-center justify-center shrink-0"
-      style={{
-        backgroundColor: owner.color,
-        height: "clamp(7px, 1.6vw, 12px)",
-        borderBottom: "1px solid rgba(0,0,0,0.12)",
-      }}
       title={`Owned by ${owner.name}`}
+      style={{
+        position: "absolute",
+        top: "2px",
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 8,
+        backgroundColor: owner.color,
+        borderRadius: "999px",
+        padding: "1px clamp(2px, 0.5vw, 4px)",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.35)",
+        border: "1px solid rgba(255,255,255,0.3)",
+        pointerEvents: "none",
+        whiteSpace: "nowrap",
+        maxWidth: "85%",
+        overflow: "hidden",
+      }}
     >
       <span
         style={{
-          fontSize: "clamp(4px, 0.75vw, 7px)",
+          fontSize: "clamp(4px, 0.7vw, 7px)",
           fontWeight: 900,
-          color: "rgba(255,255,255,0.95)",
-          letterSpacing: "0.02em",
+          color: "#fff",
+          letterSpacing: "0.04em",
           lineHeight: 1,
           textTransform: "uppercase",
-          whiteSpace: "nowrap",
+          display: "block",
           overflow: "hidden",
-          maxWidth: "100%",
           textOverflow: "ellipsis",
-          padding: "0 1px",
         }}
       >
         {label}
@@ -219,7 +223,7 @@ export function BoardSpace({ space, players, allPlayers = [], ownerships = [], l
         />
       ) : null}
 
-      {/* Owner name badge — full-width strip below color strip */}
+      {/* Owner pill badge — absolute over color strip, never disrupts layout flow */}
       {!isCorner && owner ? <OwnerNameBadge owner={owner} /> : null}
 
       <div className="flex min-h-0 flex-1 flex-col items-center justify-between gap-0.5 p-0.5 sm:p-1">

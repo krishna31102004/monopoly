@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { makeGameState, withOwnership } from "@/__tests__/helpers/factory";
+import { getOwnerBadgeLabel, getOwnerBadgePlacement } from "@/lib/tokenMeta";
 
 const BERLIN = 1;   // city
 const JFK = 5;      // airport
@@ -92,7 +93,7 @@ describe("Property buildings — data layer", () => {
     expect(o?.houses).toBe(0);
   });
 
-  it("hotel is distinct from houses (different data path in component)", () => {
+  it("hotel is distinct from 4 houses (different data path in component)", () => {
     let state = makeGameState();
     const pid = state.players[0].id;
     state = withOwnership(state, BERLIN, pid);
@@ -105,5 +106,65 @@ describe("Property buildings — data layer", () => {
     expect(houses4?.hasHotel).toBe(false);
     expect(hotel?.hasHotel).toBe(true);
     expect(hotel?.houses).toBe(0);
+  });
+});
+
+describe("getOwnerBadgeLabel", () => {
+  it("returns name unchanged when 5 chars or fewer", () => {
+    expect(getOwnerBadgeLabel("kb")).toBe("kb");
+    expect(getOwnerBadgeLabel("Ansh")).toBe("Ansh");
+    expect(getOwnerBadgeLabel("Alice")).toBe("Alice");
+  });
+
+  it("truncates names longer than 5 chars to 4 + ellipsis", () => {
+    expect(getOwnerBadgeLabel("Maximilian")).toBe("Maxi…");
+    expect(getOwnerBadgeLabel("Krishna")).toBe("Kris…");
+    expect(getOwnerBadgeLabel("Alexander")).toBe("Alex…");
+  });
+
+  it("result is at most 5 chars", () => {
+    const label = getOwnerBadgeLabel("VeryLongPlayerName");
+    expect(label.length).toBeLessThanOrEqual(5);
+  });
+
+  it("exactly 5-char name is not truncated", () => {
+    expect(getOwnerBadgeLabel("Bobby")).toBe("Bobby");
+  });
+
+  it("exactly 6-char name is truncated", () => {
+    expect(getOwnerBadgeLabel("Robert")).toBe("Robe…");
+  });
+});
+
+describe("getOwnerBadgePlacement", () => {
+  it("bottom row spaces (1-9) get top placement", () => {
+    for (let i = 1; i <= 9; i++) {
+      expect(getOwnerBadgePlacement(i)).toBe("top");
+    }
+  });
+
+  it("left side spaces (11-19) get right placement", () => {
+    for (let i = 11; i <= 19; i++) {
+      expect(getOwnerBadgePlacement(i)).toBe("right");
+    }
+  });
+
+  it("top row spaces (21-29) get bottom placement", () => {
+    for (let i = 21; i <= 29; i++) {
+      expect(getOwnerBadgePlacement(i)).toBe("bottom");
+    }
+  });
+
+  it("right side spaces (31-39) get left placement", () => {
+    for (let i = 31; i <= 39; i++) {
+      expect(getOwnerBadgePlacement(i)).toBe("left");
+    }
+  });
+
+  it("corners (0, 10, 20, 30) fall back to top", () => {
+    expect(getOwnerBadgePlacement(0)).toBe("top");
+    expect(getOwnerBadgePlacement(10)).toBe("top");
+    expect(getOwnerBadgePlacement(20)).toBe("top");
+    expect(getOwnerBadgePlacement(30)).toBe("top");
   });
 });
