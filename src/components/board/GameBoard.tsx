@@ -10,10 +10,12 @@ type GameBoardProps = {
   ownerships?: PropertyOwnership[];
   /** Override display positions (used for step-by-step movement animation) */
   displayPositions?: Record<string, number>;
+  /** Player IDs currently in landing-bounce state */
+  landingPlayerIds?: Set<string>;
   onOpenProperty: (space: OwnableSpace) => void;
 };
 
-export function GameBoard({ spaces, players, ownerships = [], displayPositions, onOpenProperty }: GameBoardProps) {
+export function GameBoard({ spaces, players, ownerships = [], displayPositions, landingPlayerIds, onOpenProperty }: GameBoardProps) {
   // Use animated display positions when provided, otherwise use actual positions
   const playersByPosition = players.reduce<Record<number, Player[]>>((groups, player) => {
     const pos = displayPositions?.[player.id] ?? player.position;
@@ -52,6 +54,7 @@ export function GameBoard({ spaces, players, ownerships = [], displayPositions, 
             players={playersByPosition[space.index] ?? []}
             allPlayers={players}
             ownerships={ownerships}
+            landingPlayerIds={landingPlayerIds}
             style={getBoardGridPlacement(space.index)}
             onOpenProperty={onOpenProperty}
           />

@@ -24,7 +24,7 @@ import type { OwnableSpace } from "@/types/board";
 export function GameLayout() {
   const [state, dispatch] = useReducer(gameReducer, undefined, createSetupGameState);
   const [selectedSpace, setSelectedSpace] = useState<OwnableSpace | null>(null);
-  const { displayPositions, isAnimating } = usePlayerMovementAnimation(state.players);
+  const { displayPositions, isAnimating, landingPlayerIds } = usePlayerMovementAnimation(state.players);
   // On mount: auto-resume saved game if one exists
   useEffect(() => {
     const saved = loadGame();
@@ -71,6 +71,7 @@ export function GameLayout() {
             players={state.players}
             ownerships={state.ownerships}
             displayPositions={displayPositions}
+            landingPlayerIds={landingPlayerIds}
             onOpenProperty={setSelectedSpace}
           />
         </section>

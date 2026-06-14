@@ -40,7 +40,7 @@ function getActorId(gs: GameState): string {
 
 export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction, error, connectionStatus, onLeave, onRequestSync }: Props) {
   const [selectedSpace, setSelectedSpace] = useState<OwnableSpace | null>(null);
-  const { displayPositions, isAnimating } = usePlayerMovementAnimation(gameState.players);
+  const { displayPositions, isAnimating, landingPlayerIds } = usePlayerMovementAnimation(gameState.players);
 
   const actorId = getActorId(gameState);
   const isMyTurn = myPlayerId === actorId;
@@ -170,6 +170,7 @@ export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction,
             players={gameState.players}
             ownerships={gameState.ownerships}
             displayPositions={displayPositions}
+            landingPlayerIds={landingPlayerIds}
             onOpenProperty={setSelectedSpace}
           />
         </section>

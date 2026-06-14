@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { rollDice } from "@/lib/game/dice";
 import { TokenIcon } from "@/components/board/TokenIcon";
+import { DiceFace } from "@/components/DiceFace";
 import type { GameAction, GameState } from "@/types/game";
 
 type GameControlsProps = {
@@ -45,13 +46,36 @@ function getTurnStatus(state: GameState) {
   return { label: "Roll the dice to move", color: "text-slate-500" };
 }
 
+// Dummy die values shown while rolling animation plays
+let rollingTick = 1;
+function nextRollingValue() {
+  rollingTick = (rollingTick % 6) + 1;
+  return rollingTick;
+}
+
 export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = false }: GameControlsProps) {
   const [diceRolling, setDiceRolling] = useState(false);
+  const [rollingDie1, setRollingDie1] = useState(3);
+  const [rollingDie2, setRollingDie2] = useState(5);
   const currentPlayer = state.players[state.currentPlayerIndex];
   const canRoll = state.phase === "readyToRoll" && isMyTurn && !isAnimating;
   const canEndTurn = state.phase === "turnComplete" && state.currentPlayerHasRolled && isMyTurn && !isAnimating;
   const isGameOver = state.phase === "gameOver";
   const status = getTurnStatus(state);
+
+  function handleRoll() {
+    setDiceRolling(true);
+    // Animate rolling dice faces while waiting for server/reducer
+    const shuffleInterval = setInterval(() => {
+      setRollingDie1(nextRollingValue());
+      setRollingDie2(nextRollingValue());
+    }, 80);
+    setTimeout(() => {
+      clearInterval(shuffleInterval);
+      setDiceRolling(false);
+    }, 420);
+    dispatch({ type: "ROLL_DICE", dice: rollDice() });
+  }
 
   return (
     <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -77,50 +101,35 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
       <div className="p-4">
         <p className={`text-xs font-bold ${status.color}`}>{status.label}</p>
 
-        {/* Dice result */}
+        {/* Dice display */}
         <div className="mt-3 flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            {diceRolling
-              ? [1, 2].map((i) => (
-                  <span
-                    key={i}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-slate-300 bg-slate-100 text-lg font-black text-slate-400 shadow-inner"
-                    style={{ animation: "spin 0.3s linear infinite" }}
-                    aria-hidden="true"
-                  >
-                    🎲
-                  </span>
-                ))
-              : state.diceRoll
-              ? [state.diceRoll.die1, state.diceRoll.die2].map((die, i) => (
-                  <span
-                    key={i}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-slate-200 bg-white text-lg font-black text-slate-950 shadow-sm"
-                  >
-                    {die}
-                  </span>
-                ))
-              : [1, 2].map((i) => (
-                  <span
-                    key={i}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-slate-200 bg-slate-50 text-lg font-black text-slate-400 opacity-40"
-                  >
-                    —
-                  </span>
-                ))}
-          </div>
-          {state.diceRoll && !diceRolling ? (
-            <div className="min-w-0">
-              <p className="text-xl font-black leading-none text-slate-950">
-                = {state.diceRoll.total}
-              </p>
-              {state.diceRoll.isDouble ? (
-                <p className="mt-0.5 text-[10px] font-black uppercase tracking-wide text-blue-600">
-                  Doubles!
+          {diceRolling ? (
+            <>
+              <DiceFace value={rollingDie1} size={44} rolling />
+              <DiceFace value={rollingDie2} size={44} rolling />
+              <p className="text-sm font-bold text-slate-400">Rolling…</p>
+            </>
+          ) : state.diceRoll ? (
+            <>
+              <DiceFace value={state.diceRoll.die1} size={44} />
+              <DiceFace value={state.diceRoll.die2} size={44} />
+              <div className="min-w-0">
+                <p className="text-xl font-black leading-none text-slate-950">
+                  = {state.diceRoll.total}
                 </p>
-              ) : null}
-            </div>
-          ) : null}
+                {state.diceRoll.isDouble ? (
+                  <p className="mt-0.5 text-[10px] font-black uppercase tracking-wide text-blue-600">
+                    Doubles!
+                  </p>
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <>
+              <DiceFace value={1} size={44} className="opacity-25" />
+              <DiceFace value={1} size={44} className="opacity-25" />
+            </>
+          )}
         </div>
 
         {/* Landing message */}
@@ -130,20 +139,25 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
           </div>
         ) : null}
 
+        {/* Free Parking pot */}
+        {state.rules?.freeParkingCash && (state.freeParkingPot ?? 0) > 0 ? (
+          <div className="mt-2 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600">
+            <span>🅿️</span>
+            <span>Free Parking pot:</span>
+            <span className="font-black text-slate-900">${(state.freeParkingPot ?? 0).toLocaleString()}</span>
+          </div>
+        ) : null}
+
         {/* Buttons — hidden during jail decision (jail panel has its own buttons) */}
         {state.phase !== "awaitingJailDecision" ? (
           <div className="mt-4 grid gap-2">
             <button
               type="button"
               disabled={!canRoll || isGameOver || diceRolling}
-              onClick={() => {
-                setDiceRolling(true);
-                setTimeout(() => setDiceRolling(false), 350);
-                dispatch({ type: "ROLL_DICE", dice: rollDice() });
-              }}
+              onClick={handleRoll}
               className="w-full rounded-lg bg-slate-950 px-4 py-3 text-sm font-black tracking-wide text-white transition-all duration-100 hover:bg-slate-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
             >
-              {diceRolling ? "Rolling…" : isAnimating ? "Moving…" : "Roll Dice"}
+              {isAnimating ? "Moving…" : "Roll Dice"}
             </button>
             <button
               type="button"

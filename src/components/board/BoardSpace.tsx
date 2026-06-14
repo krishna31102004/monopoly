@@ -23,6 +23,7 @@ type BoardSpaceProps = {
   players: Player[];
   allPlayers?: Player[];
   ownerships?: PropertyOwnership[];
+  landingPlayerIds?: Set<string>;
   style: React.CSSProperties;
   onOpenProperty: (space: OwnableSpace) => void;
 };
@@ -160,7 +161,7 @@ function ImprovementDots({ ownership }: { ownership: PropertyOwnership }) {
   return null;
 }
 
-export function BoardSpace({ space, players, allPlayers = [], ownerships = [], style, onOpenProperty }: BoardSpaceProps) {
+export function BoardSpace({ space, players, allPlayers = [], ownerships = [], landingPlayerIds, style, onOpenProperty }: BoardSpaceProps) {
   const isCorner = [0, 10, 20, 30].includes(space.index);
   const canOpen = isOwnable(space);
 
@@ -249,7 +250,7 @@ export function BoardSpace({ space, players, allPlayers = [], ownerships = [], s
         </div>
 
         <div className="w-full" style={{ minHeight: "clamp(12px, 18%, 20px)" }}>
-          {players.length > 0 ? <PlayerToken players={players} /> : null}
+          {players.length > 0 ? <PlayerToken players={players} landingPlayerIds={landingPlayerIds} /> : null}
         </div>
       </div>
     </>
