@@ -263,8 +263,13 @@ export class RoomManager {
 
     if (isTradeAction) {
       if (intent.type === "PROPOSE_TRADE") {
-        if (playerId !== actorId) {
-          return { ok: false, error: "Only the current player can propose a trade." };
+        // During bankruptcyPending, only the debtor may propose; otherwise only the current player
+        const expectedProposerId =
+          gs.phase === "bankruptcyPending" && gs.bankruptcy
+            ? gs.bankruptcy.debtorPlayerId
+            : actorId;
+        if (playerId !== expectedProposerId) {
+          return { ok: false, error: gs.phase === "bankruptcyPending" ? "Only the debtor can propose a trade during bankruptcy." : "Only the current player can propose a trade." };
         }
         if (playerId !== intent.initiatorId) {
           return { ok: false, error: "You can only propose a trade as yourself." };
@@ -308,6 +313,17 @@ export class RoomManager {
     }
 
     const newState = gameReducer(gs, action);
+
+    // Safety guard: no player should ever have negative cash after any action
+    const negativeCashPlayer = newState.players.find((p) => !p.isBankrupt && p.cash < 0);
+    if (negativeCashPlayer) {
+      console.error(
+        `[RoomManager] BUG: Player ${negativeCashPlayer.name} has negative cash ($${negativeCashPlayer.cash}) after action ${action.type}. Rejecting.`,
+      );
+      // Do not persist the bad state
+      return { ok: false, error: "Internal error: negative cash detected. Please report this bug." };
+    }
+
     room.gameState = newState;
     this.touch(room);
     return { ok: true, value: newState };

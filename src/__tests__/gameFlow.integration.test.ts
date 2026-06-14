@@ -562,7 +562,9 @@ describe("Flow 9: Winner detection", () => {
       dice: { die1: 1, die2: 1, total: 2, isDouble: true },
     });
     expect(s1.phase).toBe("bankruptcyPending");
-    expect(playerAt(s1, 0).cash).toBe(150 - 200); // -50
+    // Phase 4D.7: no-negative-cash rule — cash stays at $150 (unchanged), debt recorded separately
+    expect(playerAt(s1, 0).cash).toBe(150); // NOT -50: cash never goes negative
+    expect(s1.bankruptcy?.amountOwed).toBe(200); // debt is recorded
 
     // Player declares bankruptcy → game ends
     const s2 = gameReducer(s1, { type: "DECLARE_BANKRUPTCY" });

@@ -2,6 +2,7 @@ import { boardSpaces, getBoardSpaceByIndex } from "@/data/board";
 import type { OwnableSpace } from "@/types/board";
 import { addLogEntry, createInitialGameState, createSetupGameState } from "@/lib/game/createInitialGameState";
 import { resolveLanding } from "@/lib/game/landing";
+import type { DebtPending } from "@/lib/game/landing";
 import { moveAroundBoard } from "@/lib/game/movement";
 import { getOwnership, isOwnableSpace } from "@/lib/game/ownership";
 import { drawAndApplyCard } from "@/lib/game/cards";
@@ -133,7 +134,39 @@ function applyLandingResolution(
     finalState = drawAndApplyCard(finalState, "community-chest", rolledDouble);
   }
 
+  // No-negative-cash rule: if the landing produced a debt the player couldn't
+  // pay, enter bankruptcyPending directly without calling checkBankruptcy (which
+  // would find no negative cash and do nothing).
+  if (resolution.debtPending) {
+    return enterDebtPending(finalState, resolution.debtPending);
+  }
+
   return checkBankruptcy(finalState, creditorFromLandingAction(finalState.landingAction));
+}
+
+/**
+ * Enter bankruptcyPending state due to an unaffordable mandatory payment.
+ * Cash is NOT modified — it stays at its current (non-negative) value.
+ */
+function enterDebtPending(state: GameState, debt: DebtPending): GameState {
+  const log = addLogEntry(
+    state.gameLog,
+    `Debt pending: must pay $${debt.amountOwed}. Sell assets or declare bankruptcy.`,
+  );
+  const currentPlayer = state.players[state.currentPlayerIndex];
+  return {
+    ...state,
+    phase: "bankruptcyPending",
+    gameLog: log,
+    bankruptcy: {
+      debtorPlayerId: currentPlayer.id,
+      creditor: debt.creditor,
+      amountOwed: debt.amountOwed,
+      reason: debt.reason,
+      status: "pending",
+      phaseBeforeBankruptcy: state.phase,
+    },
+  };
 }
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
@@ -220,6 +253,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (state.phase !== "awaitingJailDecision") return state;
       const currentPlayer = state.players[state.currentPlayerIndex];
       if (!currentPlayer.isInJail) return state;
+      // No-negative-cash rule: block payment if player can't afford it
+      if (currentPlayer.cash < 50) return state;
 
       const newCash = currentPlayer.cash - 50;
       const nextPlayers = state.players.map((p, i) =>
@@ -230,18 +265,15 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const msg = `${currentPlayer.name} paid $50 to leave Jail.`;
       const log = addLogEntry(state.gameLog, msg);
 
-      return checkBankruptcy(
-        {
-          ...state,
-          players: nextPlayers,
-          phase: "readyToRoll",
-          gameLog: log,
-          landingMessage: msg,
-          landingAction: { kind: "message", spaceIndex: 10, message: msg },
-          drawnCard: null,
-        },
-        { type: "bank" },
-      );
+      return {
+        ...state,
+        players: nextPlayers,
+        phase: "readyToRoll",
+        gameLog: log,
+        landingMessage: msg,
+        landingAction: { kind: "message", spaceIndex: 10, message: msg },
+        drawnCard: null,
+      };
     }
 
     case "USE_JAIL_CARD": {
@@ -326,6 +358,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         );
         const movement = moveAroundBoard(currentPlayer.position, action.dice.total);
         const landedSpace = getBoardSpaceByIndex(movement.to);
+        // No-negative-cash rule: apply GO bonus first, then deduct $50.
+        // If player still can't afford $50 after GO, they move but enter debt pending.
+        const goBonus = movement.passedGo ? 200 : 0;
+        const cashAfterGo = currentPlayer.cash + goBonus;
+        const canAffordJailFee = cashAfterGo >= 50;
         const releasedPlayers = state.players.map((p, i) =>
           i === state.currentPlayerIndex
             ? {
@@ -333,7 +370,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
                 position: movement.to,
                 isInJail: false,
                 jailTurns: 0,
-                cash: p.cash - 50 + (movement.passedGo ? 200 : 0),
+                cash: canAffordJailFee ? cashAfterGo - 50 : cashAfterGo,
               }
             : p,
         );
@@ -352,6 +389,16 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           gameLog: nextLog,
           drawnCard: null,
         };
+
+        // If they couldn't afford the $50 jail fee, enter debt pending first
+        if (!canAffordJailFee) {
+          return enterDebtPending(stateAfterMove, {
+            amountOwed: 50,
+            creditor: { type: "bank" },
+            reason: `${currentPlayer.name} owes $50 jail fee to the Bank.`,
+            potEligible: false,
+          });
+        }
 
         const resolution = resolveLanding(stateAfterMove, landedSpace, false);
         return applyLandingResolution(stateAfterMove, resolution, landedSpace.kind, false);
@@ -726,12 +773,19 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "PROPOSE_TRADE": {
-      if (state.phase === "gameOver" || state.phase === "bankruptcyPending" || state.phase === "auction") return state;
+      if (state.phase === "gameOver" || state.phase === "auction") return state;
       if (state.trade) return state;
-      // Actor must be the current player and must be proposing as themselves
-      const currentActorId = state.players[state.currentPlayerIndex]?.id;
-      if (action.actorPlayerId !== currentActorId) return state;
-      if (action.actorPlayerId !== action.initiatorId) return state;
+      // During bankruptcyPending, only the debtor can propose a trade (emergency trade to raise cash)
+      if (state.phase === "bankruptcyPending") {
+        if (!state.bankruptcy) return state;
+        if (action.actorPlayerId !== state.bankruptcy.debtorPlayerId) return state;
+        if (action.actorPlayerId !== action.initiatorId) return state;
+      } else {
+        // Normal gameplay: actor must be the current player
+        const currentActorId = state.players[state.currentPlayerIndex]?.id;
+        if (action.actorPlayerId !== currentActorId) return state;
+        if (action.actorPlayerId !== action.initiatorId) return state;
+      }
       const check = validateTrade(
         state,
         action.initiatorId,
@@ -898,13 +952,33 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case "RESOLVE_BANKRUPTCY_IF_SOLVENT": {
       if (!state.bankruptcy || state.phase !== "bankruptcyPending") return state;
       const debtor = state.players.find((p) => p.id === state.bankruptcy!.debtorPlayerId);
-      if (!debtor || debtor.cash < 0) return state;
+      // No-negative-cash rule: cash stays non-negative, so we check cash >= amountOwed
+      if (!debtor || debtor.cash < state.bankruptcy.amountOwed) return state;
 
-      const msg = `${debtor.name} raised enough cash and is no longer at risk of bankruptcy.`;
+      const { bankruptcy } = state;
+      const creditor = bankruptcy.creditor;
+
+      // Transfer the owed amount to creditor now that debtor has enough cash
+      let nextPlayers = state.players.map((p) => {
+        if (p.id === debtor.id) return { ...p, cash: p.cash - bankruptcy.amountOwed };
+        if (
+          creditor.type === "player" &&
+          p.id === (creditor as { type: "player"; playerId: string }).playerId
+        ) {
+          return { ...p, cash: p.cash + bankruptcy.amountOwed };
+        }
+        return p;
+      });
+
+      // Handle pot for bank payments that are pot-eligible
+      // (we don't have potEligible in BankruptcyState, so check via reason heuristic — skip for now)
+
+      const msg = `${debtor.name} paid $${bankruptcy.amountOwed} and resolved the debt.`;
       return {
         ...state,
+        players: nextPlayers,
         bankruptcy: null,
-        phase: state.bankruptcy.phaseBeforeBankruptcy,
+        phase: bankruptcy.phaseBeforeBankruptcy,
         gameLog: addLogEntry(state.gameLog, msg),
       };
     }

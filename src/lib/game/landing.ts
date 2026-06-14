@@ -3,8 +3,21 @@ import { addLogEntry } from "@/lib/game/createInitialGameState";
 import { getPropertyOwner, getOwnership, isOwnableSpace } from "@/lib/game/ownership";
 import { calculateRent } from "@/lib/game/rent";
 import type { BoardSpace } from "@/types/board";
-import type { GameLogEntry, GamePhase, GameState, LandingAction } from "@/types/game";
+import type { BankruptcyCreditor, GameLogEntry, GamePhase, GameState, LandingAction } from "@/types/game";
 import type { Player } from "@/types/player";
+
+/**
+ * When the current player cannot afford a mandatory payment (rent, tax),
+ * `debtPending` carries the debt info so the reducer can enter bankruptcyPending
+ * WITHOUT having reduced the player's cash below zero.
+ */
+export type DebtPending = {
+  amountOwed: number;
+  creditor: BankruptcyCreditor;
+  reason: string;
+  /** When true and rule is on, the amount should go to the pot once paid */
+  potEligible: boolean;
+};
 
 type LandingResolution = {
   players: Player[];
@@ -14,6 +27,8 @@ type LandingResolution = {
   phase: GamePhase;
   doublesCount: number;
   freeParkingPotDelta?: number;
+  /** Populated when debtor cannot afford a mandatory payment (no-negative-cash rule) */
+  debtPending?: DebtPending;
 };
 
 function phaseAfterResolvedLanding(rolledDouble: boolean): GamePhase {
@@ -140,6 +155,42 @@ export function resolveLanding(
       };
     }
 
+    // No-negative-cash rule: only transfer money if debtor can afford the full rent.
+    // If they can't, leave cash unchanged and return debtPending so the reducer
+    // enters bankruptcyPending without ever reducing cash below zero.
+    const canAfford = currentPlayer.cash >= rent.amount;
+
+    if (!canAfford) {
+      const rentMessage = `${currentPlayer.name} cannot afford $${rent.amount} rent for ${landedSpace.name} owed to ${owner.name}.`;
+      const rentReasonMessage = `${rentMessage} (${rent.reason})`;
+      nextLog = addLogEntry(nextLog, rentReasonMessage);
+
+      return {
+        players: state.players, // cash unchanged
+        gameLog: nextLog,
+        landingMessage: rentMessage,
+        landingAction: {
+          kind: "rentPayment",
+          spaceIndex: landedSpace.index,
+          message: rentReasonMessage,
+          payerId: currentPlayer.id,
+          ownerId: owner.id,
+          rentAmount: rent.amount,
+          payerCashAfter: currentPlayer.cash, // unchanged
+          ownerCashAfter: owner.cash, // unchanged
+          bankruptcyDeferred: true,
+        },
+        phase: phaseAfterResolvedLanding(rolledDouble),
+        doublesCount: state.doublesCount,
+        debtPending: {
+          amountOwed: rent.amount,
+          creditor: { type: "player", playerId: owner.id },
+          reason: rentReasonMessage,
+          potEligible: false,
+        },
+      };
+    }
+
     const payerCashAfter = currentPlayer.cash - rent.amount;
     const ownerCashAfter = owner.cash + rent.amount;
     const rentPlayers = state.players.map((player) => {
@@ -186,6 +237,33 @@ export function resolveLanding(
 
   if (landedSpace.kind === "tax") {
     const taxAmount = landedSpace.amount;
+    const canAfford = currentPlayer.cash >= taxAmount;
+
+    if (!canAfford) {
+      // No-negative-cash rule: do NOT deduct — enter debt pending
+      const taxMessage = `${currentPlayer.name} cannot afford $${taxAmount} for ${landedSpace.name}.`;
+      nextLog = addLogEntry(nextLog, taxMessage);
+      return {
+        players: state.players, // cash unchanged
+        gameLog: nextLog,
+        landingMessage: taxMessage,
+        landingAction: {
+          kind: "message",
+          spaceIndex: landedSpace.index,
+          message: taxMessage,
+        },
+        phase: phaseAfterResolvedLanding(rolledDouble),
+        doublesCount: state.doublesCount,
+        freeParkingPotDelta: 0,
+        debtPending: {
+          amountOwed: taxAmount,
+          creditor: { type: "bank" },
+          reason: `${currentPlayer.name} owes $${taxAmount} for ${landedSpace.name}.`,
+          potEligible: state.rules.freeParkingCash,
+        },
+      };
+    }
+
     const taxedPlayers = state.players.map((player, index) =>
       index === state.currentPlayerIndex
         ? {

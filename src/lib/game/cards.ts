@@ -304,29 +304,47 @@ function applyCardEffect(
 
     case "pay-bank": {
       const amount = card.amount ?? 0;
-      const newCash = currentPlayer.cash - amount;
-      const nextPlayers = state.players.map((p, i) =>
-        i === state.currentPlayerIndex ? { ...p, cash: newCash } : p,
-      );
-      const msg = `${currentPlayer.name} paid $${amount} to the bank.`;
+      const canAfford = currentPlayer.cash >= amount;
       let log = addLogEntry(state.gameLog, `${currentPlayer.name} drew: "${card.text}"`);
-      log = addLogEntry(log, msg);
-      if (newCash < 0) {
-        log = addLogEntry(log, `${currentPlayer.name}'s cash is below $0.`);
-      }
-      // freeParkingCash rule: bank payments from cards go into the pot
-      const newPot = state.rules.freeParkingCash ? state.freeParkingPot + amount : state.freeParkingPot;
-      const finalState: GameState = {
+      const msg = `${currentPlayer.name} paid $${amount} to the bank.`;
+      const stateWithCardReturned: GameState = {
         ...state,
-        players: nextPlayers,
-        gameLog: log,
         [deckKey]: returnCardToBottom(state[deckKey], card.id),
         phase: rolledDouble ? "readyToRoll" : "turnComplete",
-        landingMessage: msg,
-        landingAction: { kind: "message", spaceIndex: currentPlayer.position, message: msg },
+        landingMessage: canAfford ? msg : `${currentPlayer.name} cannot afford $${amount} to the bank.`,
+        landingAction: { kind: "message", spaceIndex: currentPlayer.position, message: canAfford ? msg : `${currentPlayer.name} cannot afford $${amount} to the bank.` },
+      };
+      if (!canAfford) {
+        // No-negative-cash rule: enter debt pending without deducting
+        log = addLogEntry(log, `${currentPlayer.name} cannot afford $${amount} to the bank.`);
+        const debtState: GameState = {
+          ...stateWithCardReturned,
+          gameLog: addLogEntry(log, `${currentPlayer.name} must resolve the debt.`),
+          phase: "bankruptcyPending",
+          bankruptcy: {
+            debtorPlayerId: currentPlayer.id,
+            creditor: { type: "bank" },
+            amountOwed: amount,
+            reason: `${currentPlayer.name} owes $${amount} to the Bank (card: "${card.text}").`,
+            status: "pending",
+            phaseBeforeBankruptcy: rolledDouble ? "readyToRoll" : "turnComplete",
+          },
+        };
+        return { state: debtState, resolvedMessage: msg };
+      }
+      log = addLogEntry(log, msg);
+      // freeParkingCash rule: bank payments from cards go into the pot
+      const newPot = state.rules.freeParkingCash ? state.freeParkingPot + amount : state.freeParkingPot;
+      const nextPlayers = state.players.map((p, i) =>
+        i === state.currentPlayerIndex ? { ...p, cash: p.cash - amount } : p,
+      );
+      const finalState: GameState = {
+        ...stateWithCardReturned,
+        players: nextPlayers,
+        gameLog: log,
         freeParkingPot: newPot,
       };
-      return { state: checkBankruptcy(finalState, { type: "bank" }), resolvedMessage: msg };
+      return { state: finalState, resolvedMessage: msg };
     }
 
     case "collect-each-player": {
@@ -366,27 +384,46 @@ function applyCardEffect(
       );
       const totalPaid = activePlayers.length * amount;
       let log = addLogEntry(state.gameLog, `${currentPlayer.name} drew: "${card.text}"`);
-      const nextPlayers = state.players.map((p) => {
-        if (p.id === currentPlayer.id) return { ...p, cash: p.cash - totalPaid };
-        if (!p.isBankrupt) return { ...p, cash: p.cash + amount };
-        return p;
-      });
-      const msg = `${currentPlayer.name} paid $${amount} to each player ($${totalPaid} total).`;
+      const canAfford = currentPlayer.cash >= totalPaid;
+      const msg = canAfford
+        ? `${currentPlayer.name} paid $${amount} to each player ($${totalPaid} total).`
+        : `${currentPlayer.name} cannot afford $${totalPaid} ($${amount} each) to other players.`;
       log = addLogEntry(log, msg);
-      if (currentPlayer.cash - totalPaid < 0) {
-        log = addLogEntry(log, `${currentPlayer.name}'s cash is below $0.`);
-      }
-      const finalState: GameState = {
+      const stateWithCardReturned: GameState = {
         ...state,
-        players: nextPlayers,
         gameLog: log,
         [deckKey]: returnCardToBottom(state[deckKey], card.id),
         phase: rolledDouble ? "readyToRoll" : "turnComplete",
         landingMessage: msg,
         landingAction: { kind: "message", spaceIndex: currentPlayer.position, message: msg },
       };
-      // Current player pays multiple others — creditor simplified to bank
-      return { state: checkBankruptcy(finalState, { type: "bank" }), resolvedMessage: msg };
+      if (!canAfford) {
+        // No-negative-cash rule: enter debt pending (creditor = bank as simplification)
+        const debtState: GameState = {
+          ...stateWithCardReturned,
+          gameLog: addLogEntry(log, `${currentPlayer.name} must resolve the debt.`),
+          phase: "bankruptcyPending",
+          bankruptcy: {
+            debtorPlayerId: currentPlayer.id,
+            creditor: { type: "bank" },
+            amountOwed: totalPaid,
+            reason: `${currentPlayer.name} owes $${totalPaid} to other players (card: "${card.text}").`,
+            status: "pending",
+            phaseBeforeBankruptcy: rolledDouble ? "readyToRoll" : "turnComplete",
+          },
+        };
+        return { state: debtState, resolvedMessage: msg };
+      }
+      const nextPlayers = state.players.map((p) => {
+        if (p.id === currentPlayer.id) return { ...p, cash: p.cash - totalPaid };
+        if (!p.isBankrupt) return { ...p, cash: p.cash + amount };
+        return p;
+      });
+      const finalState: GameState = {
+        ...stateWithCardReturned,
+        players: nextPlayers,
+      };
+      return { state: finalState, resolvedMessage: msg };
     }
 
     case "get-out-of-jail-free": {
@@ -423,26 +460,48 @@ function applyCardEffect(
         else houseCount += o.houses;
       }
       const total = houseCount * houseRate + hotelCount * hotelRate;
-      const newCash = currentPlayer.cash - total;
-      const nextPlayers = state.players.map((p, i) =>
-        i === state.currentPlayerIndex ? { ...p, cash: newCash } : p,
-      );
-      const msg =
-        total > 0
-          ? `${currentPlayer.name} paid $${total} in repairs (${houseCount} houses × $${houseRate}, ${hotelCount} hotels × $${hotelRate}).`
-          : `${currentPlayer.name} drew repairs card but owns no houses or hotels. No charge.`;
       let log = addLogEntry(state.gameLog, `${currentPlayer.name} drew: "${card.text}"`);
+      const canAfford = total === 0 || currentPlayer.cash >= total;
+      const msg =
+        total === 0
+          ? `${currentPlayer.name} drew repairs card but owns no houses or hotels. No charge.`
+          : canAfford
+            ? `${currentPlayer.name} paid $${total} in repairs (${houseCount} houses × $${houseRate}, ${hotelCount} hotels × $${hotelRate}).`
+            : `${currentPlayer.name} cannot afford $${total} in repairs (${houseCount} houses × $${houseRate}, ${hotelCount} hotels × $${hotelRate}).`;
       log = addLogEntry(log, msg);
-      const finalState: GameState = {
+      const stateWithCardReturned: GameState = {
         ...state,
-        players: nextPlayers,
         gameLog: log,
         [deckKey]: returnCardToBottom(state[deckKey], card.id),
         phase: rolledDouble ? "readyToRoll" : "turnComplete",
         landingMessage: msg,
         landingAction: { kind: "message", spaceIndex: currentPlayer.position, message: msg },
       };
-      return { state: checkBankruptcy(finalState, { type: "bank" }), resolvedMessage: msg };
+      if (!canAfford) {
+        // No-negative-cash rule: enter debt pending without deducting
+        const debtState: GameState = {
+          ...stateWithCardReturned,
+          gameLog: addLogEntry(log, `${currentPlayer.name} must resolve the debt.`),
+          phase: "bankruptcyPending",
+          bankruptcy: {
+            debtorPlayerId: currentPlayer.id,
+            creditor: { type: "bank" },
+            amountOwed: total,
+            reason: `${currentPlayer.name} owes $${total} in repairs to the Bank (card: "${card.text}").`,
+            status: "pending",
+            phaseBeforeBankruptcy: rolledDouble ? "readyToRoll" : "turnComplete",
+          },
+        };
+        return { state: debtState, resolvedMessage: msg };
+      }
+      const nextPlayers = state.players.map((p, i) =>
+        i === state.currentPlayerIndex ? { ...p, cash: p.cash - total } : p,
+      );
+      const finalState: GameState = {
+        ...stateWithCardReturned,
+        players: nextPlayers,
+      };
+      return { state: finalState, resolvedMessage: msg };
     }
 
     default:

@@ -5,9 +5,10 @@ import type { GameAction, GameState } from "@/types/game";
 type Props = {
   state: GameState;
   dispatch: (action: GameAction) => void;
+  myPlayerId?: string;
 };
 
-export function BankruptcyPanel({ state, dispatch }: Props) {
+export function BankruptcyPanel({ state, dispatch, myPlayerId }: Props) {
   if (state.phase !== "bankruptcyPending" || !state.bankruptcy) return null;
 
   const { bankruptcy } = state;
@@ -22,16 +23,22 @@ export function BankruptcyPanel({ state, dispatch }: Props) {
 
   if (!debtor) return null;
 
-  const shortage = -debtor.cash;
-  const isSolvent = debtor.cash >= 0;
+  const amountDue = bankruptcy.amountOwed;
+  const currentCash = debtor.cash; // always >= 0
+  const shortage = amountDue - currentCash;
+  const canPay = currentCash >= amountDue;
+
+  // In multiplayer: only the debtor gets active buttons
+  const isDebtor = !myPlayerId || myPlayerId === debtor.id;
+  const isWatcher = myPlayerId && myPlayerId !== debtor.id;
 
   return (
     <div className="rounded-xl border border-red-300 bg-red-50 p-4">
       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-red-700">
-        Bankruptcy Pending
+        Payment Required
       </p>
 
-      <div className="mt-2 space-y-1">
+      <div className="mt-2 space-y-1.5">
         <div className="flex items-center gap-2">
           <span
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-black text-white"
@@ -43,47 +50,58 @@ export function BankruptcyPanel({ state, dispatch }: Props) {
         </div>
 
         <p className="text-xs text-slate-600">
-          <span className="font-bold">Owes:</span> {creditorName}
+          <span className="font-bold">Owes:</span>{" "}
+          <span className="font-semibold text-slate-800">{creditorName}</span>
         </p>
 
         <p className="text-xs text-slate-600">
-          <span className="font-bold">Cash:</span>{" "}
-          <span className={debtor.cash < 0 ? "text-red-600 font-bold" : "text-emerald-600 font-bold"}>
-            ${debtor.cash.toLocaleString()}
+          <span className="font-bold">Amount due:</span>{" "}
+          <span className="font-bold text-red-700">${amountDue.toLocaleString()}</span>
+        </p>
+
+        <p className="text-xs text-slate-600">
+          <span className="font-bold">Current cash:</span>{" "}
+          <span className={canPay ? "font-bold text-emerald-600" : "font-bold text-amber-700"}>
+            ${currentCash.toLocaleString()}
           </span>
-          {debtor.cash < 0 && (
-            <span className="ml-1 text-red-600">
-              (short ${shortage.toLocaleString()})
+          {!canPay && (
+            <span className="ml-1 text-red-600 font-semibold">
+              (needs ${shortage.toLocaleString()} more)
             </span>
           )}
         </p>
-
-        <p className="text-xs text-slate-500">{bankruptcy.reason}</p>
       </div>
 
-      <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-        {isSolvent ? (
-          "Cash is now non-negative. You can resolve your bankruptcy and continue."
-        ) : (
-          "Mortgage properties or sell houses/hotels to raise cash. If you cannot recover, declare bankruptcy."
-        )}
-      </div>
+      {isWatcher ? (
+        <p className="mt-3 text-xs text-slate-500 italic">
+          Waiting for {debtor.name} to resolve payment…
+        </p>
+      ) : (
+        <>
+          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            {canPay
+              ? "You have enough cash to pay. Click Pay to settle the debt and continue."
+              : "Raise Cash: mortgage properties or sell houses/hotels to raise funds. Once you have enough, the Pay button will activate."
+            }
+          </div>
 
-      <div className="mt-3 flex gap-2">
-        <button
-          disabled={!isSolvent}
-          onClick={() => dispatch({ type: "RESOLVE_BANKRUPTCY_IF_SOLVENT" })}
-          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Resolve (Solvent)
-        </button>
-        <button
-          onClick={() => dispatch({ type: "DECLARE_BANKRUPTCY" })}
-          className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700"
-        >
-          Declare Bankruptcy
-        </button>
-      </div>
+          <div className="mt-3 flex gap-2 flex-wrap">
+            <button
+              disabled={!canPay}
+              onClick={() => dispatch({ type: "RESOLVE_BANKRUPTCY_IF_SOLVENT" })}
+              className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Pay ${amountDue.toLocaleString()}
+            </button>
+            <button
+              onClick={() => dispatch({ type: "DECLARE_BANKRUPTCY" })}
+              className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700"
+            >
+              Declare Bankruptcy
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -481,7 +481,8 @@ describe("Existing behavior preserved", () => {
     expect(next).toBe(state);
   });
 
-  it("bankrupt player cannot dispatch PROPOSE_TRADE during bankruptcy pending", () => {
+  it("debtor CAN propose an emergency trade during bankruptcyPending (to raise cash)", () => {
+    // Phase 4D.7: during bankruptcyPending, the debtor is allowed to propose trades
     let state = makeGameState(2);
     const p0id = state.players[0].id;
     const p1id = state.players[1].id;
@@ -495,7 +496,27 @@ describe("Existing behavior preserved", () => {
       offerFromInitiator: { cash: 0, propertySpaceIndices: [], getOutOfJailFreeCards: 0 },
       offerFromRecipient: { cash: 0, propertySpaceIndices: [], getOutOfJailFreeCards: 0 },
     });
-    expect(next.trade).toBeNull(); // trade was not set
+    // Debtor is allowed to propose trades during bankruptcy to raise cash
+    expect(next.trade).not.toBeNull();
+    expect(next.phase).toBe("bankruptcyPending");
+  });
+
+  it("non-debtor player cannot dispatch PROPOSE_TRADE during bankruptcy pending", () => {
+    let state = makeGameState(2);
+    const p0id = state.players[0].id;
+    const p1id = state.players[1].id;
+    // p0 is the debtor; p1 trying to propose (not allowed)
+    state = makePendingBankruptcy(state, 0, { type: "bank" });
+
+    const next = gameReducer(state, {
+      type: "PROPOSE_TRADE",
+      actorPlayerId: p1id,
+      initiatorId: p1id,
+      recipientId: p0id,
+      offerFromInitiator: { cash: 0, propertySpaceIndices: [], getOutOfJailFreeCards: 0 },
+      offerFromRecipient: { cash: 0, propertySpaceIndices: [], getOutOfJailFreeCards: 0 },
+    });
+    expect(next.trade).toBeNull(); // non-debtor cannot propose
     expect(next.phase).toBe("bankruptcyPending");
   });
 

@@ -31,6 +31,8 @@ export function TradePanel({ state, dispatch, myPlayerId }: Props) {
   const [recipientGOJF, setRecipientGOJF] = useState(0);
 
   if (state.phase === "gameOver") return null;
+  // During auction, trades are not allowed
+  if (state.phase === "auction") return null;
 
   // Pending trade view
   if (state.trade) {
@@ -110,8 +112,13 @@ export function TradePanel({ state, dispatch, myPlayerId }: Props) {
     );
   }
 
+  // During bankruptcyPending, only the debtor can propose; otherwise only the current player
   const currentPlayerId = state.players[state.currentPlayerIndex]?.id;
-  const canPropose = !myPlayerId || myPlayerId === currentPlayerId;
+  const authorizedProposerId =
+    state.phase === "bankruptcyPending" && state.bankruptcy
+      ? state.bankruptcy.debtorPlayerId
+      : currentPlayerId;
+  const canPropose = !myPlayerId || myPlayerId === authorizedProposerId;
 
   if (!open) {
     return (
@@ -126,7 +133,8 @@ export function TradePanel({ state, dispatch, myPlayerId }: Props) {
     );
   }
 
-  // In multiplayer, force the initiator to be the connected player (who must be current player)
+  // In multiplayer, force the initiator to be the connected player
+  // (must be current player, or debtor during bankruptcy)
   const effectiveInitiatorId = myPlayerId ?? initiatorId;
   const initiatorPlayer = state.players.find((p) => p.id === effectiveInitiatorId);
   const recipientPlayer = state.players.find((p) => p.id === recipientId);
