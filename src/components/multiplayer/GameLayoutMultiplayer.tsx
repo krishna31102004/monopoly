@@ -6,7 +6,7 @@ import { AuctionPanel } from "@/components/AuctionPanel";
 import { CardPanel } from "@/components/CardPanel";
 import { GameBoard } from "@/components/board/GameBoard";
 import { GameControls } from "@/components/GameControls";
-import { GameLog } from "@/components/GameLog";
+import { GameLogDrawer } from "@/components/GameLogDrawer";
 import { JailActionPanel } from "@/components/JailActionPanel";
 import { LandingActionPanel } from "@/components/LandingActionPanel";
 import { PlayerPanel } from "@/components/PlayerPanel";
@@ -190,7 +190,7 @@ export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction,
             <LandingActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} />
             <BankruptcyPanel state={gameState} dispatch={dispatch} />
             <TradePanel state={gameState} dispatch={dispatch} myPlayerId={myPlayerId} />
-            <GameLog entries={gameState.gameLog} />
+            <GameLogDrawer entries={gameState.gameLog} />
           </div>
 
           <div className="mb-3 flex items-end justify-between gap-3">

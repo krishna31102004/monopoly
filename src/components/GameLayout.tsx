@@ -6,7 +6,7 @@ import { AuctionPanel } from "@/components/AuctionPanel";
 import { CardPanel } from "@/components/CardPanel";
 import { GameBoard } from "@/components/board/GameBoard";
 import { GameControls } from "@/components/GameControls";
-import { GameLog } from "@/components/GameLog";
+import { GameLogDrawer } from "@/components/GameLogDrawer";
 import { JailActionPanel } from "@/components/JailActionPanel";
 import { LandingActionPanel } from "@/components/LandingActionPanel";
 import { PlayerPanel } from "@/components/PlayerPanel";
@@ -41,7 +41,7 @@ export function GameLayout() {
   }, [state]);
 
   if (state.phase === "setup") {
-    return <GameSetup onStartGame={(players) => dispatch({ type: "START_GAME", players })} />;
+    return <GameSetup onStartGame={(players, rules) => dispatch({ type: "START_GAME", players, rules })} />;
   }
 
   const winner = state.winnerId ? state.players.find((p) => p.id === state.winnerId) : null;
@@ -92,7 +92,7 @@ export function GameLayout() {
             <BankruptcyPanel state={state} dispatch={dispatch} />
             <TradePanel state={state} dispatch={dispatch} />
             <GameSaveControls state={state} dispatch={dispatch} />
-            <GameLog entries={state.gameLog} />
+            <GameLogDrawer entries={state.gameLog} />
           </div>
 
           <div className="mb-3 flex items-end justify-between gap-3">

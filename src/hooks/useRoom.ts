@@ -14,7 +14,7 @@ import type {
   RoomPublicView,
   RoomUpdatePayload,
 } from "@/types/multiplayer";
-import type { GameState } from "@/types/game";
+import type { GameRules, GameState } from "@/types/game";
 
 const SESSION_PLAYER_ID = "wc_playerId";
 const SESSION_ROOM_CODE = "wc_roomCode";
@@ -195,8 +195,8 @@ export function useRoom() {
     sessionStorage.removeItem(SESSION_PLAYER_COLOR);
   }, []);
 
-  const startGame = useCallback(() => {
-    getSocket().emit("room:startGame");
+  const startGame = useCallback((rules?: GameRules) => {
+    getSocket().emit("room:startGame", rules ? { rules } : undefined);
   }, []);
 
   const requestSync = useCallback(() => {

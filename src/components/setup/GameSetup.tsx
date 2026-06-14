@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { StartGamePlayer } from "@/types/game";
+import type { GameRules, StartGamePlayer } from "@/types/game";
+import { DEFAULT_RULES } from "@/types/game";
+import { GameRulesPanel } from "@/components/setup/GameRulesPanel";
 import type { PlayerToken } from "@/types/player";
 
 const tokenOptions: Array<{
@@ -25,7 +27,7 @@ type DraftPlayer = {
 };
 
 type GameSetupProps = {
-  onStartGame: (players: StartGamePlayer[]) => void;
+  onStartGame: (players: StartGamePlayer[], rules: GameRules) => void;
 };
 
 function createDraftPlayer(index: number, token: PlayerToken): DraftPlayer {
@@ -41,6 +43,7 @@ export function GameSetup({ onStartGame }: GameSetupProps) {
     createDraftPlayer(0, "car"),
     createDraftPlayer(1, "hat"),
   ]);
+  const [rules, setRules] = useState<GameRules>(DEFAULT_RULES);
 
   const selectedTokens = useMemo(
     () => new Set(draftPlayers.map((p) => p.token)),
@@ -76,6 +79,7 @@ export function GameSetup({ onStartGame }: GameSetupProps) {
           color: token.color,
         };
       }),
+      rules,
     );
   }
 
@@ -98,6 +102,10 @@ export function GameSetup({ onStartGame }: GameSetupProps) {
           <p className="mt-3 text-sm font-semibold text-slate-500">
             2–6 players · Local pass-and-play · $1,500 starting cash
           </p>
+        </div>
+
+        <div className="mb-4">
+          <GameRulesPanel rules={rules} onChange={setRules} />
         </div>
 
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.12)]">

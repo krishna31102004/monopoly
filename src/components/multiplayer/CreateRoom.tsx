@@ -7,6 +7,7 @@ import { TokenPicker } from "@/components/multiplayer/TokenPicker";
 import { RoomLobby } from "@/components/multiplayer/RoomLobby";
 import { GameLayoutMultiplayer } from "@/components/multiplayer/GameLayoutMultiplayer";
 import type { PlayerToken } from "@/types/player";
+import type { GameRules } from "@/types/game";
 
 export function CreateRoom() {
   const {
@@ -62,7 +63,7 @@ export function CreateRoom() {
       <RoomLobby
         room={room}
         myPlayerId={myPlayerId}
-        onStartGame={startGame}
+        onStartGame={(rules: GameRules) => startGame(rules)}
         onLeave={leaveRoom}
         error={error}
       />

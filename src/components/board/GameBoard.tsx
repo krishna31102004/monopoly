@@ -22,7 +22,7 @@ export function GameBoard({ spaces, players, ownerships = [], displayPositions, 
   }, {});
 
   return (
-    <div className="mx-auto w-full max-w-[min(94vw,calc(100vh-2rem),980px)] xl:max-w-[min(76vw,calc(100vh-2rem),980px)]">
+    <div className="mx-auto w-full max-w-[min(94vw,calc(100vh-2rem),980px)] xl:max-w-[min(76vw,calc(100vh-2rem),1100px)]">
       <div
         className="grid aspect-square grid-cols-11 grid-rows-11 overflow-hidden border-[3px] border-[var(--board-border)] bg-[var(--board-line)] shadow-[0_24px_80px_rgba(15,26,28,0.25)]"
         aria-label="World Cities game board"

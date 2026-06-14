@@ -2,17 +2,21 @@
 
 import { useState } from "react";
 import type { RoomPublicView } from "@/types/multiplayer";
+import type { GameRules } from "@/types/game";
+import { DEFAULT_RULES } from "@/types/game";
+import { GameRulesPanel } from "@/components/setup/GameRulesPanel";
 
 type Props = {
   room: RoomPublicView;
   myPlayerId: string;
-  onStartGame: () => void;
+  onStartGame: (rules: GameRules) => void;
   onLeave: () => void;
   error: string | null;
 };
 
 export function RoomLobby({ room, myPlayerId, onStartGame, onLeave, error }: Props) {
   const [copied, setCopied] = useState(false);
+  const [rules, setRules] = useState<GameRules>(DEFAULT_RULES);
   const myPlayer = room.players.find((p) => p.playerId === myPlayerId);
   const isHost = myPlayer?.isHost ?? false;
   const canStart = isHost && room.players.filter((p) => p.connected).length >= 2;
@@ -110,6 +114,85 @@ export function RoomLobby({ room, myPlayerId, onStartGame, onLeave, error }: Pro
           </div>
         </div>
 
+        {/* House Rules */}
+        <div className="mb-4">
+          {/* Adapt GameRulesPanel dark style for lobby */}
+          <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-900">
+            <div className="border-b border-slate-800 px-5 py-4">
+              <h2 className="text-base font-black text-white">House Rules</h2>
+              <p className="text-xs font-semibold text-slate-500">
+                {isHost ? "Toggle rules before starting." : "Rules set by the host."}
+              </p>
+            </div>
+            <div className="divide-y divide-slate-800">
+              {(Object.keys(rules) as (keyof GameRules)[]).map((key) => {
+                const labelMap: Record<keyof GameRules, string> = {
+                  doubleRentOnFullSet: "Double Rent on Full Set",
+                  freeParkingCash: "Free Parking Jackpot",
+                  auctions: "Auctions",
+                  noRentInJail: "No Rent While in Jail",
+                  mortgages: "Mortgages",
+                  evenBuild: "Even Build Rule",
+                };
+                const isOn = rules[key];
+                return (
+                  <div
+                    key={key}
+                    className={[
+                      "flex items-center gap-4 px-5 py-3",
+                      isHost ? "cursor-pointer hover:bg-slate-800/50" : "",
+                    ].join(" ")}
+                    onClick={() => {
+                      if (!isHost) return;
+                      setRules((r) => ({ ...r, [key]: !r[key] }));
+                    }}
+                    role={isHost ? "button" : undefined}
+                    tabIndex={isHost ? 0 : undefined}
+                    onKeyDown={
+                      isHost
+                        ? (e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setRules((r) => ({ ...r, [key]: !r[key] }));
+                            }
+                          }
+                        : undefined
+                    }
+                    aria-pressed={isHost ? isOn : undefined}
+                  >
+                    <span
+                      className={[
+                        "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors",
+                        isOn ? "bg-emerald-500" : "bg-slate-600",
+                        !isHost ? "opacity-70" : "",
+                      ].join(" ")}
+                      aria-hidden="true"
+                    >
+                      <span
+                        className={[
+                          "inline-block h-4 w-4 rounded-full bg-white shadow transition-transform",
+                          isOn ? "translate-x-4" : "translate-x-0.5",
+                        ].join(" ")}
+                      />
+                    </span>
+                    <span className="flex-1 text-sm font-semibold text-slate-300">
+                      {labelMap[key]}
+                    </span>
+                    <span
+                      className={[
+                        "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide",
+                        isOn ? "bg-emerald-900 text-emerald-400" : "bg-slate-800 text-slate-500",
+                      ].join(" ")}
+                    >
+                      {isOn ? "ON" : "OFF"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
         {/* Error */}
         {error && (
           <div className="mb-4 rounded-lg border border-red-800 bg-red-950 px-4 py-3 text-sm font-semibold text-red-300">
@@ -123,7 +206,7 @@ export function RoomLobby({ room, myPlayerId, onStartGame, onLeave, error }: Pro
             <>
               <button
                 type="button"
-                onClick={onStartGame}
+                onClick={() => onStartGame(rules)}
                 disabled={!canStart}
                 className="w-full rounded-xl bg-emerald-600 px-6 py-4 text-base font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
               >
