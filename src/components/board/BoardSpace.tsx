@@ -32,10 +32,8 @@ function isOwnable(space: BoardSpaceType): space is OwnableSpace {
   return space.kind === "city" || space.kind === "airport" || space.kind === "utility";
 }
 
-/** Shorten long space names for board display. Full name stays in modal. */
 function boardDisplayName(space: BoardSpaceType): string {
   if (space.kind === "airport") {
-    // Strip " Airport" and " International" suffixes for brevity
     return space.name
       .replace(" International Airport", "")
       .replace(" Airport", "");
@@ -103,36 +101,57 @@ function SpecialMarker({ space }: { space: BoardSpaceType }) {
   }
 }
 
-/** Small colored owner badge in the top-right of the space */
-function OwnerBadge({ owner }: { owner: Player }) {
+/**
+ * Owner name badge — sits just below the color strip, full width.
+ * Shows truncated owner name in the owner's accent color.
+ */
+function OwnerNameBadge({ owner }: { owner: Player }) {
+  // Truncate to ~4 chars for narrow spaces
+  const label = owner.name.length > 5 ? owner.name.slice(0, 4) + "…" : owner.name;
   return (
-    <span
-      className="absolute right-0.5 top-0.5 flex h-[clamp(10px,2vw,14px)] w-[clamp(10px,2vw,14px)] items-center justify-center rounded-full text-white shadow-sm"
+    <div
+      className="flex w-full items-center justify-center shrink-0"
       style={{
         backgroundColor: owner.color,
-        fontSize: "clamp(5px,0.8vw,7px)",
-        fontWeight: 900,
-        lineHeight: 1,
+        height: "clamp(7px, 1.6vw, 12px)",
+        borderBottom: "1px solid rgba(0,0,0,0.12)",
       }}
-      title={`Owned by ${owner.name} (${owner.tokenLabel})`}
+      title={`Owned by ${owner.name}`}
     >
-      {owner.tokenLabel.slice(0, 2)}
-    </span>
+      <span
+        style={{
+          fontSize: "clamp(4px, 0.75vw, 7px)",
+          fontWeight: 900,
+          color: "rgba(255,255,255,0.95)",
+          letterSpacing: "0.02em",
+          lineHeight: 1,
+          textTransform: "uppercase",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          maxWidth: "100%",
+          textOverflow: "ellipsis",
+          padding: "0 1px",
+        }}
+      >
+        {label}
+      </span>
+    </div>
   );
 }
 
-/** Small house/hotel indicator row for city spaces */
-function ImprovementDots({ ownership }: { ownership: PropertyOwnership }) {
+/** Houses and hotel indicator — bigger, cleaner shapes */
+function PropertyBuildings({ ownership }: { ownership: PropertyOwnership }) {
   if (ownership.hasHotel) {
     return (
-      <div className="flex justify-center">
+      <div className="flex justify-center py-px">
         <span
-          className="flex items-center justify-center rounded-sm bg-red-600 text-white"
+          className="flex items-center justify-center rounded font-black text-white shadow-sm"
           style={{
-            width: "clamp(8px,1.8vw,12px)",
-            height: "clamp(5px,1.2vw,8px)",
-            fontSize: "clamp(4px,0.7vw,6px)",
-            fontWeight: 900,
+            backgroundColor: "#c0392b",
+            width: "clamp(10px,2.2vw,16px)",
+            height: "clamp(7px,1.5vw,11px)",
+            fontSize: "clamp(4px,0.8vw,7px)",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.2)",
           }}
           title="Hotel"
         >
@@ -143,14 +162,16 @@ function ImprovementDots({ ownership }: { ownership: PropertyOwnership }) {
   }
   if (ownership.houses > 0) {
     return (
-      <div className="flex justify-center gap-px">
+      <div className="flex justify-center gap-px py-px">
         {Array.from({ length: ownership.houses }).map((_, i) => (
           <span
             key={i}
-            className="rounded-sm bg-emerald-600"
+            className="rounded-sm"
             style={{
-              width: "clamp(4px,1vw,6px)",
-              height: "clamp(4px,1vw,6px)",
+              backgroundColor: "#27ae60",
+              width: "clamp(5px,1.2vw,8px)",
+              height: "clamp(5px,1.2vw,8px)",
+              boxShadow: "0 1px 2px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.2)",
             }}
             title={`${ownership.houses} house${ownership.houses > 1 ? "s" : ""}`}
           />
@@ -165,7 +186,6 @@ export function BoardSpace({ space, players, allPlayers = [], ownerships = [], l
   const isCorner = [0, 10, 20, 30].includes(space.index);
   const canOpen = isOwnable(space);
 
-  // Ownership lookup
   const ownership = canOpen
     ? ownerships.find((o) => o.spaceIndex === space.index)
     : undefined;
@@ -177,6 +197,7 @@ export function BoardSpace({ space, players, allPlayers = [], ownerships = [], l
 
   const content = (
     <>
+      {/* Color strip for cities */}
       {space.kind === "city" ? (
         <span
           className={`block shrink-0 border-b border-[var(--board-border)] ${colorGroupClasses[space.colorGroup]}`}
@@ -198,8 +219,8 @@ export function BoardSpace({ space, players, allPlayers = [], ownerships = [], l
         />
       ) : null}
 
-      {/* Owner badge (top-right corner) */}
-      {owner ? <OwnerBadge owner={owner} /> : null}
+      {/* Owner name badge — full-width strip below color strip */}
+      {!isCorner && owner ? <OwnerNameBadge owner={owner} /> : null}
 
       <div className="flex min-h-0 flex-1 flex-col items-center justify-between gap-0.5 p-0.5 sm:p-1">
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-0.5">
@@ -245,7 +266,7 @@ export function BoardSpace({ space, players, allPlayers = [], ownerships = [], l
 
           {/* House/hotel indicators — cities only */}
           {!isCorner && space.kind === "city" && ownership ? (
-            <ImprovementDots ownership={ownership} />
+            <PropertyBuildings ownership={ownership} />
           ) : null}
         </div>
 
