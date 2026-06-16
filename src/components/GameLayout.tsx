@@ -16,6 +16,7 @@ import { BankruptcyPanel } from "@/components/BankruptcyPanel";
 import { TradePanel } from "@/components/TradePanel";
 import { GameSaveControls } from "@/components/GameSaveControls";
 import { GameSetup } from "@/components/setup/GameSetup";
+import { MobileActionBar } from "@/components/MobileActionBar";
 import { boardSpaces } from "@/data/board";
 import { createSetupGameState } from "@/lib/game/createInitialGameState";
 import { gameReducer } from "@/lib/game/gameReducer";
@@ -57,7 +58,7 @@ export function GameLayout() {
   const winner = state.winnerId ? state.players.find((p) => p.id === state.winnerId) : null;
 
   return (
-    <main className="min-h-screen px-2 py-3 sm:px-4 sm:py-5 lg:px-6">
+    <main className="min-h-screen px-2 py-3 pb-20 sm:pb-5 sm:px-4 sm:py-5 lg:px-6">
       {/* Game-over banner */}
       {state.phase === "gameOver" && winner ? (
         <div className="mx-auto mb-4 max-w-[1560px] overflow-hidden rounded-xl border border-emerald-300 bg-emerald-50 px-6 py-4 shadow-sm">
@@ -83,6 +84,7 @@ export function GameLayout() {
             displayPositions={displayPositions}
             landingPlayerIds={landingPlayerIds}
             onOpenProperty={setSelectedSpace}
+            currentPlayerIndex={state.currentPlayerIndex}
           />
         </section>
 
@@ -139,6 +141,14 @@ export function GameLayout() {
         onClose={() => setSelectedSpace(null)}
         currentPlayer={state.players[state.currentPlayerIndex]}
         dispatch={dispatch}
+      />
+
+      {/* Sticky bottom bar — mobile only (hidden on sm+) */}
+      <MobileActionBar
+        state={state}
+        dispatch={dispatch}
+        isAnimating={isAnimating}
+        presentationStatus={presentationStatus}
       />
     </main>
   );

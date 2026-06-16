@@ -63,3 +63,38 @@ button {
   55%  { transform: scale(0.88); opacity: 1; }
   100% { transform: scale(1);   opacity: 1; }
 }
+
+/* ── Mobile board scroll viewport ───────────────────────────────────── */
+
+/* Smooth momentum scrolling for the board panning container */
+.board-scroll-container {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* On mobile: cap the visible height so the board is a pannable viewport
+   rather than a 840px-tall block that pushes content far below. */
+@media (max-width: 639px) {
+  .board-scroll-container {
+    /* Show roughly a 5×5-cell window on a 390 px phone */
+    max-height: min(88vw, 500px);
+  }
+}
+
+/* Scroll hint label shown only on mobile */
+.board-scroll-hint {
+  display: none;
+}
+@media (max-width: 639px) {
+  .board-scroll-hint {
+    display: block;
+  }
+}
+
+/* Ensure buttons in the mobile action bar are comfortably tappable */
+@media (max-width: 639px) {
+  .mobile-action-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

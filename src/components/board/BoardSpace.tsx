@@ -246,7 +246,7 @@ export function BoardSpace({ space, players, allPlayers = [], ownerships = [], l
       {space.kind === "city" ? (
         <span
           className={`block shrink-0 border-b border-[var(--board-border)] ${colorGroupClasses[space.colorGroup]}`}
-          style={{ height: isCorner ? "0" : "clamp(9px, 24%, 16px)" }}
+          style={{ height: isCorner ? "0" : "clamp(11px, 24%, 18px)" }}
         />
       ) : null}
 
@@ -298,7 +298,7 @@ export function BoardSpace({ space, players, allPlayers = [], ownerships = [], l
           {!isCorner ? (
             <span
               className="max-w-full text-center font-black leading-tight text-slate-950"
-              style={{ fontSize: "clamp(6px, 1.1vw, 11px)", overflowWrap: "break-word", hyphens: "auto" }}
+              style={{ fontSize: "clamp(8px, 1.1vw, 11px)", overflowWrap: "break-word", hyphens: "auto" }}
             >
               {displayName}
             </span>
@@ -307,7 +307,7 @@ export function BoardSpace({ space, players, allPlayers = [], ownerships = [], l
           {!isCorner && (space.kind === "city" || space.kind === "airport" || space.kind === "utility") ? (
             <span
               className="font-bold text-slate-500"
-              style={{ fontSize: "clamp(6px, 1vw, 10px)" }}
+              style={{ fontSize: "clamp(7px, 1vw, 10px)" }}
             >
               ${space.price}
             </span>

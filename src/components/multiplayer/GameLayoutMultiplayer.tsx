@@ -14,6 +14,7 @@ import { PlayerPanel } from "@/components/PlayerPanel";
 import { PropertyCardModal } from "@/components/PropertyCardModal";
 import { BankruptcyPanel } from "@/components/BankruptcyPanel";
 import { TradePanel } from "@/components/TradePanel";
+import { MobileActionBar } from "@/components/MobileActionBar";
 import { boardSpaces } from "@/data/board";
 import type { GameAction, GameState } from "@/types/game";
 import type { GameActionIntent, RoomPublicView } from "@/types/multiplayer";
@@ -96,7 +97,7 @@ export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction,
   const currentActor = gameState.players.find((p) => p.id === actorId);
 
   return (
-    <main className="min-h-screen px-2 py-3 sm:px-4 sm:py-5 lg:px-6">
+    <main className="min-h-screen px-2 py-3 pb-20 sm:pb-5 sm:px-4 sm:py-5 lg:px-6">
       {/* Game-over banner */}
       {gameState.phase === "gameOver" && winner ? (
         <div className="mx-auto mb-4 max-w-[1560px] overflow-hidden rounded-xl border border-emerald-300 bg-emerald-50 px-6 py-4 shadow-sm">
@@ -182,6 +183,7 @@ export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction,
             displayPositions={displayPositions}
             landingPlayerIds={landingPlayerIds}
             onOpenProperty={setSelectedSpace}
+            currentPlayerIndex={gameState.currentPlayerIndex}
           />
         </section>
 
@@ -237,6 +239,15 @@ export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction,
         onClose={() => setSelectedSpace(null)}
         currentPlayer={gameState.players[gameState.currentPlayerIndex]}
         dispatch={dispatch}
+      />
+
+      {/* Sticky bottom bar — mobile only (hidden on sm+) */}
+      <MobileActionBar
+        state={gameState}
+        dispatch={dispatch}
+        isMyTurn={isMyTurn}
+        isAnimating={isAnimating}
+        presentationStatus={presentationStatus}
       />
     </main>
   );
