@@ -51,10 +51,16 @@ function spaceTypeLabel(space: BoardSpace) {
   return "space";
 }
 
+/** Card-driven rent overrides applied on top of the normal rent calculation. */
+export type CardRentRule =
+  | { kind: "double" }
+  | { kind: "fixedUtilityMultiplier"; multiplier: number };
+
 export function resolveLanding(
   state: GameState,
   landedSpace: BoardSpace,
   rolledDouble: boolean,
+  cardRentRule?: CardRentRule,
 ): LandingResolution {
   const currentPlayer = state.players[state.currentPlayerIndex];
   const landingMessage = `Landed on ${landedSpace.name}`;
@@ -129,13 +135,30 @@ export function resolveLanding(
       };
     }
 
-    const rent = calculateRent(
+    let rent = calculateRent(
       landedSpace,
       ownership,
       state.ownerships,
       state.diceRoll?.total ?? 0,
       state.rules.doubleRentOnFullSet,
     );
+
+    if (!rent.isMortgaged && cardRentRule?.kind === "double") {
+      rent = {
+        amount: rent.amount * 2,
+        reason: `${rent.reason}, doubled by card`,
+        isMortgaged: false,
+      };
+    }
+
+    if (!rent.isMortgaged && cardRentRule?.kind === "fixedUtilityMultiplier" && landedSpace.kind === "utility") {
+      const diceTotal = state.diceRoll?.total ?? 0;
+      rent = {
+        amount: diceTotal * cardRentRule.multiplier,
+        reason: `card: pay ${cardRentRule.multiplier}x dice roll (utility)`,
+        isMortgaged: false,
+      };
+    }
 
     if (rent.isMortgaged) {
       const message = `${currentPlayer.name} landed on ${landedSpace.name}, but it is mortgaged. No rent is charged.`;

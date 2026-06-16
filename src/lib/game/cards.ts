@@ -1,11 +1,33 @@
 import { chanceCards, communityChestCards, type CardDefinition } from "@/data/cards";
 import { addLogEntry } from "@/lib/game/createInitialGameState";
-import { resolveLanding } from "@/lib/game/landing";
+import { resolveLanding, type DebtPending } from "@/lib/game/landing";
 import { moveAroundBoard } from "@/lib/game/movement";
 import { checkBankruptcy } from "@/lib/game/bankruptcy";
 import { getBoardSpaceByIndex } from "@/data/board";
 import type { DrawnCard, GameState } from "@/types/game";
 import type { Player } from "@/types/player";
+
+/** Mirrors gameReducer's debt-pending entry so card-driven payments also defer bankruptcy without going negative. */
+function enterDebtPendingFromCard(state: GameState, debt: DebtPending): GameState {
+  const currentPlayer = state.players[state.currentPlayerIndex];
+  const log = addLogEntry(
+    state.gameLog,
+    `Debt pending: must pay $${debt.amountOwed}. Sell assets or declare bankruptcy.`,
+  );
+  return {
+    ...state,
+    phase: "bankruptcyPending",
+    gameLog: log,
+    bankruptcy: {
+      debtorPlayerId: currentPlayer.id,
+      creditor: debt.creditor,
+      amountOwed: debt.amountOwed,
+      reason: debt.reason,
+      status: "pending",
+      phaseBeforeBankruptcy: state.phase,
+    },
+  };
+}
 
 const ALL_CARDS: Record<string, CardDefinition> = {};
 for (const c of [...chanceCards, ...communityChestCards]) {
@@ -155,7 +177,10 @@ function applyCardEffect(
         landingAction: resolution.landingAction,
         gameLog: resolution.gameLog,
       };
-      return { state: finalState, resolvedMessage: msg };
+      return {
+        state: resolution.debtPending ? enterDebtPendingFromCard(finalState, resolution.debtPending) : finalState,
+        resolvedMessage: msg,
+      };
     }
 
     case "advance-nearest-airport": {
@@ -177,7 +202,7 @@ function applyCardEffect(
         landingAction: null,
       };
       const targetSpace = getBoardSpaceByIndex(target);
-      const resolution = resolveLanding(stateAfterMove, targetSpace, rolledDouble);
+      const resolution = resolveLanding(stateAfterMove, targetSpace, rolledDouble, { kind: "double" });
       const finalState: GameState = {
         ...stateAfterMove,
         players: resolution.players,
@@ -187,7 +212,10 @@ function applyCardEffect(
         landingAction: resolution.landingAction,
         gameLog: resolution.gameLog,
       };
-      return { state: finalState, resolvedMessage: msg };
+      return {
+        state: resolution.debtPending ? enterDebtPendingFromCard(finalState, resolution.debtPending) : finalState,
+        resolvedMessage: msg,
+      };
     }
 
     case "advance-nearest-utility": {
@@ -209,7 +237,10 @@ function applyCardEffect(
         landingAction: null,
       };
       const targetSpace = getBoardSpaceByIndex(target);
-      const resolution = resolveLanding(stateAfterMove, targetSpace, rolledDouble);
+      const resolution = resolveLanding(stateAfterMove, targetSpace, rolledDouble, {
+        kind: "fixedUtilityMultiplier",
+        multiplier: 10,
+      });
       const finalState: GameState = {
         ...stateAfterMove,
         players: resolution.players,
@@ -219,7 +250,10 @@ function applyCardEffect(
         landingAction: resolution.landingAction,
         gameLog: resolution.gameLog,
       };
-      return { state: finalState, resolvedMessage: msg };
+      return {
+        state: resolution.debtPending ? enterDebtPendingFromCard(finalState, resolution.debtPending) : finalState,
+        resolvedMessage: msg,
+      };
     }
 
     case "go-back-3": {
@@ -259,7 +293,10 @@ function applyCardEffect(
         landingAction: resolution.landingAction,
         gameLog: resolution.gameLog,
       };
-      return { state: finalState, resolvedMessage: msg };
+      return {
+        state: resolution.debtPending ? enterDebtPendingFromCard(finalState, resolution.debtPending) : finalState,
+        resolvedMessage: msg,
+      };
     }
 
     case "go-to-jail": {

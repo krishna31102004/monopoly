@@ -33,6 +33,7 @@ export function GameBoard({
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const playersByPosition = players.reduce<Record<number, Player[]>>((groups, player) => {
+    if (player.isBankrupt) return groups;
     const pos = displayPositions?.[player.id] ?? player.position;
     groups[pos] = [...(groups[pos] ?? []), player];
     return groups;
