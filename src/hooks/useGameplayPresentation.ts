@@ -1,0 +1,151 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import {
+  DICE_ROLL_MS,
+  LANDING_REVEAL_DELAY_MS,
+  CARD_REVEAL_MIN_MS,
+} from "@/lib/animation/timing";
+import type { GameState } from "@/types/game";
+
+export type GameplayPresentationPhase =
+  | "idle"
+  | "rollingDice"
+  | "showingDiceResult"
+  | "movingToken"
+  | "landing"
+  | "revealingCard"
+  | "showingOutcome";
+
+/**
+ * Sequences the UI reveal of landing outcomes so they appear only after
+ * the token visibly reaches its destination.
+ *
+ * Returns:
+ *   showLandingPanel  — gate for LandingActionPanel / BankruptcyPanel outcome
+ *   showCardPanel     — gate for CardPanel visibility
+ *   showCardResolved  — gate for the resolvedMessage inside CardPanel
+ *   diceRolling       — true while the local dice animation should play
+ *   presentationPhase — current phase, useful for status messages
+ */
+export function useGameplayPresentation(state: GameState, isAnimating: boolean): {
+  showLandingPanel: boolean;
+  showCardPanel: boolean;
+  showCardResolved: boolean;
+  diceRolling: boolean;
+  presentationPhase: GameplayPresentationPhase;
+} {
+  // Derive a stable key that changes exactly once per new dice roll
+  const diceKey =
+    state.diceRoll && state.currentPlayerHasRolled
+      ? `${state.currentPlayerIndex}:${state.doublesCount}:${state.diceRoll.die1}:${state.diceRoll.die2}`
+      : null;
+
+  // Initialize refs to current values so we don't trigger sequence on first render
+  const prevDiceKeyRef = useRef<string | null>(diceKey);
+  const prevIsAnimatingRef = useRef<boolean>(isAnimating);
+  const sequenceActiveRef = useRef<boolean>(false);
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const [showLandingPanel, setShowLandingPanel] = useState(true);
+  const [showCardPanel, setShowCardPanel] = useState(true);
+  const [showCardResolved, setShowCardResolved] = useState(true);
+  const [diceRolling, setDiceRolling] = useState(false);
+  const [presentationPhase, setPresentationPhase] = useState<GameplayPresentationPhase>("idle");
+
+  function clearTimers() {
+    timersRef.current.forEach((id) => clearTimeout(id));
+    timersRef.current = [];
+  }
+
+  function addTimer(fn: () => void, ms: number) {
+    const id = setTimeout(fn, ms);
+    timersRef.current.push(id);
+  }
+
+  function revealAll() {
+    setShowLandingPanel(true);
+    setShowCardPanel(true);
+    setShowCardResolved(true);
+    setPresentationPhase("showingOutcome");
+    sequenceActiveRef.current = false;
+  }
+
+  // Detect new dice roll
+  useEffect(() => {
+    const prevKey = prevDiceKeyRef.current;
+    prevDiceKeyRef.current = diceKey;
+
+    if (diceKey !== null && diceKey !== prevKey) {
+      clearTimers();
+      sequenceActiveRef.current = true;
+
+      setShowLandingPanel(false);
+      setShowCardPanel(false);
+      setShowCardResolved(false);
+      setDiceRolling(true);
+      setPresentationPhase("rollingDice");
+
+      // Stop dice rolling, enter "result hold" phase
+      addTimer(() => {
+        setDiceRolling(false);
+        setPresentationPhase("showingDiceResult");
+      }, DICE_ROLL_MS);
+
+      // Fallback: reveal panels if token never moves (no position change)
+      // e.g. jail turn, staying on same space
+      addTimer(() => {
+        if (sequenceActiveRef.current) revealAll();
+      }, DICE_ROLL_MS + LANDING_REVEAL_DELAY_MS * 2);
+    }
+    // diceKey is a stable derived string; clearTimers/addTimer use refs only
+  }, [diceKey]);
+
+  // Track isAnimating transitions
+  useEffect(() => {
+    const wasAnimating = prevIsAnimatingRef.current;
+    prevIsAnimatingRef.current = isAnimating;
+
+    if (!wasAnimating && isAnimating && sequenceActiveRef.current) {
+      // Movement started — cancel fallback, enter moving phase
+      clearTimers();
+      setPresentationPhase("movingToken");
+    }
+
+    if (wasAnimating && !isAnimating && sequenceActiveRef.current) {
+      // Movement ended — start reveal sequence
+      clearTimers();
+      setPresentationPhase("landing");
+
+      const hasCard = state.drawnCard !== null;
+
+      if (hasCard) {
+        addTimer(() => {
+          setShowCardPanel(true);
+          setPresentationPhase("revealingCard");
+          addTimer(() => {
+            setShowCardResolved(true);
+            setShowLandingPanel(true);
+            revealAll();
+          }, CARD_REVEAL_MIN_MS);
+        }, LANDING_REVEAL_DELAY_MS);
+      } else {
+        addTimer(() => revealAll(), LANDING_REVEAL_DELAY_MS);
+      }
+    }
+    // isAnimating is the only reactive input; state.drawnCard is read by ref via closure
+  }, [isAnimating]);
+
+  useEffect(() => {
+    return () => clearTimers();
+    // clearTimers only uses timersRef, no reactive deps needed
+  }, []);
+
+  return {
+    showLandingPanel,
+    showCardPanel,
+    showCardResolved,
+    diceRolling,
+    presentationPhase,
+  };
+}

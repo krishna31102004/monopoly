@@ -4,6 +4,8 @@ import type { DrawnCard } from "@/types/game";
 
 type CardPanelProps = {
   drawnCard: DrawnCard;
+  /** When false, the resolvedMessage is hidden (card is revealed but effect is not yet shown). Default: true */
+  showResolved?: boolean;
 };
 
 const deckLabel: Record<string, string> = {
@@ -31,7 +33,7 @@ const deckEmoji: Record<string, string> = {
   "community-chest": "📦",
 };
 
-export function CardPanel({ drawnCard }: CardPanelProps) {
+export function CardPanel({ drawnCard, showResolved = true }: CardPanelProps) {
   const { card } = drawnCard;
   const deck = card.deck;
 
@@ -45,7 +47,7 @@ export function CardPanel({ drawnCard }: CardPanelProps) {
         </p>
         <h2 className="mt-0.5 text-base font-black leading-snug text-slate-950">{card.text}</h2>
       </div>
-      {drawnCard.resolvedMessage ? (
+      {drawnCard.resolvedMessage && showResolved ? (
         <div className="p-4">
           <p className="text-sm font-semibold text-slate-700">{drawnCard.resolvedMessage}</p>
         </div>

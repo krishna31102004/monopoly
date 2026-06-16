@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { usePlayerMovementAnimation } from "@/hooks/usePlayerMovementAnimation";
+import { useGameplayPresentation } from "@/hooks/useGameplayPresentation";
 import { AuctionPanel } from "@/components/AuctionPanel";
 import { CardPanel } from "@/components/CardPanel";
 import { GameBoard } from "@/components/board/GameBoard";
@@ -41,6 +42,15 @@ function getActorId(gs: GameState): string {
 export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction, error, connectionStatus, onLeave, onRequestSync }: Props) {
   const [selectedSpace, setSelectedSpace] = useState<OwnableSpace | null>(null);
   const { displayPositions, isAnimating, landingPlayerIds } = usePlayerMovementAnimation(gameState.players);
+  const { showLandingPanel, showCardPanel, showCardResolved, presentationPhase } = useGameplayPresentation(gameState, isAnimating);
+
+  const presentationStatus =
+    presentationPhase === "rollingDice" ? "Rolling dice…" :
+    presentationPhase === "showingDiceResult" ? `Dice: ${gameState.diceRoll ? `${gameState.diceRoll.die1} + ${gameState.diceRoll.die2}` : "—"}` :
+    presentationPhase === "movingToken" ? "Moving…" :
+    presentationPhase === "landing" ? "Resolving landing…" :
+    presentationPhase === "revealingCard" ? "Revealing card…" :
+    null;
 
   const actorId = getActorId(gameState);
   const isMyTurn = myPlayerId === actorId;
@@ -178,17 +188,17 @@ export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction,
         {/* Sidebar */}
         <aside className="min-w-0 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto">
           <div className="mb-3 grid gap-3">
-            <GameControls state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} isAnimating={isAnimating} />
+            <GameControls state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} isAnimating={isAnimating} presentationStatus={presentationStatus} showLandingMessage={showLandingPanel} />
             {gameState.phase === "awaitingJailDecision" ? (
               <JailActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} />
             ) : null}
-            {gameState.phase === "auction" ? (
+            {gameState.phase === "auction" && showLandingPanel ? (
               <AuctionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} />
             ) : null}
-            {gameState.drawnCard ? (
-              <CardPanel drawnCard={gameState.drawnCard} />
+            {gameState.drawnCard && showCardPanel ? (
+              <CardPanel drawnCard={gameState.drawnCard} showResolved={showCardResolved} />
             ) : null}
-            <LandingActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} />
+            {showLandingPanel ? <LandingActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} /> : null}
             <BankruptcyPanel state={gameState} dispatch={dispatch} />
             <TradePanel state={gameState} dispatch={dispatch} myPlayerId={myPlayerId} />
             <GameLogDrawer entries={gameState.gameLog} />

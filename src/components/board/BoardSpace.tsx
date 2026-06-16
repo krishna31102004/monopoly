@@ -101,6 +101,47 @@ function SpecialMarker({ space }: { space: BoardSpaceType }) {
   }
 }
 
+/** Diagonal stripe overlay indicating a mortgaged property. Sits above color strip, below text content. */
+function MortgageOverlay() {
+  return (
+    <div
+      aria-label="Mortgaged"
+      role="img"
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 4,
+        pointerEvents: "none",
+        background:
+          "repeating-linear-gradient(-45deg, transparent 0px, transparent 5px, rgba(139,0,0,0.14) 5px, rgba(139,0,0,0.14) 6px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: "inherit",
+      }}
+    >
+      <span
+        style={{
+          transform: "rotate(-28deg)",
+          fontSize: "clamp(4px, 0.8vw, 7px)",
+          fontWeight: 900,
+          color: "rgba(139,0,0,0.72)",
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          background: "rgba(255,255,255,0.82)",
+          padding: "1px clamp(2px, 0.4vw, 4px)",
+          borderRadius: "2px",
+          whiteSpace: "nowrap",
+          lineHeight: 1.3,
+          boxShadow: "0 0 0 1px rgba(139,0,0,0.18)",
+        }}
+      >
+        MORTGAGED
+      </span>
+    </div>
+  );
+}
+
 /** Pill badge absolutely positioned over the color strip — does not affect layout flow. */
 function OwnerNameBadge({ owner }: { owner: Player }) {
   const label = owner.name.length > 5 ? owner.name.slice(0, 4) + "…" : owner.name;
@@ -223,10 +264,14 @@ export function BoardSpace({ space, players, allPlayers = [], ownerships = [], l
         />
       ) : null}
 
+      {/* Mortgage overlay — diagonal stripes, sits below text/tokens via z-index */}
+      {!isCorner && ownership?.isMortgaged ? <MortgageOverlay /> : null}
+
       {/* Owner pill badge — absolute over color strip, never disrupts layout flow */}
       {!isCorner && owner ? <OwnerNameBadge owner={owner} /> : null}
 
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-between gap-0.5 p-0.5 sm:p-1">
+      {/* z-index:5 ensures all text/icons paint above the mortgage overlay (z-index:4) */}
+      <div className="relative z-[5] flex min-h-0 flex-1 flex-col items-center justify-between gap-0.5 p-0.5 sm:p-1">
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-0.5">
           {isCorner ? (
             <div className="flex flex-col items-center gap-0.5">
@@ -274,7 +319,7 @@ export function BoardSpace({ space, players, allPlayers = [], ownerships = [], l
           ) : null}
         </div>
 
-        <div className="w-full" style={{ minHeight: "clamp(12px, 18%, 20px)" }}>
+        <div className="relative z-[10] w-full" style={{ minHeight: "clamp(12px, 18%, 20px)" }}>
           {players.length > 0 ? <PlayerToken players={players} landingPlayerIds={landingPlayerIds} /> : null}
         </div>
       </div>

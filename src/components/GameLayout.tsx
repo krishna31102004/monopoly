@@ -2,6 +2,7 @@
 
 import { useEffect, useReducer, useState } from "react";
 import { usePlayerMovementAnimation } from "@/hooks/usePlayerMovementAnimation";
+import { useGameplayPresentation } from "@/hooks/useGameplayPresentation";
 import { AuctionPanel } from "@/components/AuctionPanel";
 import { CardPanel } from "@/components/CardPanel";
 import { GameBoard } from "@/components/board/GameBoard";
@@ -25,6 +26,15 @@ export function GameLayout() {
   const [state, dispatch] = useReducer(gameReducer, undefined, createSetupGameState);
   const [selectedSpace, setSelectedSpace] = useState<OwnableSpace | null>(null);
   const { displayPositions, isAnimating, landingPlayerIds } = usePlayerMovementAnimation(state.players);
+  const { showLandingPanel, showCardPanel, showCardResolved, presentationPhase } = useGameplayPresentation(state, isAnimating);
+
+  const presentationStatus =
+    presentationPhase === "rollingDice" ? "Rolling dice…" :
+    presentationPhase === "showingDiceResult" ? `Dice: ${state.diceRoll ? `${state.diceRoll.die1} + ${state.diceRoll.die2}` : "—"}` :
+    presentationPhase === "movingToken" ? "Moving…" :
+    presentationPhase === "landing" ? "Resolving landing…" :
+    presentationPhase === "revealingCard" ? "Revealing card…" :
+    null;
   // On mount: auto-resume saved game if one exists
   useEffect(() => {
     const saved = loadGame();
@@ -79,17 +89,17 @@ export function GameLayout() {
         {/* Sidebar */}
         <aside className="min-w-0 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto">
           <div className="mb-3 grid gap-3">
-            <GameControls state={state} dispatch={dispatch} isAnimating={isAnimating} />
+            <GameControls state={state} dispatch={dispatch} isAnimating={isAnimating} presentationStatus={presentationStatus} showLandingMessage={showLandingPanel} />
             {state.phase === "awaitingJailDecision" ? (
               <JailActionPanel state={state} dispatch={dispatch} />
             ) : null}
-            {state.phase === "auction" ? (
+            {state.phase === "auction" && showLandingPanel ? (
               <AuctionPanel state={state} dispatch={dispatch} />
             ) : null}
-            {state.drawnCard ? (
-              <CardPanel drawnCard={state.drawnCard} />
+            {state.drawnCard && showCardPanel ? (
+              <CardPanel drawnCard={state.drawnCard} showResolved={showCardResolved} />
             ) : null}
-            <LandingActionPanel state={state} dispatch={dispatch} />
+            {showLandingPanel ? <LandingActionPanel state={state} dispatch={dispatch} /> : null}
             <BankruptcyPanel state={state} dispatch={dispatch} />
             <TradePanel state={state} dispatch={dispatch} />
             <GameSaveControls state={state} dispatch={dispatch} />

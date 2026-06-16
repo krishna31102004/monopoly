@@ -4,6 +4,7 @@ import { useState } from "react";
 import { rollDice } from "@/lib/game/dice";
 import { TokenIcon } from "@/components/board/TokenIcon";
 import { DiceFace } from "@/components/DiceFace";
+import { DICE_ROLL_MS } from "@/lib/animation/timing";
 import type { GameAction, GameState } from "@/types/game";
 
 type GameControlsProps = {
@@ -11,6 +12,10 @@ type GameControlsProps = {
   dispatch: React.Dispatch<GameAction>;
   isMyTurn?: boolean;
   isAnimating?: boolean;
+  /** Presentation phase string shown as status during animation (e.g. "Moving…") */
+  presentationStatus?: string | null;
+  /** When false, the landing message is hidden until the reveal sequence completes */
+  showLandingMessage?: boolean;
 };
 
 function getTurnStatus(state: GameState) {
@@ -53,7 +58,7 @@ function nextRollingValue() {
   return rollingTick;
 }
 
-export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = false }: GameControlsProps) {
+export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = false, presentationStatus, showLandingMessage = true }: GameControlsProps) {
   const [diceRolling, setDiceRolling] = useState(false);
   const [rollingDie1, setRollingDie1] = useState(3);
   const [rollingDie2, setRollingDie2] = useState(5);
@@ -73,7 +78,7 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
     setTimeout(() => {
       clearInterval(shuffleInterval);
       setDiceRolling(false);
-    }, 420);
+    }, DICE_ROLL_MS);
     dispatch({ type: "ROLL_DICE", dice: rollDice() });
   }
 
@@ -99,7 +104,9 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
       </div>
 
       <div className="p-4">
-        <p className={`text-xs font-bold ${status.color}`}>{status.label}</p>
+        <p className={`text-xs font-bold ${presentationStatus ? "text-slate-500" : status.color}`}>
+          {presentationStatus ?? status.label}
+        </p>
 
         {/* Dice display */}
         <div className="mt-3 flex items-center gap-3">
@@ -132,8 +139,8 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
           )}
         </div>
 
-        {/* Landing message */}
-        {state.landingMessage && state.phase !== "auction" && state.phase !== "awaitingJailDecision" ? (
+        {/* Landing message — gated on presentation reveal */}
+        {state.landingMessage && showLandingMessage && state.phase !== "auction" && state.phase !== "awaitingJailDecision" ? (
           <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold leading-5 text-emerald-900">
             {state.landingMessage}
           </div>
@@ -153,15 +160,15 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
           <div className="mt-4 grid gap-2">
             <button
               type="button"
-              disabled={!canRoll || isGameOver || diceRolling}
+              disabled={!canRoll || isGameOver || diceRolling || !!presentationStatus}
               onClick={handleRoll}
               className="w-full rounded-lg bg-slate-950 px-4 py-3 text-sm font-black tracking-wide text-white transition-all duration-100 hover:bg-slate-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
             >
-              {isAnimating ? "Moving…" : "Roll Dice"}
+              {diceRolling ? "Rolling…" : isAnimating ? "Moving…" : "Roll Dice"}
             </button>
             <button
               type="button"
-              disabled={!canEndTurn || isGameOver}
+              disabled={!canEndTurn || isGameOver || !!presentationStatus}
               onClick={() => dispatch({ type: "END_TURN" })}
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-700 transition-all duration-100 hover:bg-white hover:border-slate-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30"
             >

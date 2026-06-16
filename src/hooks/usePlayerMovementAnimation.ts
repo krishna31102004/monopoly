@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { getBoardMovementPath } from "@/lib/animation/movementPath";
+import { TOKEN_STEP_MS as _TOKEN_STEP_MS, TOKEN_LAND_MS as _TOKEN_LAND_MS } from "@/lib/animation/timing";
 import type { Player } from "@/types/player";
 
-export const TOKEN_STEP_MS = 320; // ms per board space — visible board-game pace
-export const TOKEN_LAND_MS = 240; // landing bounce duration
+// Re-export so existing imports from this module continue to work
+export const TOKEN_STEP_MS = _TOKEN_STEP_MS;
+export const TOKEN_LAND_MS = _TOKEN_LAND_MS;
 
 function positionsFromPlayers(players: Player[]): Record<string, number> {
   const pos: Record<string, number> = {};
