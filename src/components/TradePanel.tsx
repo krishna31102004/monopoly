@@ -1,9 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { boardSpaces } from "@/data/board";
 import { canOpenTradeNow } from "@/lib/game/turnTimingRules";
-import { validateTradeDraft, getTradeModalRole } from "@/lib/game/tradeHelpers";
+import {
+  validateTradeDraft,
+  getTradeModalRole,
+  getTradeStatusBadgeText,
+  classifyTradeResultFromLogMessage,
+  type TradeResultKind,
+} from "@/lib/game/tradeHelpers";
 import { TokenIcon } from "@/components/board/TokenIcon";
 import type { GameAction, GameState, TradeOffer } from "@/types/game";
 import type { TradeDraftState, TradeDraftUpdatePayload } from "@/types/multiplayer";
@@ -106,6 +112,35 @@ function PlayerHeader({
   );
 }
 
+const RESULT_BANNER_STYLES: Record<TradeResultKind, string> = {
+  accepted: "border-emerald-300 bg-emerald-50 text-emerald-700",
+  declined: "border-red-300 bg-red-50 text-red-700",
+  cancelled: "border-slate-300 bg-slate-50 text-slate-600",
+};
+
+const RESULT_BANNER_TEXT: Record<TradeResultKind, string> = {
+  accepted: "✅ Trade accepted — assets have been exchanged.",
+  declined: "Trade declined.",
+  cancelled: "Trade cancelled.",
+};
+
+/** Brief, dismiss-on-timeout banner shown to everyone right after a trade resolves. */
+function TradeResultBanner({ kind, onDismiss }: { kind: TradeResultKind; onDismiss: () => void }) {
+  useEffect(() => {
+    const id = setTimeout(onDismiss, 4000);
+    return () => clearTimeout(id);
+  }, [onDismiss]);
+
+  return (
+    <div
+      className={`mb-2 rounded-xl border px-3 py-2 text-xs font-bold shadow-sm ${RESULT_BANNER_STYLES[kind]}`}
+      role="status"
+    >
+      {RESULT_BANNER_TEXT[kind]}
+    </div>
+  );
+}
+
 function descOffer(offer: TradeOffer) {
   const parts: string[] = [];
   if (offer.cash > 0) parts.push(`$${offer.cash.toLocaleString()}`);
@@ -151,7 +186,7 @@ function TradeModalShell({
         role="dialog"
         aria-modal="true"
         aria-labelledby="trade-title"
-        className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-indigo-300 bg-white shadow-[0_32px_100px_rgba(15,23,42,0.35)]"
+        className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-indigo-300 bg-white shadow-[0_32px_100px_rgba(15,23,42,0.35)] sm:rounded-2xl"
       >
         <div className="border-b border-indigo-200 bg-indigo-100 px-5 py-4 shrink-0">
           <div className="flex items-center justify-between">
@@ -291,7 +326,8 @@ function LocalTradeForm({ state, dispatch, myPlayerId }: Props) {
 
   return (
     <TradeModalShell
-      statusLabel="Propose Trade"
+      statusLabel="Trade Negotiation"
+      statusBadge={{ text: getTradeStatusBadgeText({ hasDraft: true, hasPendingTrade: false, isProposer: true }), tone: "live" }}
       title="Build a Deal"
       subtitle="Both sides must agree before the trade goes through"
       onClose={() => { setOpen(false); resetForm(); }}
@@ -336,7 +372,7 @@ function LocalTradeForm({ state, dispatch, myPlayerId }: Props) {
 
       <div className="grid grid-cols-1 divide-y divide-slate-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
         <div className="flex flex-col">
-          {initiatorPlayer ? <PlayerHeader player={initiatorPlayer} label="You offer" side="left" /> : null}
+          {initiatorPlayer ? <PlayerHeader player={initiatorPlayer} label={`${initiatorPlayer.name} gives`} side="left" /> : null}
           <div className="flex-1 p-3 space-y-3">
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1">Cash</label>
@@ -377,7 +413,7 @@ function LocalTradeForm({ state, dispatch, myPlayerId }: Props) {
         </div>
 
         <div className="flex flex-col">
-          {recipientPlayer ? <PlayerHeader player={recipientPlayer} label="They offer" side="right" /> : null}
+          {recipientPlayer ? <PlayerHeader player={recipientPlayer} label={`${recipientPlayer.name} gives`} side="right" /> : null}
           <div className="flex-1 p-3 space-y-3">
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1">Cash</label>
@@ -470,8 +506,11 @@ function LiveDraftModal({
 
   return (
     <TradeModalShell
-      statusLabel="Live Trade Draft"
-      statusBadge={{ text: isProposer ? "Editing live" : "Live — watching", tone: "live" }}
+      statusLabel="Trade Negotiation"
+      statusBadge={{
+        text: getTradeStatusBadgeText({ hasDraft: true, hasPendingTrade: false, isProposer }),
+        tone: "live",
+      }}
       title={`${proposer?.name ?? "Proposer"} ↔ ${recipient?.name ?? "Recipient"}`}
       subtitle={isProposer ? "Your edits update for everyone in real time" : "Watching the proposer build this offer"}
       onClose={isProposer ? onDraftCancel : undefined}
@@ -524,7 +563,7 @@ function LiveDraftModal({
 
       <div className="grid grid-cols-1 divide-y divide-slate-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
         <div className="flex flex-col">
-          {proposer ? <PlayerHeader player={proposer} label="Proposer offers" side="left" /> : null}
+          {proposer ? <PlayerHeader player={proposer} label={`${proposer.name} gives`} side="left" /> : null}
           <div className="flex-1 p-3 space-y-3">
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1">Cash</label>
@@ -577,7 +616,7 @@ function LiveDraftModal({
         </div>
 
         <div className="flex flex-col">
-          {recipient ? <PlayerHeader player={recipient} label="Recipient gives" side="right" locked /> : null}
+          {recipient ? <PlayerHeader player={recipient} label={`${recipient.name} gives`} side="right" locked /> : null}
           <div className="flex-1 p-3 space-y-3">
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1">Cash</label>
@@ -651,12 +690,22 @@ function PendingTradeView({ state, dispatch, myPlayerId }: Props) {
 
   return (
     <TradeModalShell
-      statusLabel="Pending Trade"
-      statusBadge={{ text: "Awaiting response", tone: "pending" }}
+      statusLabel="Trade Negotiation"
+      statusBadge={{
+        text: getTradeStatusBadgeText({
+          hasDraft: false,
+          hasPendingTrade: true,
+          isProposer: isInitiator,
+          recipientName: recipient?.name,
+        }),
+        tone: "pending",
+      }}
       title={`${initiator?.name ?? "?"} → ${recipient?.name ?? "?"}`}
       footer={
         isSpectator ? (
-          <p className="text-xs text-slate-500 italic">Waiting for trade to be resolved…</p>
+          <p className="text-xs text-slate-500 italic">
+            Watching trade negotiation. Only {recipient?.name ?? "the recipient"} can respond.
+          </p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {isRecipient && !isInitiator && (
@@ -731,11 +780,35 @@ function PendingTradeView({ state, dispatch, myPlayerId }: Props) {
 export function TradePanel(props: Props) {
   const { state, dispatch, myPlayerId, tradeDraft, onDraftStart, onDraftUpdate, onDraftCancel, onDraftSubmit } = props;
 
-  if (state.phase === "gameOver") return null;
+  // Detect a trade/draft that just resolved (was open, is now gone) so everyone
+  // in the room — including spectators — sees a brief accepted/declined/cancelled
+  // banner instead of the modal just silently vanishing.
+  const wasOpenRef = useRef(false);
+  const [resultBanner, setResultBanner] = useState<TradeResultKind | null>(null);
+  const isOpenNow = Boolean(state.trade) || Boolean(tradeDraft);
+  useEffect(() => {
+    if (wasOpenRef.current && !isOpenNow) {
+      const lastMessage = state.gameLog[0]?.message;
+      const kind = classifyTradeResultFromLogMessage(lastMessage);
+      if (kind) setResultBanner(kind);
+    }
+    wasOpenRef.current = isOpenNow;
+  }, [isOpenNow, state.gameLog]);
+
+  const banner = resultBanner ? (
+    <TradeResultBanner kind={resultBanner} onDismiss={() => setResultBanner(null)} />
+  ) : null;
+
+  if (state.phase === "gameOver") return banner;
 
   // Already-proposed pending trade always takes priority — visible to everyone.
   if (state.trade) {
-    return <PendingTradeView state={state} dispatch={dispatch} myPlayerId={myPlayerId} />;
+    return (
+      <>
+        {banner}
+        <PendingTradeView state={state} dispatch={dispatch} myPlayerId={myPlayerId} />
+      </>
+    );
   }
 
   const isMultiplayerDraftMode = onDraftStart !== undefined;
@@ -743,14 +816,17 @@ export function TradePanel(props: Props) {
   if (isMultiplayerDraftMode) {
     if (tradeDraft) {
       return (
-        <LiveDraftModal
-          state={state}
-          myPlayerId={myPlayerId}
-          draft={tradeDraft}
-          onDraftUpdate={onDraftUpdate ?? (() => {})}
-          onDraftCancel={onDraftCancel ?? (() => {})}
-          onDraftSubmit={onDraftSubmit ?? (() => {})}
-        />
+        <>
+          {banner}
+          <LiveDraftModal
+            state={state}
+            myPlayerId={myPlayerId}
+            draft={tradeDraft}
+            onDraftUpdate={onDraftUpdate ?? (() => {})}
+            onDraftCancel={onDraftCancel ?? (() => {})}
+            onDraftSubmit={onDraftSubmit ?? (() => {})}
+          />
+        </>
       );
     }
 
@@ -765,6 +841,7 @@ export function TradePanel(props: Props) {
 
     return (
       <div>
+        {banner}
         <button
           disabled={!canPropose || candidates.length === 0}
           className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-bold text-slate-700 shadow-sm transition-all duration-100 hover:bg-slate-50 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-40"
@@ -783,5 +860,10 @@ export function TradePanel(props: Props) {
     );
   }
 
-  return <LocalTradeForm {...props} />;
+  return (
+    <>
+      {banner}
+      <LocalTradeForm {...props} />
+    </>
+  );
 }

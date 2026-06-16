@@ -242,6 +242,20 @@ describe("CANCEL_TRADE reducer", () => {
     expect(next.trade).toBeNull();
   });
 
+  it("logs a cancellation message so every client can show a result banner", () => {
+    let state = makeGameState();
+    state = gameReducer(state, {
+      type: "PROPOSE_TRADE",
+      actorPlayerId: p0Id(state),
+      initiatorId: p0Id(state),
+      recipientId: p1Id(state),
+      offerFromInitiator: EMPTY_OFFER,
+      offerFromRecipient: EMPTY_OFFER,
+    });
+    const next = gameReducer(state, { type: "CANCEL_TRADE", actorPlayerId: p0Id(state) });
+    expect(next.gameLog[0]?.message).toMatch(/cancelled the trade/i);
+  });
+
   it("is a no-op when no trade is pending", () => {
     const state = makeGameState();
     const next = gameReducer(state, { type: "CANCEL_TRADE", actorPlayerId: p0Id(state) });

@@ -108,3 +108,33 @@ export function validateTradeDraft(
 
   return validateTrade(state, proposerId, recipientId, offerFromProposer, offerFromRecipient);
 }
+
+export type TradeResultKind = "accepted" | "declined" | "cancelled";
+
+/**
+ * Classifies the most recent game-log message as a trade resolution kind,
+ * so the UI can show a brief success/declined/cancelled banner for everyone
+ * in the room (including spectators) without needing a dedicated reducer
+ * field — the existing log entry is the only signal every client already
+ * receives identically.
+ */
+export function classifyTradeResultFromLogMessage(message: string | undefined): TradeResultKind | null {
+  if (!message) return null;
+  if (message.startsWith("Trade accepted")) return "accepted";
+  if (message.includes("declined the trade")) return "declined";
+  if (message.includes("cancelled the trade")) return "cancelled";
+  return null;
+}
+
+/** Status badge text shown in the trade modal header, per the modal's current stage. */
+export function getTradeStatusBadgeText(params: {
+  hasDraft: boolean;
+  hasPendingTrade: boolean;
+  isProposer: boolean;
+  recipientName?: string;
+}): string {
+  const { hasDraft, hasPendingTrade, isProposer, recipientName } = params;
+  if (hasPendingTrade) return isProposer ? `Waiting for ${recipientName ?? "recipient"}` : "Offer Sent";
+  if (hasDraft) return isProposer ? "Drafting" : "Live Draft";
+  return "Drafting";
+}

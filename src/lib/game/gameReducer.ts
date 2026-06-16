@@ -993,7 +993,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case "CANCEL_TRADE": {
       if (!state.trade) return state;
       if (action.actorPlayerId !== state.trade.initiatorPlayerId) return state;
-      return { ...state, trade: null };
+      const initiator = state.players.find((p) => p.id === state.trade!.initiatorPlayerId);
+      const msg = `${initiator?.name ?? "Proposer"} cancelled the trade.`;
+      return { ...state, trade: null, gameLog: addLogEntry(state.gameLog, msg) };
     }
 
     case "RESOLVE_BANKRUPTCY_IF_SOLVENT": {

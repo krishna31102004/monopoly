@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { getTradeModalRole, canEditTradeDraft, canSubmitTradeDraft } from "@/lib/game/tradeHelpers";
+import {
+  getTradeModalRole,
+  canEditTradeDraft,
+  canSubmitTradeDraft,
+  getTradeStatusBadgeText,
+  classifyTradeResultFromLogMessage,
+} from "@/lib/game/tradeHelpers";
 import { makeGameState } from "./helpers/factory";
 import type { TradeDraftState } from "@/types/multiplayer";
 
@@ -37,5 +43,44 @@ describe("Premium trade UI — three visual states map to distinct roles", () =>
     const liveDraft: TradeDraftState = { ...draft, proposerId: state.players[0].id, recipientId: state.players[1].id };
     expect(canSubmitTradeDraft(state, liveDraft.proposerId, liveDraft)).toBe(true);
     expect(canSubmitTradeDraft(state, liveDraft.recipientId, liveDraft)).toBe(false);
+  });
+});
+
+describe("trade modal status badge text reflects the negotiation stage", () => {
+  it("shows 'Drafting' for the proposer before anything is sent", () => {
+    expect(getTradeStatusBadgeText({ hasDraft: true, hasPendingTrade: false, isProposer: true })).toBe("Drafting");
+  });
+
+  it("shows 'Live Draft' to the recipient/spectators watching a draft", () => {
+    expect(getTradeStatusBadgeText({ hasDraft: true, hasPendingTrade: false, isProposer: false })).toBe("Live Draft");
+  });
+
+  it("shows 'Waiting for <recipient>' to the proposer once the offer is sent", () => {
+    expect(
+      getTradeStatusBadgeText({ hasDraft: false, hasPendingTrade: true, isProposer: true, recipientName: "Ravi" }),
+    ).toBe("Waiting for Ravi");
+  });
+
+  it("shows 'Offer Sent' to the recipient/spectators once the offer is sent", () => {
+    expect(getTradeStatusBadgeText({ hasDraft: false, hasPendingTrade: true, isProposer: false })).toBe("Offer Sent");
+  });
+});
+
+describe("trade result banner classification from the game log", () => {
+  it("classifies an accepted trade", () => {
+    expect(classifyTradeResultFromLogMessage("Trade accepted: P1 gave $100 to P2 in exchange for nothing.")).toBe("accepted");
+  });
+
+  it("classifies a declined trade", () => {
+    expect(classifyTradeResultFromLogMessage("P2 declined the trade.")).toBe("declined");
+  });
+
+  it("classifies a cancelled trade", () => {
+    expect(classifyTradeResultFromLogMessage("P1 cancelled the trade.")).toBe("cancelled");
+  });
+
+  it("returns null for unrelated log messages or no message", () => {
+    expect(classifyTradeResultFromLogMessage("P1 rolled a 6 and a 4.")).toBeNull();
+    expect(classifyTradeResultFromLogMessage(undefined)).toBeNull();
   });
 });
