@@ -16,8 +16,14 @@ describe("owner badge cleanup", () => {
     expect(boardSpaceSource).not.toContain('owner.name.slice(0, 4) + "…"');
   });
 
-  it("uses the getOwnerBadgePlacement helper for edge-attached positioning", () => {
-    expect(boardSpaceSource).toContain("getOwnerBadgePlacement");
+  it("uses the getOwnerBadgeClassName helper for the restored fixed positioning", () => {
+    expect(boardSpaceSource).toContain("getOwnerBadgeClassName");
+  });
+
+  it("badge sits at the restored fixed top-center placement, not edge-varying", () => {
+    expect(boardSpaceSource).toContain('top: "2px"');
+    expect(boardSpaceSource).toContain('left: "50%"');
+    expect(boardSpaceSource).toContain('transform: "translateX(-50%)"');
   });
 
   it("the badge component never hardcodes a 'PLAY' style label", () => {

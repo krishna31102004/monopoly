@@ -2,44 +2,33 @@ import { getColorGroupSpaces, ownsFullColorGroup } from "@/lib/game/propertyDeve
 import type { CityProperty } from "@/types/board";
 import type { PropertyOwnership } from "@/types/game";
 
-/** Which outer edge of the board a tile sits on, based on its grid index (0-39). Bottom row is
- *  0-10, left column is 11-20, top row is 21-30, right column is 31-39 (see board-grid.ts). */
-export type BoardEdge = "bottom" | "left" | "top" | "right";
+/** Restored (pre-4E.5) badge placement: a single fixed position — top-center, absolutely
+ *  positioned over the color strip — regardless of which side of the board the tile sits on.
+ *  Kept as a named type/return value (rather than a literal) so callers and tests have a
+ *  stable contract even though there is currently only one placement. */
+export type BoardEdge = "top-center";
 
-/** Compact, premium owner badge label — initials, never a truncated "PLAY…"-style fragment.
- *  - Multi-word names: initials of the first two words ("Krishna Balaji" -> "KB").
- *  - Single word + trailing digits: first letter + digits ("Player2" -> "P2").
- *  - Short single word (<=4 chars): full word, uppercased ("ansh" -> "ANSH", "kb" -> "KB").
- *  - Long single word with no digits: first two letters ("Player" -> "PL"). */
+/** Owner badge label — the player's actual display name, not initials. Truncated with an
+ *  ellipsis only when the name is too long to fit the tile; short/normal names (e.g. "kb",
+ *  "ansh", "botdaddy") are shown verbatim, case preserved. */
+const MAX_BADGE_NAME_LENGTH = 10;
+
 export function getOwnerBadgeLabel(playerName: string): string {
   const trimmed = playerName.trim();
   if (!trimmed) return "?";
-
-  const words = trimmed.split(/\s+/);
-  if (words.length > 1) {
-    return words
-      .slice(0, 2)
-      .map((w) => w[0]?.toUpperCase() ?? "")
-      .join("");
-  }
-
-  const word = words[0];
-  const digitMatch = word.match(/^([A-Za-z]+)(\d+)$/);
-  if (digitMatch) {
-    return (digitMatch[1][0] + digitMatch[2]).toUpperCase();
-  }
-
-  if (word.length <= 4) return word.toUpperCase();
-  return word.slice(0, 2).toUpperCase();
+  if (trimmed.length <= MAX_BADGE_NAME_LENGTH) return trimmed;
+  return `${trimmed.slice(0, MAX_BADGE_NAME_LENGTH - 1)}…`;
 }
 
-/** The board edge a tile's owner badge should attach to, so it never overlaps the city name,
- *  price, or houses/hotels in the tile's interior. */
-export function getOwnerBadgePlacement(spaceIndex: number): BoardEdge {
-  if (spaceIndex >= 0 && spaceIndex <= 10) return "bottom";
-  if (spaceIndex >= 11 && spaceIndex <= 20) return "left";
-  if (spaceIndex >= 21 && spaceIndex <= 30) return "top";
-  return "right";
+/** The owner badge's placement, restored to the single pre-4E.5 position (top-center over the
+ *  color strip) for every space, regardless of which side of the board it's on. */
+export function getOwnerBadgePlacement(_spaceIndex: number): BoardEdge {
+  return "top-center";
+}
+
+/** CSS class for the badge's positioning, matching the restored top-center placement. */
+export function getOwnerBadgeClassName(_spaceIndex: number): string {
+  return "board-owner-badge-top-center";
 }
 
 /** True when the given owner currently owns every city in this property's color group —

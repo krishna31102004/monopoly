@@ -1,5 +1,5 @@
 import { PlayerToken } from "@/components/board/PlayerToken";
-import { getOwnerBadgeLabel, getOwnerBadgePlacement, isFullSetOwner } from "@/lib/ui/boardTilePresentation";
+import { getOwnerBadgeClassName, getOwnerBadgeLabel, isFullSetOwner } from "@/lib/ui/boardTilePresentation";
 import type {
   BoardSpace as BoardSpaceType,
   CityColorGroup,
@@ -143,23 +143,21 @@ function MortgageOverlay() {
   );
 }
 
-const EDGE_POSITION_STYLE: Record<ReturnType<typeof getOwnerBadgePlacement>, React.CSSProperties> = {
-  bottom: { bottom: "2px", left: "50%", transform: "translateX(-50%)" },
-  top: { top: "2px", left: "50%", transform: "translateX(-50%)" },
-  left: { left: "2px", top: "2px" },
-  right: { right: "2px", top: "2px" },
-};
-
-/** Compact, edge-attached owner badge — initials only, never overlaps the city name, price,
- *  player tokens, or houses/hotels (which live in the tile's vertical center/footer). */
+/** Owner badge — fixed top-center placement over the color strip, showing the owner's full
+ *  display name (not initials), never overlapping the city name, price, player tokens, or
+ *  houses/hotels (which live in the tile's vertical center/footer). */
 function OwnerNameBadge({ owner, spaceIndex }: { owner: Player; spaceIndex: number }) {
   const label = getOwnerBadgeLabel(owner.name);
-  const placement = getOwnerBadgePlacement(spaceIndex);
+  const className = getOwnerBadgeClassName(spaceIndex);
   return (
     <div
       title={`Owned by ${owner.name}`}
+      className={className}
       style={{
         position: "absolute",
+        top: "2px",
+        left: "50%",
+        transform: "translateX(-50%)",
         zIndex: 8,
         backgroundColor: owner.color,
         borderRadius: "999px",
@@ -168,9 +166,8 @@ function OwnerNameBadge({ owner, spaceIndex }: { owner: Player; spaceIndex: numb
         border: "1px solid rgba(255,255,255,0.35)",
         pointerEvents: "none",
         whiteSpace: "nowrap",
-        maxWidth: "60%",
+        maxWidth: "85%",
         overflow: "hidden",
-        ...EDGE_POSITION_STYLE[placement],
       }}
     >
       <span
@@ -178,9 +175,8 @@ function OwnerNameBadge({ owner, spaceIndex }: { owner: Player; spaceIndex: numb
           fontSize: "clamp(4px, 0.7vw, 7px)",
           fontWeight: 900,
           color: "#fff",
-          letterSpacing: "0.04em",
+          letterSpacing: "0.02em",
           lineHeight: 1,
-          textTransform: "uppercase",
           display: "block",
           overflow: "hidden",
           textOverflow: "ellipsis",
