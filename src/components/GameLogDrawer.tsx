@@ -8,9 +8,6 @@ type GameLogDrawerProps = {
   entries: GameLogEntry[];
 };
 
-/** Collapsed-by-default count of entries previewed at the top of the drawer header. */
-const COLLAPSED_PREVIEW_COUNT = 2;
-
 const TONE_DOT_CLASS: Record<GameLogTone, string> = {
   success: "bg-emerald-500",
   danger: "bg-red-500",
@@ -22,7 +19,6 @@ const TONE_DOT_CLASS: Record<GameLogTone, string> = {
 export function GameLogDrawer({ entries }: GameLogDrawerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const grouped = getGroupedGameLogEntries(entries);
-  const preview = grouped.slice(0, COLLAPSED_PREVIEW_COUNT);
 
   return (
     <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -35,28 +31,15 @@ export function GameLogDrawer({ entries }: GameLogDrawerProps) {
         <div className="flex items-center gap-2 min-w-0">
           <div className="min-w-0">
             <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
-              Timeline
+              Game Log
             </p>
-            {!isOpen && preview.length > 0 ? (
-              <p className="truncate text-xs font-bold text-slate-700">
-                <span aria-hidden="true">{preview[0].icon}</span> {preview[0].entry.message}
-              </p>
-            ) : (
-              <h2 className="text-base font-black text-slate-950">Recent Actions</h2>
-            )}
+            <h2 className="text-base font-black text-slate-950">Recent Actions</h2>
           </div>
-          {!isOpen && entries.length > 0 && (
-            <span className="ml-1 shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700">
-              {entries.length}
-            </span>
-          )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {isOpen && (
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black text-slate-600">
-              {entries.length}
-            </span>
-          )}
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black text-slate-600">
+            {entries.length}
+          </span>
           <span className="text-slate-400 text-sm font-bold" aria-hidden="true">
             {isOpen ? "▲" : "▼"}
           </span>
