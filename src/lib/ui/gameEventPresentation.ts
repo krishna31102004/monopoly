@@ -18,12 +18,22 @@ export type GameEventKind =
 
 export type GameEventTone = "success" | "danger" | "warning" | "info" | "neutral";
 
+/** Where the banner is safe to render. "board-center" is the only zone guaranteed not to
+ *  overlap a board space tile (the outer ring of the grid is fully occupied by spaces). */
+export type GameEventBannerPlacement = "board-center" | "board-top-edge";
+
 export type GameEventBanner = {
   kind: GameEventKind;
   text: string;
   tone: GameEventTone;
   icon: string;
+  placement: GameEventBannerPlacement;
 };
+
+/** Every event kind renders inside the safe board-center zone — never over the board's edge spaces. */
+export function getEventBannerPlacement(_kind: GameEventKind): GameEventBannerPlacement {
+  return "board-center";
+}
 
 const EVENT_PATTERNS: Array<{
   kind: GameEventKind;
@@ -77,7 +87,7 @@ export function getGameEventBannerFromLogEntry(
   const kind = classifyGameEvent(logEntry.message);
   if (!kind) return null;
   const pattern = EVENT_PATTERNS.find((p) => p.kind === kind)!;
-  return { kind, text: logEntry.message, tone: pattern.tone, icon: pattern.icon };
+  return { kind, text: logEntry.message, tone: pattern.tone, icon: pattern.icon, placement: getEventBannerPlacement(kind) };
 }
 
 export type MoneyMovementFeedback =
@@ -151,6 +161,12 @@ export function getCardRevealTone(deck: "chance" | "community-chest" | string): 
 /** True once a drawn card should be visually presented (gated by the existing reveal sequencer). */
 export function shouldShowCardReveal(state: GameState, showCardPanel: boolean): boolean {
   return state.drawnCard !== null && showCardPanel;
+}
+
+/** The card reveal modal always exposes a user-controlled Continue/Dismiss action — the user is
+ *  never trapped waiting for an automatic timer. */
+export function getCardRevealDismissAction(): "continue" {
+  return "continue";
 }
 
 /** True while an auction-related banner should be considered (start/win/no-bid moment is in the log). */

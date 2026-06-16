@@ -36,12 +36,9 @@ export function GameEventBanner({ latestLogEntry }: GameEventBannerProps) {
   if (!visibleBanner) return null;
 
   return (
-    <div
-      className="pointer-events-none absolute inset-x-0 top-2 z-30 flex justify-center px-2 sm:top-3"
-      aria-live="polite"
-    >
+    <div className="mt-1.5 flex w-full justify-center px-1" aria-live="polite">
       <div
-        className={`game-event-banner pointer-events-auto max-w-[min(92vw,420px)] rounded-full border px-4 py-2 text-center text-xs font-black shadow-lg backdrop-blur-sm sm:text-sm ${TONE_STYLES[visibleBanner.tone]}`}
+        className={`game-event-banner max-w-full truncate rounded-full border px-3 py-1.5 text-center text-[10px] font-black shadow-md backdrop-blur-sm sm:text-xs ${TONE_STYLES[visibleBanner.tone]}`}
         role="status"
       >
         <span className="mr-1.5" aria-hidden="true">{visibleBanner.icon}</span>

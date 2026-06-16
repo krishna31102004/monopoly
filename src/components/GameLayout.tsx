@@ -33,7 +33,7 @@ export function GameLayout() {
   const [state, dispatch] = useReducer(gameReducer, undefined, createSetupGameState);
   const [selectedSpace, setSelectedSpace] = useState<OwnableSpace | null>(null);
   const { displayPositions, isAnimating, landingPlayerIds } = usePlayerMovementAnimation(state.players);
-  const { showLandingPanel, showCardPanel, showCardResolved, presentationPhase } = useGameplayPresentation(state, isAnimating);
+  const { showLandingPanel, showCardPanel, showCardResolved, presentationPhase, dismissCard } = useGameplayPresentation(state, isAnimating);
 
   const presentationStatus =
     presentationPhase === "rollingDice" ? "Rolling dice…" :
@@ -107,7 +107,7 @@ export function GameLayout() {
               <AuctionPanel state={state} dispatch={dispatch} />
             ) : null}
             {state.drawnCard && showCardPanel ? (
-              <CardPanel drawnCard={state.drawnCard} showResolved={showCardResolved} />
+              <CardPanel drawnCard={state.drawnCard} showResolved={showCardResolved} onContinue={dismissCard} />
             ) : null}
             {showLandingPanel ? <LandingActionPanel state={state} dispatch={dispatch} /> : null}
             <BankruptcyPanel state={state} dispatch={dispatch} />

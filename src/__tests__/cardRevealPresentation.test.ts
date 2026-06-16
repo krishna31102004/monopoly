@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getCardRevealTone, shouldShowCardReveal } from "@/lib/ui/gameEventPresentation";
+import { getCardRevealTone, shouldShowCardReveal, getCardRevealDismissAction } from "@/lib/ui/gameEventPresentation";
 import { makeGameState } from "./helpers/factory";
 import type { DrawnCard } from "@/types/game";
 
@@ -61,5 +61,11 @@ describe("shouldShowCardReveal", () => {
   it("is false when no card has been drawn", () => {
     const state = makeGameState();
     expect(shouldShowCardReveal(state, true)).toBe(false);
+  });
+});
+
+describe("getCardRevealDismissAction", () => {
+  it("exposes a user-controlled continue/dismiss action so the user is never trapped on the reveal", () => {
+    expect(getCardRevealDismissAction()).toBe("continue");
   });
 });

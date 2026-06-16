@@ -110,6 +110,8 @@ export function GameBoard({
                     Buy cities · Collect rent · Win the world
                   </p>
                 )}
+
+                <GameEventBanner latestLogEntry={latestLogEntry} />
               </div>
 
               {spaces.map((space) => (
@@ -124,8 +126,6 @@ export function GameBoard({
                   onOpenProperty={onOpenProperty}
                 />
               ))}
-
-              <GameEventBanner latestLogEntry={latestLogEntry} />
             </div>
           </div>
         </div>

@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   classifyGameEvent,
   getGameEventBannerFromLogEntry,
+  getEventBannerPlacement,
   shouldShowAuctionBanner,
+  type GameEventKind,
 } from "@/lib/ui/gameEventPresentation";
 import type { GameLogEntry } from "@/types/game";
 
@@ -110,6 +112,36 @@ describe("getGameEventBannerFromLogEntry", () => {
     expect(getGameEventBannerFromLogEntry(entry("kb's turn begins."))).toBeNull();
     expect(getGameEventBannerFromLogEntry(null)).toBeNull();
     expect(getGameEventBannerFromLogEntry(undefined)).toBeNull();
+  });
+
+  it("never places a banner over the board's top edge — only the safe board-center zone", () => {
+    const banner = getGameEventBannerFromLogEntry(entry("kb bought Bengaluru for $120."));
+    expect(banner?.placement).toBe("board-center");
+    expect(banner?.placement).not.toBe("board-top-edge");
+  });
+});
+
+describe("getEventBannerPlacement", () => {
+  const kinds: GameEventKind[] = [
+    "purchase",
+    "rent",
+    "tax",
+    "freeParkingCollect",
+    "auctionStart",
+    "auctionWin",
+    "auctionNoBid",
+    "tradeAccepted",
+    "tradeDeclined",
+    "tradeCancelled",
+    "debtPending",
+    "bankruptcyResolved",
+  ];
+
+  it("returns a safe placement (never board-top-edge) for every event kind", () => {
+    for (const kind of kinds) {
+      expect(getEventBannerPlacement(kind)).toBe("board-center");
+      expect(getEventBannerPlacement(kind)).not.toBe("board-top-edge");
+    }
   });
 });
 

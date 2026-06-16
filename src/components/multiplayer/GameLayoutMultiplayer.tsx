@@ -68,7 +68,7 @@ export function GameLayoutMultiplayer({
 }: Props) {
   const [selectedSpace, setSelectedSpace] = useState<OwnableSpace | null>(null);
   const { displayPositions, isAnimating, landingPlayerIds } = usePlayerMovementAnimation(gameState.players);
-  const { showLandingPanel, showCardPanel, showCardResolved, presentationPhase } = useGameplayPresentation(gameState, isAnimating);
+  const { showLandingPanel, showCardPanel, showCardResolved, presentationPhase, dismissCard } = useGameplayPresentation(gameState, isAnimating);
 
   const presentationStatus =
     presentationPhase === "rollingDice" ? "Rolling dice…" :
@@ -225,7 +225,7 @@ export function GameLayoutMultiplayer({
               <AuctionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} serverAuthoritative />
             ) : null}
             {gameState.drawnCard && showCardPanel ? (
-              <CardPanel drawnCard={gameState.drawnCard} showResolved={showCardResolved} />
+              <CardPanel drawnCard={gameState.drawnCard} showResolved={showCardResolved} onContinue={dismissCard} />
             ) : null}
             {showLandingPanel ? <LandingActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} /> : null}
             <BankruptcyPanel state={gameState} dispatch={dispatch} />

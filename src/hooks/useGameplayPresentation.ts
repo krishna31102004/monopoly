@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   DICE_ROLL_MS,
   LANDING_REVEAL_DELAY_MS,
-  CARD_REVEAL_MIN_MS,
 } from "@/lib/animation/timing";
 import type { GameState } from "@/types/game";
 
@@ -27,6 +26,8 @@ export type GameplayPresentationPhase =
  *   showCardResolved  — gate for the resolvedMessage inside CardPanel
  *   diceRolling       — true while the local dice animation should play
  *   presentationPhase — current phase, useful for status messages
+ *   dismissCard       — call when the user clicks Continue on the card reveal modal;
+ *                        hides the card and reveals the landing/outcome panel immediately
  */
 export function useGameplayPresentation(state: GameState, isAnimating: boolean): {
   showLandingPanel: boolean;
@@ -34,6 +35,7 @@ export function useGameplayPresentation(state: GameState, isAnimating: boolean):
   showCardResolved: boolean;
   diceRolling: boolean;
   presentationPhase: GameplayPresentationPhase;
+  dismissCard: () => void;
 } {
   // Derive a stable key that changes exactly once per new dice roll
   const diceKey =
@@ -121,13 +123,12 @@ export function useGameplayPresentation(state: GameState, isAnimating: boolean):
 
       if (hasCard) {
         addTimer(() => {
+          // Show the full card (text + result) immediately; the user advances
+          // via the Continue button (dismissCard) instead of an auto-timer,
+          // so they're never left waiting or stuck on the reveal.
           setShowCardPanel(true);
+          setShowCardResolved(true);
           setPresentationPhase("revealingCard");
-          addTimer(() => {
-            setShowCardResolved(true);
-            setShowLandingPanel(true);
-            revealAll();
-          }, CARD_REVEAL_MIN_MS);
         }, LANDING_REVEAL_DELAY_MS);
       } else {
         addTimer(() => revealAll(), LANDING_REVEAL_DELAY_MS);
@@ -141,11 +142,18 @@ export function useGameplayPresentation(state: GameState, isAnimating: boolean):
     // clearTimers only uses timersRef, no reactive deps needed
   }, []);
 
+  function dismissCard() {
+    clearTimers();
+    setShowCardPanel(false);
+    revealAll();
+  }
+
   return {
     showLandingPanel,
     showCardPanel,
     showCardResolved,
     diceRolling,
     presentationPhase,
+    dismissCard,
   };
 }
