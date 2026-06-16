@@ -1210,3 +1210,20 @@ npm run dev:all    # starts Next.js (port 3000) + Socket.IO server (port 3001) t
 - Server-side dice rolling
 - Full game state broadcast after every action
 - Add QR code generation for lobby invite
+
+## Phase 4E.2: Premium Player Panel Redesign Status ✅
+
+Redesigned `PlayerPanel.tsx` into a premium "board-game card" style: dominant
+glowing/gradient styling + "Now Playing" strip for the current player, status
+chips (TURN/ONLINE/IN JAIL/DEBT/BANKRUPT/TRADING/AUCTION, bankrupt suppresses
+the rest), a compact "Free"/jail-card chip vs. a dramatic "Attempt N/3" panel
+when jailed, color-grouped property chips (★ full-set highlight) plus
+distinct airport/utility chip styling, a relative wealth bar, and a
+click-to-expand portfolio detail section (houses/hotels/mortgaged counts).
+Pure decision logic extracted to `src/lib/game/playerPanelHelpers.ts` for
+testability (no DOM library available in this repo, consistent with the
+`tradeHelpers.ts` precedent from 4E.1). Wired `isOnline`/trade/auction/debt
+flags into both `GameLayout.tsx` (local) and `GameLayoutMultiplayer.tsx`.
+
+Tests: added `src/__tests__/playerPanelHelpers.test.ts` (18 tests). Full
+suite: 838/838 passing, typecheck/lint/build clean.

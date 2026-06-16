@@ -16,6 +16,11 @@ import { BankruptcyPanel } from "@/components/BankruptcyPanel";
 import { TradePanel } from "@/components/TradePanel";
 import { MobileActionBar } from "@/components/MobileActionBar";
 import { boardSpaces } from "@/data/board";
+import {
+  isPlayerInActiveAuction,
+  isPlayerInActiveTrade,
+  isPlayerInDebt,
+} from "@/lib/game/playerPanelHelpers";
 import type { GameAction, GameState } from "@/types/game";
 import type { GameActionIntent, RoomPublicView, TradeDraftState, TradeDraftStartPayload, TradeDraftUpdatePayload } from "@/types/multiplayer";
 import type { OwnableSpace } from "@/types/board";
@@ -254,6 +259,11 @@ export function GameLayoutMultiplayer({
                 spaces={boardSpaces}
                 ownerships={gameState.ownerships}
                 isCurrentPlayer={index === gameState.currentPlayerIndex}
+                allPlayers={gameState.players}
+                isOnline={room.players.find((p) => p.playerId === player.id)?.connected}
+                isInActiveTrade={isPlayerInActiveTrade(gameState, player.id)}
+                isInActiveAuction={isPlayerInActiveAuction(gameState, player.id)}
+                isInDebt={isPlayerInDebt(gameState, player.id)}
               />
             ))}
           </div>

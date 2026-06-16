@@ -21,6 +21,11 @@ import { boardSpaces } from "@/data/board";
 import { createSetupGameState } from "@/lib/game/createInitialGameState";
 import { gameReducer } from "@/lib/game/gameReducer";
 import { saveGame, loadGame } from "@/lib/game/persistence";
+import {
+  isPlayerInActiveAuction,
+  isPlayerInActiveTrade,
+  isPlayerInDebt,
+} from "@/lib/game/playerPanelHelpers";
 import type { OwnableSpace } from "@/types/board";
 
 export function GameLayout() {
@@ -128,6 +133,10 @@ export function GameLayout() {
                 spaces={boardSpaces}
                 ownerships={state.ownerships}
                 isCurrentPlayer={index === state.currentPlayerIndex}
+                allPlayers={state.players}
+                isInActiveTrade={isPlayerInActiveTrade(state, player.id)}
+                isInActiveAuction={isPlayerInActiveAuction(state, player.id)}
+                isInDebt={isPlayerInDebt(state, player.id)}
               />
             ))}
           </div>
