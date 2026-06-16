@@ -1,6 +1,4 @@
-import { getBoardSpaceByIndex } from "@/data/board";
 import type { DrawnCard, GameLogEntry, GameState } from "@/types/game";
-import type { TradeDraftState } from "@/types/multiplayer";
 
 export type GameEventKind =
   | "purchase"
@@ -206,56 +204,4 @@ export type PresentationPhase =
  *  until a reliable animation-completion event queue exists to reintroduce it safely. */
 export function shouldShowEventBannerNow(_params: { presentationPhase: PresentationPhase }): boolean {
   return false;
-}
-
-export type BoardCenterStatus = {
-  title: string;
-  subtitle?: string;
-};
-
-/** Computes what the board's center hero area should show right now, in priority order:
- *  card reveal > auction > trade negotiation > debt pending > dice roll > free parking pot > idle turn. */
-export function getBoardCenterStatus(
-  state: GameState,
-  options?: { tradeDraft?: TradeDraftState | null },
-): BoardCenterStatus {
-  if (state.phase === "gameOver") {
-    const winner = state.players.find((p) => p.id === state.winnerId);
-    return { title: "Game Over", subtitle: winner ? `${winner.name} wins!` : undefined };
-  }
-
-  if (state.drawnCard) {
-    const deckLabel = state.drawnCard.card.deck === "chance" ? "Chance" : "Community Chest";
-    return { title: `${deckLabel} Card Drawn` };
-  }
-
-  if (state.phase === "auction" && state.auction) {
-    const space = getBoardSpaceByIndex(state.auction.propertySpaceIndex);
-    return { title: `Auction: ${space.name}` };
-  }
-
-  if (state.trade || options?.tradeDraft) {
-    return { title: "Trade Negotiation Active" };
-  }
-
-  if (state.bankruptcy) {
-    const debtor = state.players.find((p) => p.id === state.bankruptcy!.debtorPlayerId);
-    return { title: "Payment Required", subtitle: debtor ? `${debtor.name} owes $${state.bankruptcy!.amountOwed}` : undefined };
-  }
-
-  if (state.diceRoll && state.currentPlayerHasRolled) {
-    const { die1, die2, total } = state.diceRoll;
-    return { title: `Rolled ${die1} + ${die2} = ${total}` };
-  }
-
-  if (state.rules.freeParkingCash && state.freeParkingPot > 0) {
-    const currentPlayer = state.players[state.currentPlayerIndex];
-    return {
-      title: `Current Turn: ${currentPlayer?.name ?? "—"}`,
-      subtitle: `Free Parking Pot: $${state.freeParkingPot}`,
-    };
-  }
-
-  const currentPlayer = state.players[state.currentPlayerIndex];
-  return { title: `Current Turn: ${currentPlayer?.name ?? "—"}` };
 }

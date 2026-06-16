@@ -26,7 +26,6 @@ import {
   isPlayerInActiveTrade,
   isPlayerInDebt,
 } from "@/lib/game/playerPanelHelpers";
-import { getBoardCenterStatus } from "@/lib/ui/gameEventPresentation";
 import type { OwnableSpace } from "@/types/board";
 
 export function GameLayout() {
@@ -91,7 +90,6 @@ export function GameLayout() {
             landingPlayerIds={landingPlayerIds}
             onOpenProperty={setSelectedSpace}
             currentPlayerIndex={state.currentPlayerIndex}
-            centerStatus={getBoardCenterStatus(state)}
           />
         </section>
 

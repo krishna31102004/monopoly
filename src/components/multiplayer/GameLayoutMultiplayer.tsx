@@ -21,7 +21,6 @@ import {
   isPlayerInActiveTrade,
   isPlayerInDebt,
 } from "@/lib/game/playerPanelHelpers";
-import { getBoardCenterStatus } from "@/lib/ui/gameEventPresentation";
 import type { GameAction, GameState } from "@/types/game";
 import type { GameActionIntent, RoomPublicView, TradeDraftState, TradeDraftStartPayload, TradeDraftUpdatePayload } from "@/types/multiplayer";
 import type { OwnableSpace } from "@/types/board";
@@ -209,7 +208,6 @@ export function GameLayoutMultiplayer({
             landingPlayerIds={landingPlayerIds}
             onOpenProperty={setSelectedSpace}
             currentPlayerIndex={gameState.currentPlayerIndex}
-            centerStatus={getBoardCenterStatus(gameState, { tradeDraft })}
           />
         </section>
 

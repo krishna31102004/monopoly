@@ -4,7 +4,6 @@ import { useRef } from "react";
 import { BoardSpace } from "@/components/board/BoardSpace";
 import { getBoardGridPlacement } from "@/lib/board-grid";
 import { scrollBoardToSpace, MOBILE_BOARD_SIZE_PX } from "@/lib/animation/boardScroll";
-import type { BoardCenterStatus } from "@/lib/ui/gameEventPresentation";
 import type { BoardSpace as BoardSpaceType, OwnableSpace } from "@/types/board";
 import type { PropertyOwnership } from "@/types/game";
 import type { Player } from "@/types/player";
@@ -20,8 +19,6 @@ type GameBoardProps = {
   onOpenProperty: (space: OwnableSpace) => void;
   /** Index of the player whose turn it is — used by "Find me" on mobile */
   currentPlayerIndex?: number;
-  /** Dynamic center-of-board status (turn, dice, auction, trade, pot, etc.) */
-  centerStatus?: BoardCenterStatus;
 };
 
 export function GameBoard({
@@ -32,7 +29,6 @@ export function GameBoard({
   landingPlayerIds,
   onOpenProperty,
   currentPlayerIndex = 0,
-  centerStatus,
 }: GameBoardProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -90,22 +86,9 @@ export function GameBoard({
                   ))}
                 </div>
 
-                {centerStatus ? (
-                  <div className="mt-2 rounded-full border border-amber-300 bg-white/80 px-3 py-1.5 shadow-sm backdrop-blur-sm">
-                    <p className="text-[10px] font-black leading-tight text-slate-900 sm:text-xs">
-                      {centerStatus.title}
-                    </p>
-                    {centerStatus.subtitle ? (
-                      <p className="mt-0.5 text-[9px] font-bold leading-tight text-amber-700 sm:text-[10px]">
-                        {centerStatus.subtitle}
-                      </p>
-                    ) : null}
-                  </div>
-                ) : (
-                  <p className="mt-1 hidden text-[10px] font-semibold leading-5 text-slate-500 sm:block sm:text-xs">
-                    Buy cities · Collect rent · Win the world
-                  </p>
-                )}
+                <p className="mt-1 hidden text-[10px] font-semibold leading-5 text-slate-500 sm:block sm:text-xs">
+                  Buy cities · Collect rent · Win the world
+                </p>
               </div>
 
               {spaces.map((space) => (

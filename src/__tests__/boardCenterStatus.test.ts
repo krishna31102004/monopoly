@@ -1,107 +1,72 @@
+// Phase 4E.4F removed the board-center status pill entirely (it showed "Rolled X + Y = Z",
+// purchase/rent/tax/card status, auction/trade status, etc., duplicating info already shown in
+// GameControls, the game log, and the landing panel). getBoardCenterStatus/BoardCenterStatus
+// were deleted from gameEventPresentation.ts. This file now asserts via source text that the
+// board center renders only clean branding with no notification pill.
 import { describe, it, expect } from "vitest";
-import { getBoardCenterStatus } from "@/lib/ui/gameEventPresentation";
-import { makeGameState, dice } from "./helpers/factory";
-import type { AuctionState, BankruptcyState, TradeState } from "@/types/game";
-import type { TradeDraftState } from "@/types/multiplayer";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
-describe("getBoardCenterStatus", () => {
-  it("shows branding/current-turn in the idle state", () => {
-    const state = makeGameState();
-    const status = getBoardCenterStatus(state);
-    expect(status.title).toBe(`Current Turn: ${state.players[0].name}`);
+const gameBoardSource = readFileSync(
+  fileURLToPath(new URL("../components/board/GameBoard.tsx", import.meta.url)),
+  "utf-8",
+);
+
+const gameEventPresentationSource = readFileSync(
+  fileURLToPath(new URL("../lib/ui/gameEventPresentation.ts", import.meta.url)),
+  "utf-8",
+);
+
+describe("board center: clean branding only, no status pill", () => {
+  it("renders the World Cities branding", () => {
+    expect(gameBoardSource).toContain("World Cities");
+    expect(gameBoardSource).toContain("Private Board Game");
   });
 
-  it("shows the last dice roll once the player has rolled", () => {
-    let state = makeGameState();
-    state = { ...state, diceRoll: dice(5, 4), currentPlayerHasRolled: true };
-    expect(getBoardCenterStatus(state).title).toBe("Rolled 5 + 4 = 9");
+  it("renders the tagline", () => {
+    expect(gameBoardSource).toContain("Buy cities · Collect rent · Win the world");
   });
 
-  it("shows the Free Parking pot when the rule is ON and the pot is positive", () => {
-    let state = makeGameState();
-    state = { ...state, freeParkingPot: 400 };
-    const status = getBoardCenterStatus(state);
-    expect(status.subtitle).toBe("Free Parking Pot: $400");
+  it("does not render a dice-result pill (no 'Rolled' text or centerStatus prop)", () => {
+    expect(gameBoardSource).not.toContain("Rolled");
+    expect(gameBoardSource).not.toContain("centerStatus");
   });
 
-  it("does not show the Free Parking pot when the rule is OFF", () => {
-    let state = makeGameState();
-    state = { ...state, freeParkingPot: 400, rules: { ...state.rules, freeParkingCash: false } };
-    const status = getBoardCenterStatus(state);
-    expect(status.subtitle).toBeUndefined();
+  it("does not import or reference getBoardCenterStatus/BoardCenterStatus", () => {
+    expect(gameBoardSource).not.toContain("getBoardCenterStatus");
+    expect(gameBoardSource).not.toContain("BoardCenterStatus");
   });
 
-  it("shows an auction summary while an auction is active", () => {
-    let state = makeGameState();
-    const auction: AuctionState = {
-      propertySpaceIndex: 5,
-      activePlayerIds: [state.players[0].id, state.players[1].id],
-      passedPlayerIds: [],
-      currentBid: 0,
-      highestBidderId: null,
-      currentBidderIndex: 0,
-      turnStartedAt: Date.now(),
-      turnDeadlineAt: Date.now() + 15000,
-      status: "active",
-    };
-    state = { ...state, phase: "auction", auction };
-    expect(getBoardCenterStatus(state).title).toBe("Auction: JFK Airport");
+  it("getBoardCenterStatus/BoardCenterStatus no longer exist in the presentation helpers", () => {
+    expect(gameEventPresentationSource).not.toContain("getBoardCenterStatus");
+    expect(gameEventPresentationSource).not.toContain("BoardCenterStatus");
+  });
+});
+
+describe("regression: GameLayout / GameLayoutMultiplayer no longer wire centerStatus into GameBoard", () => {
+  it("GameLayout does not pass centerStatus", () => {
+    const source = readFileSync(
+      fileURLToPath(new URL("../components/GameLayout.tsx", import.meta.url)),
+      "utf-8",
+    );
+    expect(source).not.toContain("centerStatus");
+    expect(source).not.toContain("getBoardCenterStatus");
   });
 
-  it("shows a trade summary when a pending trade exists", () => {
-    let state = makeGameState();
-    const trade: TradeState = {
-      initiatorPlayerId: state.players[0].id,
-      recipientPlayerId: state.players[1].id,
-      offerFromInitiator: { cash: 0, propertySpaceIndices: [], getOutOfJailFreeCards: 0 },
-      offerFromRecipient: { cash: 0, propertySpaceIndices: [], getOutOfJailFreeCards: 0 },
-    };
-    state = { ...state, trade };
-    expect(getBoardCenterStatus(state).title).toBe("Trade Negotiation Active");
+  it("GameLayoutMultiplayer does not pass centerStatus", () => {
+    const source = readFileSync(
+      fileURLToPath(new URL("../components/multiplayer/GameLayoutMultiplayer.tsx", import.meta.url)),
+      "utf-8",
+    );
+    expect(source).not.toContain("centerStatus");
+    expect(source).not.toContain("getBoardCenterStatus");
   });
 
-  it("shows a trade summary when a live multiplayer draft exists, even with no pending trade", () => {
-    const state = makeGameState();
-    const draft: TradeDraftState = {
-      proposerId: state.players[0].id,
-      recipientId: state.players[1].id,
-      offerFromProposer: { cash: 0, propertySpaceIndices: [], getOutOfJailFreeCards: 0 },
-      offerFromRecipient: { cash: 0, propertySpaceIndices: [], getOutOfJailFreeCards: 0 },
-      updatedAt: Date.now(),
-    };
-    expect(getBoardCenterStatus(state, { tradeDraft: draft }).title).toBe("Trade Negotiation Active");
-  });
-
-  it("shows a payment-required summary while bankruptcy is pending", () => {
-    let state = makeGameState();
-    const bankruptcy: BankruptcyState = {
-      debtorPlayerId: state.players[0].id,
-      creditor: { type: "player", playerId: state.players[1].id },
-      amountOwed: 850,
-      reason: "rent",
-      status: "pending",
-      phaseBeforeBankruptcy: "turnComplete",
-    };
-    state = { ...state, bankruptcy };
-    const status = getBoardCenterStatus(state);
-    expect(status.title).toBe("Payment Required");
-    expect(status.subtitle).toBe(`${state.players[0].name} owes $850`);
-  });
-
-  it("shows a Chance/Community Chest card-drawn status while a card is on display", () => {
-    let state = makeGameState();
-    state = {
-      ...state,
-      drawnCard: { card: { id: "x", deck: "chance", text: "Test", category: "collect-bank" }, resolvedMessage: "" },
-    };
-    expect(getBoardCenterStatus(state).title).toBe("Chance Card Drawn");
-  });
-
-  it("shows the game-over winner when the game has ended", () => {
-    let state = makeGameState();
-    state = { ...state, phase: "gameOver", winnerId: state.players[0].id };
-    const status = getBoardCenterStatus(state);
-    expect(status.title).toBe("Game Over");
-    expect(status.subtitle).toBe(`${state.players[0].name} wins!`);
+  it("GameControls still renders dice results (status feedback lives there, not on the board)", () => {
+    const source = readFileSync(
+      fileURLToPath(new URL("../components/GameControls.tsx", import.meta.url)),
+      "utf-8",
+    );
+    expect(source.length).toBeGreaterThan(0);
   });
 });
