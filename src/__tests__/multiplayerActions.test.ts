@@ -208,9 +208,10 @@ describe("RoomManager — applyGameAction auction turn handling", () => {
     const r2 = mgr.applyGameAction(roomCode, currentId, { type: "DECLINE_PROPERTY" }, null);
     if (!r2.ok || r2.value.phase !== "auction") return;
 
-    const auctionBidder = r2.value.auction!.currentAuctionBidderId;
-    // The auction bidder can place a bid
-    const r3 = mgr.applyGameAction(roomCode, auctionBidder, { type: "PLACE_BID", amount: 100 }, null);
+    const auction = r2.value.auction!;
+    const auctionBidder = auction.activePlayerIds[auction.currentBidderIndex];
+    // The auction bidder can place a bid (must open at $10)
+    const r3 = mgr.applyGameAction(roomCode, auctionBidder, { type: "PLACE_BID", amount: 10 }, null);
     expect(r3.ok).toBe(true);
   });
 });

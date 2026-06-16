@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { boardSpaces } from "@/data/board";
 import { validateTrade } from "@/lib/game/trade";
+import { canOpenTradeNow } from "@/lib/game/turnTimingRules";
 import { TokenIcon } from "@/components/board/TokenIcon";
 import type { GameAction, GameState, TradeOffer } from "@/types/game";
 import type { Player } from "@/types/player";
@@ -216,7 +217,6 @@ export function TradePanel({ state, dispatch, myPlayerId }: Props) {
   const [recipientGOJF, setRecipientGOJF] = useState(0);
 
   if (state.phase === "gameOver") return null;
-  if (state.phase === "auction") return null;
 
   // Show pending trade to everyone
   if (state.trade) {
@@ -229,9 +229,10 @@ export function TradePanel({ state, dispatch, myPlayerId }: Props) {
     state.phase === "bankruptcyPending" && state.bankruptcy
       ? state.bankruptcy.debtorPlayerId
       : currentPlayerId;
-  const canPropose = !myPlayerId || myPlayerId === authorizedProposerId;
 
   const effectiveInitiatorId = myPlayerId ?? authorizedProposerId ?? "";
+  const timingGate = canOpenTradeNow(state, effectiveInitiatorId);
+  const canPropose = (!myPlayerId || myPlayerId === authorizedProposerId) && timingGate.ok;
   const initiatorPlayer = state.players.find((p) => p.id === effectiveInitiatorId);
   const activePlayers = state.players.filter((p) => !p.isBankrupt && p.id !== effectiveInitiatorId);
 
@@ -252,17 +253,22 @@ export function TradePanel({ state, dispatch, myPlayerId }: Props) {
 
   if (!open) {
     return (
-      <button
-        disabled={!canPropose}
-        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50 hover:shadow disabled:cursor-not-allowed disabled:opacity-40 transition-all"
-        onClick={() => { if (canPropose) setOpen(true); }}
-        title={canPropose ? undefined : "Only the current player can propose a trade"}
-      >
-        <span className="flex items-center gap-2">
-          <span className="text-base">🤝</span>
-          Propose Trade
-        </span>
-      </button>
+      <div>
+        <button
+          disabled={!canPropose}
+          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50 hover:shadow disabled:cursor-not-allowed disabled:opacity-40 transition-all"
+          onClick={() => { if (canPropose) setOpen(true); }}
+          title={canPropose ? undefined : !timingGate.ok ? timingGate.reason : "Only the current player can propose a trade"}
+        >
+          <span className="flex items-center gap-2">
+            <span className="text-base">🤝</span>
+            Propose Trade
+          </span>
+        </button>
+        {!timingGate.ok ? (
+          <p className="mt-1 px-1 text-[11px] font-semibold text-amber-700">{timingGate.reason}</p>
+        ) : null}
+      </div>
     );
   }
 

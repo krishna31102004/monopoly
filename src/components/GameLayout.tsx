@@ -141,6 +141,7 @@ export function GameLayout() {
         onClose={() => setSelectedSpace(null)}
         currentPlayer={state.players[state.currentPlayerIndex]}
         dispatch={dispatch}
+        state={state}
       />
 
       {/* Sticky bottom bar — mobile only (hidden on sm+) */}

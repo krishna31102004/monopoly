@@ -9,7 +9,7 @@ import type {
   JoinRoomPayload,
   GameActionPayload,
 } from "../src/types/multiplayer.js";
-import type { GameRules } from "../src/types/game.js";
+import type { GameRules, GameState } from "../src/types/game.js";
 
 const PORT = Number(process.env.PORT ?? 3001);
 const NODE_ENV = process.env.NODE_ENV ?? "development";
@@ -38,10 +38,47 @@ const io = new Server(httpServer, {
 
 const rooms = new RoomManager();
 
+// ── Auction turn timers (server-authoritative) ───────────────────────────────
+const auctionTimers = new Map<string, NodeJS.Timeout>();
+
+function clearAuctionTimer(roomCode: string): void {
+  const existing = auctionTimers.get(roomCode);
+  if (existing) {
+    clearTimeout(existing);
+    auctionTimers.delete(roomCode);
+  }
+}
+
+function scheduleAuctionTimer(roomCode: string, gameState: GameState): void {
+  clearAuctionTimer(roomCode);
+  if (gameState.phase !== "auction" || !gameState.auction) return;
+
+  const auction = gameState.auction;
+  const delay = Math.max(0, auction.turnDeadlineAt - Date.now());
+  const bidderId = auction.activePlayerIds[auction.currentBidderIndex];
+
+  const timer = setTimeout(() => {
+    // Guard against a stale timer firing after the auction state has already moved on.
+    const latest = rooms.getGameState(roomCode);
+    if (!latest || latest.phase !== "auction" || !latest.auction) return;
+    if (latest.auction.turnDeadlineAt !== auction.turnDeadlineAt) return;
+
+    const result = rooms.applyGameAction(roomCode, bidderId, { type: "PASS_AUCTION" }, null);
+    if (result.ok) {
+      io.to(roomCode).emit("game:state", { gameState: result.value });
+      console.log(`[auction] auto-passed ${bidderId} in ${roomCode} (timeout)`);
+      scheduleAuctionTimer(roomCode, result.value);
+    }
+  }, delay);
+
+  auctionTimers.set(roomCode, timer);
+}
+
 // ── Inactivity cleanup every 5 minutes ───────────────────────────────────────
 setInterval(() => {
-  const removed = rooms.cleanupInactive();
-  if (removed > 0) console.log(`[cleanup] Removed ${removed} inactive room(s).`);
+  const removedCodes = rooms.cleanupInactive();
+  for (const code of removedCodes) clearAuctionTimer(code);
+  if (removedCodes.length > 0) console.log(`[cleanup] Removed ${removedCodes.length} inactive room(s).`);
 }, 5 * 60 * 1000);
 
 // ── HTTP routes ───────────────────────────────────────────────────────────────
@@ -149,6 +186,7 @@ io.on("connection", (socket) => {
       const { room, gameState } = result.value;
       io.to(roomCode).emit("room:update", { room });
       io.to(roomCode).emit("game:state", { gameState });
+      scheduleAuctionTimer(roomCode, gameState);
       console.log(`[room] game started in ${roomCode}`);
     } catch (err) {
       console.error("[room:startGame] error:", err);
@@ -183,6 +221,7 @@ io.on("connection", (socket) => {
 
       // Broadcast updated state to all players in the room
       io.to(roomCode).emit("game:state", { gameState: result.value });
+      scheduleAuctionTimer(roomCode, result.value);
       console.log(`[game] ${action.type} by ${playerId} in ${roomCode}`);
     } catch (err) {
       console.error("[game:action] error:", err);

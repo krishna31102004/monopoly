@@ -162,24 +162,24 @@ describe("Flow 2: Decline property and win at auction", () => {
     expect(s2.phase).toBe("auction");
     expect(s2.auction).not.toBeNull();
     // Both players included
-    expect(s2.auction!.activeBidderIds).toContain(p0id);
-    expect(s2.auction!.activeBidderIds).toContain(p1id);
+    expect(s2.auction!.activePlayerIds).toContain(p0id);
+    expect(s2.auction!.activePlayerIds).toContain(p1id);
     // First auction bidder is p0 (first in list)
-    expect(s2.auction!.currentAuctionBidderId).toBe(p0id);
+    expect(s2.auction!.activePlayerIds[s2.auction!.currentBidderIndex]).toBe(p0id);
 
-    // Player 0 places a bid of $100
-    let s3 = gameReducer(s2, { type: "PLACE_BID", amount: 100 });
-    expect(s3.auction!.currentBid).toBe(100);
-    expect(s3.auction!.highBidderId).toBe(p0id);
-    expect(s3.auction!.currentAuctionBidderId).toBe(p1id);
+    // Player 0 opens the bid at $10
+    let s3 = gameReducer(s2, { type: "PLACE_BID", amount: 10 });
+    expect(s3.auction!.currentBid).toBe(10);
+    expect(s3.auction!.highestBidderId).toBe(p0id);
+    expect(s3.auction!.activePlayerIds[s3.auction!.currentBidderIndex]).toBe(p1id);
 
     // Player 1 passes → last bidder (p0) wins
     let s4 = gameReducer(s3, { type: "PASS_AUCTION" });
     expect(s4.phase).toBe("turnComplete");
     expect(s4.auction).toBeNull();
 
-    // p0 paid $100, owns Guadalajara
-    expect(playerAt(s4, 0).cash).toBe(p0CashAfterGO - 100);
+    // p0 paid $10, owns Guadalajara
+    expect(playerAt(s4, 0).cash).toBe(p0CashAfterGO - 10);
     expect(s4.ownerships.find((o) => o.spaceIndex === 1)?.ownerId).toBe(p0id);
     // log entry
     expect(s4.gameLog.some((e) => e.message.includes("won") && e.message.includes("auction"))).toBe(true);

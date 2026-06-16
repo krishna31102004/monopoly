@@ -345,7 +345,7 @@ describe("RoomManager — cleanup", () => {
     );
     expect(mgr.roomCount).toBe(1);
     const removed = mgr.cleanupInactive();
-    expect(removed).toBe(0);
+    expect(removed).toEqual([]);
     expect(mgr.roomCount).toBe(1);
     expect(mgr.getRoom(room.roomCode)).not.toBeNull();
   });
@@ -360,7 +360,7 @@ describe("RoomManager — cleanup", () => {
     mgr.setLastActivityAt(room.roomCode, Date.now() - 3 * 60 * 60 * 1000);
     expect(mgr.roomCount).toBe(1);
     const removed = mgr.cleanupInactive();
-    expect(removed).toBe(1);
+    expect(removed).toEqual([room.roomCode]);
     expect(mgr.roomCount).toBe(0);
   });
 });

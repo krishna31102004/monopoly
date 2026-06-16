@@ -68,11 +68,11 @@ describe("auctions rule", () => {
     state = gameReducer(state, { type: "DECLINE_PROPERTY" });
     expect(state.phase).toBe("auction");
 
-    const bidder = state.auction!.currentAuctionBidderId;
-    const bidderPlayer = state.players.find((p) => p.id === bidder)!;
-    const result = gameReducer(state, { type: "PLACE_BID", amount: 50 });
-    expect(result.auction?.currentBid).toBe(50);
-    expect(result.auction?.highBidderId).toBe(bidder);
+    const auction = state.auction!;
+    const bidder = auction.activePlayerIds[auction.currentBidderIndex];
+    const result = gameReducer(state, { type: "PLACE_BID", amount: 10 });
+    expect(result.auction?.currentBid).toBe(10);
+    expect(result.auction?.highestBidderId).toBe(bidder);
   });
 
   it("PASS_AUCTION with only 2 players and one has bid → auction resolves win", () => {
@@ -83,8 +83,9 @@ describe("auctions rule", () => {
     expect(state.phase).toBe("auction");
 
     // First bidder places a bid
-    const firstBidder = state.auction!.currentAuctionBidderId;
-    state = gameReducer(state, { type: "PLACE_BID", amount: 60 });
+    const auction = state.auction!;
+    const firstBidder = auction.activePlayerIds[auction.currentBidderIndex];
+    state = gameReducer(state, { type: "PLACE_BID", amount: 10 });
     // Second bidder passes → auction ends, first bidder wins
     state = gameReducer(state, { type: "PASS_AUCTION" });
     // After auction resolves, phase should be turnComplete or readyToRoll (not auction)

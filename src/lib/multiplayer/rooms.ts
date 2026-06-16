@@ -244,7 +244,7 @@ export class RoomManager {
     // all other phases require it to be the current player's turn.
     let actorId: string;
     if (gs.phase === "auction" && gs.auction) {
-      actorId = gs.auction.currentAuctionBidderId;
+      actorId = gs.auction.activePlayerIds[gs.auction.currentBidderIndex];
     } else if (gs.phase === "bankruptcyPending" && gs.bankruptcy) {
       actorId = gs.bankruptcy.debtorPlayerId;
     } else {
@@ -358,16 +358,16 @@ export class RoomManager {
 
   // ── Cleanup ────────────────────────────────────────────────────────────────
 
-  cleanupInactive(): number {
+  cleanupInactive(): string[] {
     const cutoff = Date.now() - INACTIVITY_TTL_MS;
-    let removed = 0;
+    const removedCodes: string[] = [];
     for (const [code, room] of this.rooms) {
       if (room.lastActivityAt < cutoff) {
         this.rooms.delete(code);
-        removed++;
+        removedCodes.push(code);
       }
     }
-    return removed;
+    return removedCodes;
   }
 
   get roomCount(): number {

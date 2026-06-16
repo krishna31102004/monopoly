@@ -10,8 +10,9 @@ import {
   canMortgageProperty,
   canUnmortgageProperty,
 } from "@/lib/game/propertyDevelopment";
+import { canMortgageNow } from "@/lib/game/turnTimingRules";
 import type { CityColorGroup, OwnableSpace } from "@/types/board";
-import type { GameAction, PropertyOwnership } from "@/types/game";
+import type { GameAction, GameState, PropertyOwnership } from "@/types/game";
 import type { Player } from "@/types/player";
 
 type PropertyCardModalProps = {
@@ -21,6 +22,7 @@ type PropertyCardModalProps = {
   onClose: () => void;
   currentPlayer?: Player;
   dispatch?: (action: GameAction) => void;
+  state?: GameState;
 };
 
 const colorLabels: Record<CityColorGroup, string> = {
@@ -63,6 +65,7 @@ export function PropertyCardModal({
   onClose,
   currentPlayer,
   dispatch,
+  state,
 }: PropertyCardModalProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -91,30 +94,46 @@ export function PropertyCardModal({
     owner?.id === currentPlayer.id &&
     (space.kind === "city" || space.kind === "airport" || space.kind === "utility");
   const stateForChecks = { ownerships };
-  const buyHouseCheck =
+  const timingGate = state && currentPlayer ? canMortgageNow(state, currentPlayer.id) : null;
+  const timingBlocked = timingGate !== null && !timingGate.ok;
+  const timingReason = timingGate && !timingGate.ok ? timingGate.reason : undefined;
+
+  function withTiming<T extends { ok: boolean; reason?: string }>(check: T | null): T | null {
+    if (!check) return check;
+    if (timingBlocked) return { ...check, ok: false, reason: timingReason } as T;
+    return check;
+  }
+
+  const buyHouseCheck = withTiming(
     isCityOwner && currentPlayer && dispatch
       ? canBuyHouse(stateForChecks, space.index, currentPlayer)
-      : null;
-  const sellHouseCheck =
+      : null,
+  );
+  const sellHouseCheck = withTiming(
     isCityOwner && currentPlayer && dispatch
       ? canSellHouse(stateForChecks, space.index, currentPlayer)
-      : null;
-  const buyHotelCheck =
+      : null,
+  );
+  const buyHotelCheck = withTiming(
     isCityOwner && currentPlayer && dispatch
       ? canBuyHotel(stateForChecks, space.index, currentPlayer)
-      : null;
-  const sellHotelCheck =
+      : null,
+  );
+  const sellHotelCheck = withTiming(
     isCityOwner && currentPlayer && dispatch
       ? canSellHotel(stateForChecks, space.index, currentPlayer)
-      : null;
-  const mortgageCheck =
+      : null,
+  );
+  const mortgageCheck = withTiming(
     isAnyPropOwner && currentPlayer && dispatch
       ? canMortgageProperty(stateForChecks, space.index, currentPlayer)
-      : null;
-  const unmortgageCheck =
+      : null,
+  );
+  const unmortgageCheck = withTiming(
     isAnyPropOwner && currentPlayer && dispatch
       ? canUnmortgageProperty(stateForChecks, space.index, currentPlayer)
-      : null;
+      : null,
+  );
 
   return (
     <div
@@ -202,6 +221,12 @@ export function PropertyCardModal({
               </p>
             </div>
           </div>
+
+          {timingBlocked && (isCityOwner || isAnyPropOwner) ? (
+            <div className="mb-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-xs font-bold text-amber-800">
+              {timingReason}
+            </div>
+          ) : null}
 
           {space.kind === "city" ? (
             <>

@@ -109,41 +109,41 @@ describe("validateGameShape", () => {
     ).toBe(true);
   });
 
-  it("rejects auction with startedByPlayerId not in players", () => {
+  it("rejects auction with an active player not in players", () => {
     const state = makeGameState(2);
+    const now = Date.now();
     const badState = {
       ...state,
       auction: {
-        spaceIndex: 1,
-        propertyName: "Guadalajara",
-        startedByPlayerId: "ghost-player",
-        currentBid: 0,
-        highBidderId: null,
-        activeBidderIds: [state.players[0].id],
+        propertySpaceIndex: 1,
+        activePlayerIds: ["ghost-player"],
         passedPlayerIds: [],
-        minimumNextBid: 10,
+        currentBid: 0,
+        highestBidderId: null,
+        currentBidderIndex: 0,
+        turnStartedAt: now,
+        turnDeadlineAt: now + 20000,
         status: "active",
-        currentAuctionBidderId: state.players[0].id,
       },
     };
     expect(validateGameShape(badState)).toBe(false);
   });
 
-  it("rejects auction with highBidderId not in players", () => {
+  it("rejects auction with highestBidderId not in players", () => {
     const state = makeGameState(2);
+    const now = Date.now();
     const badState = {
       ...state,
       auction: {
-        spaceIndex: 1,
-        propertyName: "Guadalajara",
-        startedByPlayerId: state.players[0].id,
-        currentBid: 50,
-        highBidderId: "ghost-player",
-        activeBidderIds: [state.players[0].id],
+        propertySpaceIndex: 1,
+        activePlayerIds: [state.players[0].id],
         passedPlayerIds: [],
-        minimumNextBid: 60,
+        currentBid: 50,
+        highestBidderId: "ghost-player",
+        currentBidderIndex: 0,
+        turnStartedAt: now,
+        turnDeadlineAt: now + 20000,
         status: "active",
-        currentAuctionBidderId: state.players[0].id,
       },
     };
     expect(validateGameShape(badState)).toBe(false);

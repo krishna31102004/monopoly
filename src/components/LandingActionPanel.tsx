@@ -86,6 +86,12 @@ export function LandingActionPanel({ state, dispatch, isMyTurn = true }: Landing
           </dl>
         ) : null}
 
+        {isPurchaseDecision && !canBuy ? (
+          <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-xs font-bold text-amber-800">
+            You do not have enough cash to buy this property. Decline to send it to auction.
+          </div>
+        ) : null}
+
         {isPurchaseDecision && isOwnableSpace(space) ? (
           <div className="mt-4 grid grid-cols-2 gap-2">
             <button

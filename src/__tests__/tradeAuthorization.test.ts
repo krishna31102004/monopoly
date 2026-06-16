@@ -75,6 +75,12 @@ describe("PROPOSE_TRADE — turn authorization", () => {
     expect(next.trade?.recipientPlayerId).toBe(state.players[1].id); // still original trade
   });
 
+  it("cannot propose during awaitingPurchaseDecision phase", () => {
+    const state = { ...makeGameState(), phase: "awaitingPurchaseDecision" as const };
+    const next = propose(state);
+    expect(next.trade).toBeNull();
+  });
+
   it("cannot propose during auction phase", () => {
     const state = { ...makeGameState(), phase: "auction" as const };
     const next = propose(state);

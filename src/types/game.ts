@@ -34,19 +34,16 @@ export type DrawnCard = {
   resolvedMessage: string;
 };
 
-export type AuctionStatus = "active" | "won" | "no-bids";
-
 export type AuctionState = {
-  spaceIndex: number;
-  propertyName: string;
-  startedByPlayerId: string;
-  currentBid: number;
-  highBidderId: string | null;
-  activeBidderIds: string[];
+  propertySpaceIndex: number;
+  activePlayerIds: string[];
   passedPlayerIds: string[];
-  minimumNextBid: number;
-  status: AuctionStatus;
-  currentAuctionBidderId: string;
+  currentBid: number;
+  highestBidderId: string | null;
+  currentBidderIndex: number;
+  turnStartedAt: number;
+  turnDeadlineAt: number;
+  status: "active";
 };
 
 export type DiceRoll = {

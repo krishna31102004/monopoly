@@ -16,7 +16,17 @@ import {
   canUnmortgageProperty,
 } from "@/lib/game/propertyDevelopment";
 import { validateTrade } from "@/lib/game/trade";
+import { AUCTION_TURN_MS } from "@/lib/animation/timing";
 import type { AuctionState, BankruptcyCreditor, GameAction, GameState, LandingAction } from "@/types/game";
+
+const AUCTION_STARTING_BID = 10;
+const AUCTION_INCREMENTS = [1, 10, 100];
+
+/** Valid next bid: exactly $10 to open, or currentBid + 1/10/100 thereafter. */
+function isValidBidAmount(currentBid: number, amount: number): boolean {
+  if (currentBid === 0) return amount === AUCTION_STARTING_BID;
+  return AUCTION_INCREMENTS.some((inc) => amount === currentBid + inc);
+}
 
 function creditorFromLandingAction(action: LandingAction | null): BankruptcyCreditor {
   if (action?.kind === "rentPayment") {
@@ -30,11 +40,11 @@ function resolveAuctionWin(
   auction: AuctionState,
   log: import("@/types/game").GameLogEntry[],
 ): GameState {
-  const winner = state.players.find((p) => p.id === auction.highBidderId);
+  const winner = state.players.find((p) => p.id === auction.highestBidderId);
   if (!winner) return state;
 
-  const space = getBoardSpaceByIndex(auction.spaceIndex);
-  const winMessage = `${winner.name} won ${auction.propertyName} at auction for $${auction.currentBid}.`;
+  const space = getBoardSpaceByIndex(auction.propertySpaceIndex);
+  const winMessage = `${winner.name} won ${space.name} at auction for $${auction.currentBid}.`;
   const nextLog = addLogEntry(log, winMessage);
 
   const nextPlayers = state.players.map((player) => {
@@ -55,7 +65,7 @@ function resolveAuctionWin(
     };
   });
   const nextOwnerships = state.ownerships.map((item) =>
-    item.spaceIndex === auction.spaceIndex ? { ...item, ownerId: winner.id } : item,
+    item.spaceIndex === auction.propertySpaceIndex ? { ...item, ownerId: winner.id } : item,
   );
   const phaseAfter = state.diceRoll?.isDouble ? "readyToRoll" : "turnComplete";
 
@@ -67,7 +77,7 @@ function resolveAuctionWin(
       phase: phaseAfter,
       auction: null,
       landingMessage: winMessage,
-      landingAction: { kind: "message", spaceIndex: auction.spaceIndex, message: winMessage },
+      landingAction: { kind: "message", spaceIndex: auction.propertySpaceIndex, message: winMessage },
       gameLog: nextLog,
     },
     { type: "bank" },
@@ -489,18 +499,18 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       }
 
       const declineMessage = `${currentPlayer.name} declined to buy ${space.name}. Auction started.`;
-      const activeBidderIds = state.players.filter((p) => !p.isBankrupt).map((p) => p.id);
+      const activePlayerIds = state.players.filter((p) => !p.isBankrupt).map((p) => p.id);
+      const now = Date.now();
       const auction: AuctionState = {
-        spaceIndex: space.index,
-        propertyName: space.name,
-        startedByPlayerId: currentPlayer.id,
-        currentBid: 0,
-        highBidderId: null,
-        activeBidderIds,
+        propertySpaceIndex: space.index,
+        activePlayerIds,
         passedPlayerIds: [],
-        minimumNextBid: 1,
+        currentBid: 0,
+        highestBidderId: null,
+        currentBidderIndex: 0,
+        turnStartedAt: now,
+        turnDeadlineAt: now + AUCTION_TURN_MS,
         status: "active",
-        currentAuctionBidderId: activeBidderIds[0],
       };
 
       return {
@@ -517,26 +527,29 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (state.phase !== "auction" || !state.auction) return state;
 
       const { auction } = state;
-      const bidder = state.players.find((p) => p.id === auction.currentAuctionBidderId);
-      if (!bidder || action.amount <= auction.currentBid || action.amount > bidder.cash) return state;
+      const bidderId = auction.activePlayerIds[auction.currentBidderIndex];
+      const bidder = state.players.find((p) => p.id === bidderId);
+      if (!bidder || bidder.isBankrupt) return state;
+      if (!isValidBidAmount(auction.currentBid, action.amount)) return state;
+      if (action.amount > bidder.cash) return state;
 
-      const bidMessage = `${bidder.name} bid $${action.amount} on ${auction.propertyName}.`;
+      const space = getBoardSpaceByIndex(auction.propertySpaceIndex);
+      const bidMessage = `${bidder.name} bid $${action.amount} on ${space.name}.`;
       const nextLog = addLogEntry(state.gameLog, bidMessage);
 
-      const updatedActiveBidderIds = auction.activeBidderIds;
-      const currentIdx = updatedActiveBidderIds.indexOf(auction.currentAuctionBidderId);
-      const nextIdx = (currentIdx + 1) % updatedActiveBidderIds.length;
-      const nextBidderId = updatedActiveBidderIds[nextIdx];
+      const now = Date.now();
+      const nextIdx = (auction.currentBidderIndex + 1) % auction.activePlayerIds.length;
 
       const updatedAuction: AuctionState = {
         ...auction,
         currentBid: action.amount,
-        highBidderId: bidder.id,
-        minimumNextBid: action.amount + 10,
-        currentAuctionBidderId: nextBidderId,
+        highestBidderId: bidder.id,
+        currentBidderIndex: nextIdx,
+        turnStartedAt: now,
+        turnDeadlineAt: now + AUCTION_TURN_MS,
       };
 
-      if (updatedAuction.activeBidderIds.length === 1 && updatedAuction.highBidderId === nextBidderId) {
+      if (auction.activePlayerIds.length === 1) {
         return resolveAuctionWin(state, updatedAuction, nextLog);
       }
 
@@ -547,18 +560,20 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (state.phase !== "auction" || !state.auction) return state;
 
       const { auction } = state;
-      const passerId = auction.currentAuctionBidderId;
+      const passerId = auction.activePlayerIds[auction.currentBidderIndex];
       const passer = state.players.find((p) => p.id === passerId);
       if (!passer) return state;
 
-      const passMessage = `${passer.name} passed on ${auction.propertyName}.`;
+      const space = getBoardSpaceByIndex(auction.propertySpaceIndex);
+      const passMessage = `${passer.name} passed on ${space.name}.`;
       let nextLog = addLogEntry(state.gameLog, passMessage);
 
-      const remainingBidders = auction.activeBidderIds.filter((id) => id !== passerId);
+      const remainingBidders = auction.activePlayerIds.filter((id) => id !== passerId);
       const nextPassedPlayerIds = [...auction.passedPlayerIds, passerId];
+      const now = Date.now();
 
-      if (remainingBidders.length === 0 && !auction.highBidderId) {
-        const noOneBidMessage = `No one bid on ${auction.propertyName}. It remains unowned.`;
+      if (remainingBidders.length === 0 && !auction.highestBidderId) {
+        const noOneBidMessage = `No one bid on ${space.name}. It remains unowned.`;
         nextLog = addLogEntry(nextLog, noOneBidMessage);
         const phaseAfter = state.diceRoll?.isDouble ? "readyToRoll" : "turnComplete";
         return {
@@ -566,44 +581,45 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           phase: phaseAfter,
           auction: null,
           landingMessage: noOneBidMessage,
-          landingAction: { kind: "message", spaceIndex: auction.spaceIndex, message: noOneBidMessage },
+          landingAction: { kind: "message", spaceIndex: auction.propertySpaceIndex, message: noOneBidMessage },
           gameLog: nextLog,
         };
       }
 
       if (
         remainingBidders.length === 1 &&
-        auction.highBidderId !== null &&
-        remainingBidders[0] === auction.highBidderId
+        auction.highestBidderId !== null &&
+        remainingBidders[0] === auction.highestBidderId
       ) {
         const updatedAuction: AuctionState = {
           ...auction,
-          activeBidderIds: remainingBidders,
+          activePlayerIds: remainingBidders,
           passedPlayerIds: nextPassedPlayerIds,
-          currentAuctionBidderId: remainingBidders[0],
+          currentBidderIndex: 0,
         };
         return resolveAuctionWin(state, updatedAuction, nextLog);
       }
 
-      if (remainingBidders.length === 0 && auction.highBidderId) {
+      if (remainingBidders.length === 0 && auction.highestBidderId) {
         const updatedAuction: AuctionState = {
           ...auction,
-          activeBidderIds: remainingBidders,
+          activePlayerIds: remainingBidders,
           passedPlayerIds: nextPassedPlayerIds,
-          currentAuctionBidderId: auction.highBidderId,
+          currentBidderIndex: 0,
         };
         return resolveAuctionWin(state, updatedAuction, nextLog);
       }
 
-      const currentIdx = auction.activeBidderIds.indexOf(passerId);
+      const currentIdx = auction.activePlayerIds.indexOf(passerId);
       const nextIdx = currentIdx % remainingBidders.length;
-      const nextBidderId = remainingBidders[nextIdx];
 
       const updatedAuction: AuctionState = {
         ...auction,
-        activeBidderIds: remainingBidders,
+        activePlayerIds: remainingBidders,
         passedPlayerIds: nextPassedPlayerIds,
-        currentAuctionBidderId: nextBidderId,
+        currentBidderIndex: nextIdx,
+        turnStartedAt: now,
+        turnDeadlineAt: now + AUCTION_TURN_MS,
       };
 
       return { ...state, auction: updatedAuction, gameLog: nextLog };
@@ -616,7 +632,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "BUY_HOUSE": {
-      if (state.phase === "gameOver" || state.phase === "bankruptcyPending") return state;
+      if (
+        state.phase === "gameOver" ||
+        state.phase === "bankruptcyPending" ||
+        state.phase === "awaitingPurchaseDecision" ||
+        state.phase === "auction"
+      ) return state;
       const player = state.players[state.currentPlayerIndex];
       const check = canBuyHouse(state, action.spaceIndex, player);
       if (!check.ok) return state;
@@ -642,7 +663,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "SELL_HOUSE": {
-      if (state.phase === "gameOver") return state;
+      if (
+        state.phase === "gameOver" ||
+        state.phase === "awaitingPurchaseDecision" ||
+        state.phase === "auction"
+      ) return state;
       const player = state.players[state.currentPlayerIndex];
       const check = canSellHouse(state, action.spaceIndex, player);
       if (!check.ok) return state;
@@ -669,7 +694,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "BUY_HOTEL": {
-      if (state.phase === "gameOver" || state.phase === "bankruptcyPending") return state;
+      if (
+        state.phase === "gameOver" ||
+        state.phase === "bankruptcyPending" ||
+        state.phase === "awaitingPurchaseDecision" ||
+        state.phase === "auction"
+      ) return state;
       const player = state.players[state.currentPlayerIndex];
       const check = canBuyHotel(state, action.spaceIndex, player);
       if (!check.ok) return state;
@@ -694,7 +724,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "SELL_HOTEL": {
-      if (state.phase === "gameOver") return state;
+      if (
+        state.phase === "gameOver" ||
+        state.phase === "awaitingPurchaseDecision" ||
+        state.phase === "auction"
+      ) return state;
       const player = state.players[state.currentPlayerIndex];
       const check = canSellHotel(state, action.spaceIndex, player);
       if (!check.ok) return state;
@@ -720,7 +754,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "MORTGAGE_PROPERTY": {
-      if (state.phase === "gameOver") return state;
+      if (
+        state.phase === "gameOver" ||
+        state.phase === "awaitingPurchaseDecision" ||
+        state.phase === "auction"
+      ) return state;
       if (!state.rules.mortgages) return state;
       const player = state.players[state.currentPlayerIndex];
       const check = canMortgageProperty(state, action.spaceIndex, player);
@@ -746,7 +784,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "UNMORTGAGE_PROPERTY": {
-      if (state.phase === "gameOver" || state.phase === "bankruptcyPending") return state;
+      if (
+        state.phase === "gameOver" ||
+        state.phase === "bankruptcyPending" ||
+        state.phase === "awaitingPurchaseDecision" ||
+        state.phase === "auction"
+      ) return state;
       if (!state.rules.mortgages) return state;
       const player = state.players[state.currentPlayerIndex];
       const check = canUnmortgageProperty(state, action.spaceIndex, player);
@@ -773,7 +816,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "PROPOSE_TRADE": {
-      if (state.phase === "gameOver" || state.phase === "auction") return state;
+      if (
+        state.phase === "gameOver" ||
+        state.phase === "auction" ||
+        state.phase === "awaitingPurchaseDecision"
+      ) return state;
       if (state.trade) return state;
       // During bankruptcyPending, only the debtor can propose a trade (emergency trade to raise cash)
       if (state.phase === "bankruptcyPending") {

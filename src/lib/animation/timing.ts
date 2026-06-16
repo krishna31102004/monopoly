@@ -6,3 +6,4 @@ export const TOKEN_STEP_MS = 340;
 export const TOKEN_LAND_MS = 260;
 export const LANDING_REVEAL_DELAY_MS = 500;
 export const CARD_REVEAL_MIN_MS = 900;
+export const AUCTION_TURN_MS = 20000;

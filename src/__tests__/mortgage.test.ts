@@ -306,3 +306,48 @@ describe("Rent on mortgaged property", () => {
     expect(rent.isMortgaged).toBe(true);
   });
 });
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Phase-timing gates (Phase 4D.10)
+// ──────────────────────────────────────────────────────────────────────────────
+describe("MORTGAGE_PROPERTY / UNMORTGAGE_PROPERTY phase gating", () => {
+  it("blocks MORTGAGE_PROPERTY during awaitingPurchaseDecision", () => {
+    let state = makeGameState();
+    state = withBrownGroup(state);
+    state = { ...state, phase: "awaitingPurchaseDecision" };
+    const before = state.players[state.currentPlayerIndex].cash;
+    const after = gameReducer(state, { type: "MORTGAGE_PROPERTY", spaceIndex: BROWN_1 });
+    expect(after.players[after.currentPlayerIndex].cash).toBe(before);
+    expect(after.ownerships.find((o) => o.spaceIndex === BROWN_1)?.isMortgaged).toBe(false);
+  });
+
+  it("blocks MORTGAGE_PROPERTY during auction", () => {
+    let state = makeGameState();
+    state = withBrownGroup(state);
+    state = { ...state, phase: "auction" };
+    const before = state.players[state.currentPlayerIndex].cash;
+    const after = gameReducer(state, { type: "MORTGAGE_PROPERTY", spaceIndex: BROWN_1 });
+    expect(after.players[after.currentPlayerIndex].cash).toBe(before);
+  });
+
+  it("blocks UNMORTGAGE_PROPERTY during awaitingPurchaseDecision", () => {
+    let state = makeGameState();
+    state = withBrownGroup(state);
+    state = withMortgage(state, BROWN_1);
+    state = { ...state, phase: "awaitingPurchaseDecision" };
+    const before = state.players[state.currentPlayerIndex].cash;
+    const after = gameReducer(state, { type: "UNMORTGAGE_PROPERTY", spaceIndex: BROWN_1 });
+    expect(after.players[after.currentPlayerIndex].cash).toBe(before);
+    expect(after.ownerships.find((o) => o.spaceIndex === BROWN_1)?.isMortgaged).toBe(true);
+  });
+
+  it("blocks UNMORTGAGE_PROPERTY during auction", () => {
+    let state = makeGameState();
+    state = withBrownGroup(state);
+    state = withMortgage(state, BROWN_1);
+    state = { ...state, phase: "auction" };
+    const before = state.players[state.currentPlayerIndex].cash;
+    const after = gameReducer(state, { type: "UNMORTGAGE_PROPERTY", spaceIndex: BROWN_1 });
+    expect(after.players[after.currentPlayerIndex].cash).toBe(before);
+  });
+});

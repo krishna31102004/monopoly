@@ -78,10 +78,13 @@ export function validateGameShape(data: unknown): data is GameState {
   // Validate auction references
   if (s.auction !== null && s.auction !== undefined) {
     const a = s.auction as Record<string, unknown>;
-    if (typeof a.startedByPlayerId === "string" && !playerIds.has(a.startedByPlayerId))
-      return false;
-    if (a.highBidderId !== null && typeof a.highBidderId === "string") {
-      if (!playerIds.has(a.highBidderId)) return false;
+    if (Array.isArray(a.activePlayerIds)) {
+      for (const id of a.activePlayerIds) {
+        if (typeof id !== "string" || !playerIds.has(id)) return false;
+      }
+    }
+    if (a.highestBidderId !== null && typeof a.highestBidderId === "string") {
+      if (!playerIds.has(a.highestBidderId)) return false;
     }
   }
 

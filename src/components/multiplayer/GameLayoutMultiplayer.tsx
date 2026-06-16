@@ -35,7 +35,7 @@ type Props = {
 
 // Determine which player ID should be acting right now
 function getActorId(gs: GameState): string {
-  if (gs.phase === "auction" && gs.auction) return gs.auction.currentAuctionBidderId;
+  if (gs.phase === "auction" && gs.auction) return gs.auction.activePlayerIds[gs.auction.currentBidderIndex];
   if (gs.phase === "bankruptcyPending" && gs.bankruptcy) return gs.bankruptcy.debtorPlayerId;
   return gs.players[gs.currentPlayerIndex]?.id ?? "";
 }
@@ -195,7 +195,7 @@ export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction,
               <JailActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} />
             ) : null}
             {gameState.phase === "auction" && showLandingPanel ? (
-              <AuctionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} />
+              <AuctionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} serverAuthoritative />
             ) : null}
             {gameState.drawnCard && showCardPanel ? (
               <CardPanel drawnCard={gameState.drawnCard} showResolved={showCardResolved} />
@@ -239,6 +239,7 @@ export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction,
         onClose={() => setSelectedSpace(null)}
         currentPlayer={gameState.players[gameState.currentPlayerIndex]}
         dispatch={dispatch}
+        state={gameState}
       />
 
       {/* Sticky bottom bar — mobile only (hidden on sm+) */}
