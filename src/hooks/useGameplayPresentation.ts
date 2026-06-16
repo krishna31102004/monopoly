@@ -5,7 +5,7 @@ import {
   DICE_ROLL_MS,
   LANDING_REVEAL_DELAY_MS,
 } from "@/lib/animation/timing";
-import { getCardRevealKey, isCardRevealDismissed } from "@/lib/ui/gameEventPresentation";
+import { shouldShowEventBannerNow } from "@/lib/ui/gameEventPresentation";
 import type { GameState } from "@/types/game";
 
 export type GameplayPresentationPhase =
@@ -23,20 +23,19 @@ export type GameplayPresentationPhase =
  *
  * Returns:
  *   showLandingPanel  — gate for LandingActionPanel / BankruptcyPanel outcome
- *   showCardPanel     — gate for CardPanel visibility
+ *   showCardPanel     — gate for the non-blocking CardPanel display
  *   showCardResolved  — gate for the resolvedMessage inside CardPanel
+ *   showEventBanner   — gate for the cinematic event banner; false until movement/bounce settles
  *   diceRolling       — true while the local dice animation should play
  *   presentationPhase — current phase, useful for status messages
- *   dismissCard       — call when the user clicks Continue on the card reveal modal;
- *                        hides the card and reveals the landing/outcome panel immediately
  */
 export function useGameplayPresentation(state: GameState, isAnimating: boolean): {
   showLandingPanel: boolean;
   showCardPanel: boolean;
   showCardResolved: boolean;
+  showEventBanner: boolean;
   diceRolling: boolean;
   presentationPhase: GameplayPresentationPhase;
-  dismissCard: () => void;
 } {
   // Derive a stable key that changes exactly once per new dice roll
   const diceKey =
@@ -49,7 +48,6 @@ export function useGameplayPresentation(state: GameState, isAnimating: boolean):
   const prevIsAnimatingRef = useRef<boolean>(isAnimating);
   const sequenceActiveRef = useRef<boolean>(false);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const dismissedCardKeyRef = useRef<string | null>(null);
 
   const [showLandingPanel, setShowLandingPanel] = useState(true);
   const [showCardPanel, setShowCardPanel] = useState(true);
@@ -83,7 +81,6 @@ export function useGameplayPresentation(state: GameState, isAnimating: boolean):
     if (diceKey !== null && diceKey !== prevKey) {
       clearTimers();
       sequenceActiveRef.current = true;
-      dismissedCardKeyRef.current = null;
 
       setShowLandingPanel(false);
       setShowCardPanel(false);
@@ -118,24 +115,13 @@ export function useGameplayPresentation(state: GameState, isAnimating: boolean):
     }
 
     if (wasAnimating && !isAnimating && sequenceActiveRef.current) {
-      // Movement ended — start reveal sequence
+      // Movement ended (token reached its space and the landing bounce settled) —
+      // start the reveal sequence. Card display and the event banner are both
+      // non-blocking, so they can appear together once movement is done.
       clearTimers();
       setPresentationPhase("landing");
 
-      const hasCard = state.drawnCard !== null;
-
-      if (hasCard) {
-        addTimer(() => {
-          // Show the full card (text + result) immediately; the user advances
-          // via the Continue button (dismissCard) instead of an auto-timer,
-          // so they're never left waiting or stuck on the reveal.
-          setShowCardPanel(true);
-          setShowCardResolved(true);
-          setPresentationPhase("revealingCard");
-        }, LANDING_REVEAL_DELAY_MS);
-      } else {
-        addTimer(() => revealAll(), LANDING_REVEAL_DELAY_MS);
-      }
+      addTimer(() => revealAll(), LANDING_REVEAL_DELAY_MS);
     }
     // isAnimating is the only reactive input; state.drawnCard is read by ref via closure
   }, [isAnimating]);
@@ -145,27 +131,16 @@ export function useGameplayPresentation(state: GameState, isAnimating: boolean):
     // clearTimers only uses timersRef, no reactive deps needed
   }, []);
 
-  const currentCardRevealKey = getCardRevealKey(state.drawnCard, state.currentPlayerIndex);
-  const cardDismissed = isCardRevealDismissed(currentCardRevealKey, dismissedCardKeyRef.current);
-
-  function dismissCard() {
-    dismissedCardKeyRef.current = currentCardRevealKey;
-    clearTimers();
-    // Reveal the rest of the outcome (landing panel) immediately — do NOT call
-    // revealAll() here, since it also sets showCardPanel(true), which previously
-    // re-opened the modal in the same render pass and left the user stuck.
-    setShowLandingPanel(true);
-    setShowCardResolved(true);
-    setPresentationPhase("showingOutcome");
-    sequenceActiveRef.current = false;
-  }
+  // The event banner must never appear while dice are rolling or the token is still moving —
+  // it's only safe once movement/bounce has settled (or there was no movement to begin with).
+  const showEventBanner = shouldShowEventBannerNow({ presentationPhase });
 
   return {
     showLandingPanel,
-    showCardPanel: showCardPanel && !cardDismissed,
+    showCardPanel,
     showCardResolved,
+    showEventBanner,
     diceRolling,
     presentationPhase,
-    dismissCard,
   };
 }

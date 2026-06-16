@@ -189,6 +189,28 @@ export function shouldShowAuctionBanner(logEntry: GameLogEntry | null | undefine
   return kind === "auctionStart" || kind === "auctionWin" || kind === "auctionNoBid";
 }
 
+/** Mirrors useGameplayPresentation's GameplayPresentationPhase — duplicated here (rather than
+ *  imported) so this pure helper module has no dependency on the "use client" hook file. */
+export type PresentationPhase =
+  | "idle"
+  | "rollingDice"
+  | "showingDiceResult"
+  | "movingToken"
+  | "landing"
+  | "revealingCard"
+  | "showingOutcome";
+
+/** True once it's safe to show the event banner — i.e. dice are done rolling and the token has
+ *  finished moving + settling. Prevents the "purchased X" / "paid rent" / card-result banner
+ *  from appearing before the player visibly sees the token reach its destination. */
+export function shouldShowEventBannerNow(params: { presentationPhase: PresentationPhase }): boolean {
+  return (
+    params.presentationPhase !== "rollingDice" &&
+    params.presentationPhase !== "showingDiceResult" &&
+    params.presentationPhase !== "movingToken"
+  );
+}
+
 export type BoardCenterStatus = {
   title: string;
   subtitle?: string;
