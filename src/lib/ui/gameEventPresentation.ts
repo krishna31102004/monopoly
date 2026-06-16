@@ -1,5 +1,5 @@
 import { getBoardSpaceByIndex } from "@/data/board";
-import type { GameLogEntry, GameState } from "@/types/game";
+import type { DrawnCard, GameLogEntry, GameState } from "@/types/game";
 import type { TradeDraftState } from "@/types/multiplayer";
 
 export type GameEventKind =
@@ -167,6 +167,20 @@ export function shouldShowCardReveal(state: GameState, showCardPanel: boolean): 
  *  never trapped waiting for an automatic timer. */
 export function getCardRevealDismissAction(): "continue" {
   return "continue";
+}
+
+/** Stable identity for "this particular card reveal", scoped to the drawn card + whose turn it
+ *  is + the resolved outcome text. Used so a dismissed reveal doesn't immediately reappear for
+ *  the same draw, while a genuinely new draw (new key) always shows. Returns null when no card
+ *  is currently drawn. */
+export function getCardRevealKey(drawnCard: DrawnCard | null, currentPlayerIndex: number): string | null {
+  if (!drawnCard) return null;
+  return `${drawnCard.card.id}:${currentPlayerIndex}:${drawnCard.resolvedMessage ?? ""}`;
+}
+
+/** True when the current reveal (by key) has already been dismissed by the user. */
+export function isCardRevealDismissed(currentKey: string | null, dismissedKey: string | null): boolean {
+  return currentKey !== null && currentKey === dismissedKey;
 }
 
 /** True while an auction-related banner should be considered (start/win/no-bid moment is in the log). */

@@ -5,6 +5,7 @@ import {
   DICE_ROLL_MS,
   LANDING_REVEAL_DELAY_MS,
 } from "@/lib/animation/timing";
+import { getCardRevealKey, isCardRevealDismissed } from "@/lib/ui/gameEventPresentation";
 import type { GameState } from "@/types/game";
 
 export type GameplayPresentationPhase =
@@ -48,6 +49,7 @@ export function useGameplayPresentation(state: GameState, isAnimating: boolean):
   const prevIsAnimatingRef = useRef<boolean>(isAnimating);
   const sequenceActiveRef = useRef<boolean>(false);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const dismissedCardKeyRef = useRef<string | null>(null);
 
   const [showLandingPanel, setShowLandingPanel] = useState(true);
   const [showCardPanel, setShowCardPanel] = useState(true);
@@ -81,6 +83,7 @@ export function useGameplayPresentation(state: GameState, isAnimating: boolean):
     if (diceKey !== null && diceKey !== prevKey) {
       clearTimers();
       sequenceActiveRef.current = true;
+      dismissedCardKeyRef.current = null;
 
       setShowLandingPanel(false);
       setShowCardPanel(false);
@@ -142,15 +145,24 @@ export function useGameplayPresentation(state: GameState, isAnimating: boolean):
     // clearTimers only uses timersRef, no reactive deps needed
   }, []);
 
+  const currentCardRevealKey = getCardRevealKey(state.drawnCard, state.currentPlayerIndex);
+  const cardDismissed = isCardRevealDismissed(currentCardRevealKey, dismissedCardKeyRef.current);
+
   function dismissCard() {
+    dismissedCardKeyRef.current = currentCardRevealKey;
     clearTimers();
-    setShowCardPanel(false);
-    revealAll();
+    // Reveal the rest of the outcome (landing panel) immediately — do NOT call
+    // revealAll() here, since it also sets showCardPanel(true), which previously
+    // re-opened the modal in the same render pass and left the user stuck.
+    setShowLandingPanel(true);
+    setShowCardResolved(true);
+    setPresentationPhase("showingOutcome");
+    sequenceActiveRef.current = false;
   }
 
   return {
     showLandingPanel,
-    showCardPanel,
+    showCardPanel: showCardPanel && !cardDismissed,
     showCardResolved,
     diceRolling,
     presentationPhase,
