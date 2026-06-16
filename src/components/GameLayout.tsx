@@ -33,7 +33,7 @@ export function GameLayout() {
   const [state, dispatch] = useReducer(gameReducer, undefined, createSetupGameState);
   const [selectedSpace, setSelectedSpace] = useState<OwnableSpace | null>(null);
   const { displayPositions, isAnimating, landingPlayerIds } = usePlayerMovementAnimation(state.players);
-  const { showLandingPanel, showCardPanel, showCardResolved, showEventBanner, presentationPhase } = useGameplayPresentation(state, isAnimating);
+  const { showLandingPanel, showCardPanel, showCardResolved, presentationPhase } = useGameplayPresentation(state, isAnimating);
 
   const presentationStatus =
     presentationPhase === "rollingDice" ? "Rolling dice…" :
@@ -92,7 +92,6 @@ export function GameLayout() {
             onOpenProperty={setSelectedSpace}
             currentPlayerIndex={state.currentPlayerIndex}
             centerStatus={getBoardCenterStatus(state)}
-            latestLogEntry={showEventBanner ? state.gameLog[0] ?? null : null}
           />
         </section>
 

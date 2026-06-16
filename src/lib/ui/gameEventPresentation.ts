@@ -200,15 +200,12 @@ export type PresentationPhase =
   | "revealingCard"
   | "showingOutcome";
 
-/** True once it's safe to show the event banner — i.e. dice are done rolling and the token has
- *  finished moving + settling. Prevents the "purchased X" / "paid rent" / card-result banner
- *  from appearing before the player visibly sees the token reach its destination. */
-export function shouldShowEventBannerNow(params: { presentationPhase: PresentationPhase }): boolean {
-  return (
-    params.presentationPhase !== "rollingDice" &&
-    params.presentationPhase !== "showingDiceResult" &&
-    params.presentationPhase !== "movingToken"
-  );
+/** The floating/cinematic event banner has been removed entirely (see Phase 4E.4E) — it spoiled
+ *  outcomes before token movement finished, even after repeated timing fixes. The game log,
+ *  landing panel, and card panel already surface every outcome, so this always returns false
+ *  until a reliable animation-completion event queue exists to reintroduce it safely. */
+export function shouldShowEventBannerNow(_params: { presentationPhase: PresentationPhase }): boolean {
+  return false;
 }
 
 export type BoardCenterStatus = {

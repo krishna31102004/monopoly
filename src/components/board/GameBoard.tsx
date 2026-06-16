@@ -2,12 +2,11 @@
 
 import { useRef } from "react";
 import { BoardSpace } from "@/components/board/BoardSpace";
-import { GameEventBanner } from "@/components/GameEventBanner";
 import { getBoardGridPlacement } from "@/lib/board-grid";
 import { scrollBoardToSpace, MOBILE_BOARD_SIZE_PX } from "@/lib/animation/boardScroll";
 import type { BoardCenterStatus } from "@/lib/ui/gameEventPresentation";
 import type { BoardSpace as BoardSpaceType, OwnableSpace } from "@/types/board";
-import type { GameLogEntry, PropertyOwnership } from "@/types/game";
+import type { PropertyOwnership } from "@/types/game";
 import type { Player } from "@/types/player";
 
 type GameBoardProps = {
@@ -23,8 +22,6 @@ type GameBoardProps = {
   currentPlayerIndex?: number;
   /** Dynamic center-of-board status (turn, dice, auction, trade, pot, etc.) */
   centerStatus?: BoardCenterStatus;
-  /** Most recent gameLog entry, used to drive the cinematic event banner */
-  latestLogEntry?: GameLogEntry | null;
 };
 
 export function GameBoard({
@@ -36,7 +33,6 @@ export function GameBoard({
   onOpenProperty,
   currentPlayerIndex = 0,
   centerStatus,
-  latestLogEntry,
 }: GameBoardProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -110,8 +106,6 @@ export function GameBoard({
                     Buy cities · Collect rent · Win the world
                   </p>
                 )}
-
-                <GameEventBanner latestLogEntry={latestLogEntry} />
               </div>
 
               {spaces.map((space) => (

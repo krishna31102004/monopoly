@@ -5,7 +5,6 @@ import {
   DICE_ROLL_MS,
   LANDING_REVEAL_DELAY_MS,
 } from "@/lib/animation/timing";
-import { shouldShowEventBannerNow } from "@/lib/ui/gameEventPresentation";
 import type { GameState } from "@/types/game";
 
 export type GameplayPresentationPhase =
@@ -25,7 +24,6 @@ export type GameplayPresentationPhase =
  *   showLandingPanel  — gate for LandingActionPanel / BankruptcyPanel outcome
  *   showCardPanel     — gate for the non-blocking CardPanel display
  *   showCardResolved  — gate for the resolvedMessage inside CardPanel
- *   showEventBanner   — gate for the cinematic event banner; false until movement/bounce settles
  *   diceRolling       — true while the local dice animation should play
  *   presentationPhase — current phase, useful for status messages
  */
@@ -33,7 +31,6 @@ export function useGameplayPresentation(state: GameState, isAnimating: boolean):
   showLandingPanel: boolean;
   showCardPanel: boolean;
   showCardResolved: boolean;
-  showEventBanner: boolean;
   diceRolling: boolean;
   presentationPhase: GameplayPresentationPhase;
 } {
@@ -116,8 +113,8 @@ export function useGameplayPresentation(state: GameState, isAnimating: boolean):
 
     if (wasAnimating && !isAnimating && sequenceActiveRef.current) {
       // Movement ended (token reached its space and the landing bounce settled) —
-      // start the reveal sequence. Card display and the event banner are both
-      // non-blocking, so they can appear together once movement is done.
+      // start the reveal sequence. Card display is non-blocking and can appear
+      // once movement is done.
       clearTimers();
       setPresentationPhase("landing");
 
@@ -131,15 +128,10 @@ export function useGameplayPresentation(state: GameState, isAnimating: boolean):
     // clearTimers only uses timersRef, no reactive deps needed
   }, []);
 
-  // The event banner must never appear while dice are rolling or the token is still moving —
-  // it's only safe once movement/bounce has settled (or there was no movement to begin with).
-  const showEventBanner = shouldShowEventBannerNow({ presentationPhase });
-
   return {
     showLandingPanel,
     showCardPanel,
     showCardResolved,
-    showEventBanner,
     diceRolling,
     presentationPhase,
   };
