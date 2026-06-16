@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getBoardSpaceByIndex } from "@/data/board";
 import { isOwnableSpace } from "@/lib/game/ownership";
+import { AUCTION_TURN_MS } from "@/lib/animation/timing";
 import type { GameAction, GameState } from "@/types/game";
 
 type AuctionPanelProps = {
@@ -23,8 +24,48 @@ function getSpaceTypeLabel(kind: string) {
   return "Property";
 }
 
+/** Circular countdown ring — premium alternative to a plain numeric badge. Goes urgent
+ *  (orange → red) in the final 5 seconds, per the dramatic-auction spec. */
+function TimerRing({ secondsLeft }: { secondsLeft: number }) {
+  const fraction = Math.max(0, Math.min(1, secondsLeft / (AUCTION_TURN_MS / 1000)));
+  const radius = 22;
+  const circumference = 2 * Math.PI * radius;
+  const isUrgent = secondsLeft <= 5;
+  const ringColor = isUrgent ? "#dc2626" : "#d97706";
+
+  return (
+    <div className="relative h-12 w-12 shrink-0" aria-label="Time remaining" data-urgent={isUrgent}>
+      <svg viewBox="0 0 52 52" className={isUrgent ? "auction-timer-ring-urgent" : ""}>
+        <circle cx="26" cy="26" r={radius} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="4" />
+        <circle
+          cx="26"
+          cy="26"
+          r={radius}
+          fill="none"
+          stroke={ringColor}
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - fraction)}
+          transform="rotate(-90 26 26)"
+          style={{ transition: "stroke-dashoffset 0.25s linear" }}
+        />
+      </svg>
+      <span
+        className={`absolute inset-0 flex items-center justify-center text-sm font-black ${
+          isUrgent ? "text-red-300" : "text-amber-100"
+        }`}
+      >
+        {secondsLeft}
+      </span>
+    </div>
+  );
+}
+
 export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthoritative = false }: AuctionPanelProps) {
   const [now, setNow] = useState(() => Date.now());
+  const [resultMessage, setResultMessage] = useState<string | null>(null);
+  const prevAuctionRef = useRef(state.phase === "auction" ? state.auction : null);
 
   useEffect(() => {
     if (state.phase !== "auction" || !state.auction) return;
@@ -41,6 +82,38 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
     dispatch({ type: "PASS_AUCTION" });
   }, [auction, now, serverAuthoritative, dispatch]);
 
+  // Brief premium result state (winner / no-bid) once the auction resolves, shown inside this
+  // modal only — does not reintroduce a floating event banner elsewhere in the UI.
+  useEffect(() => {
+    const prevAuction = prevAuctionRef.current;
+    prevAuctionRef.current = auction;
+    if (prevAuction && !auction) {
+      const message = state.landingAction?.kind === "message" ? state.landingAction.message : null;
+      if (message) {
+        setResultMessage(message);
+        const id = setTimeout(() => setResultMessage(null), 2200);
+        return () => clearTimeout(id);
+      }
+    }
+  }, [auction, state.landingAction]);
+
+  if (!auction && resultMessage) {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-3 backdrop-blur-sm"
+        role="status"
+        aria-live="polite"
+      >
+        <div className="w-full max-w-sm rounded-2xl border border-amber-300 bg-white px-6 py-8 text-center shadow-[0_32px_100px_rgba(15,23,42,0.45)]">
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-600">
+            Auction Result
+          </p>
+          <p className="mt-2 text-lg font-black leading-snug text-slate-950">{resultMessage}</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!auction) return null;
 
   const space = getBoardSpaceByIndex(auction.propertySpaceIndex);
@@ -53,6 +126,7 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
 
   const isActiveBidder = isMyTurn && !!currentBidder;
   const secondsLeft = Math.max(0, Math.ceil((auction.turnDeadlineAt - now) / 1000));
+  const isUrgent = secondsLeft <= 5;
 
   const bidOptions: { label: string; amount: number }[] =
     auction.currentBid === 0
@@ -70,63 +144,64 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 p-3 backdrop-blur-[2px] sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/85 p-0 backdrop-blur-sm sm:items-center sm:p-3"
       role="presentation"
     >
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby="auction-title"
-        className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-2xl border border-amber-300 bg-white shadow-[0_32px_100px_rgba(15,23,42,0.35)]"
+        className={`max-h-[95vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-amber-400/40 bg-slate-900 shadow-[0_32px_100px_rgba(0,0,0,0.6)] sm:rounded-2xl ${
+          isUrgent ? "auction-modal-urgent" : ""
+        }`}
       >
-        <div className="border-b border-amber-200 bg-amber-100 px-5 py-4">
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-700">
-              Auction
+        <div className="flex items-center justify-between gap-3 border-b border-amber-400/30 bg-gradient-to-r from-amber-700 via-amber-600 to-amber-700 px-5 py-4">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-100">
+              Live Auction
             </p>
-            <span
-              className={`rounded-full px-2.5 py-1 text-xs font-black ${
-                secondsLeft <= 5 ? "bg-red-600 text-white" : "bg-amber-600 text-white"
-              }`}
-              aria-label="Time remaining"
-            >
-              {secondsLeft}s
-            </span>
+            <h2 id="auction-title" className="mt-0.5 truncate text-xl font-black text-white">
+              {space.name}
+            </h2>
+            {isOwnableSpace(space) ? (
+              <p className="text-xs font-semibold text-amber-100/90">
+                {getSpaceTypeLabel(space.kind)} · List ${listPrice}
+              </p>
+            ) : null}
           </div>
-          <h2 id="auction-title" className="mt-0.5 text-xl font-black text-slate-950">
-            {space.name}
-          </h2>
-          {isOwnableSpace(space) ? (
-            <p className="text-xs font-semibold text-amber-700">
-              {getSpaceTypeLabel(space.kind)} · List ${listPrice}
-            </p>
-          ) : null}
+          <TimerRing secondsLeft={secondsLeft} />
         </div>
 
         <div className="p-5">
           {/* Bid status */}
           <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-center">
+            <div className="rounded-lg border border-amber-400/30 bg-slate-800 p-3 text-center">
               <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">
                 Current Bid
               </p>
-              <p className="mt-0.5 text-xl font-black text-slate-950">
+              <p className="mt-0.5 text-2xl font-black text-amber-300">
                 {auction.currentBid > 0 ? `$${auction.currentBid}` : "—"}
               </p>
             </div>
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-center">
+            <div className="rounded-lg border border-amber-400/30 bg-slate-800 p-3 text-center">
               <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">
                 Highest Bidder
               </p>
-              <p className="mt-0.5 text-base font-black leading-tight text-slate-950 truncate">
+              <p className="mt-0.5 text-base font-black leading-tight text-white truncate">
                 {highBidder?.name ?? "None"}
               </p>
             </div>
           </div>
 
-          {/* Active turn indicator */}
-          <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-center text-sm font-black text-amber-800">
-            {currentBidder ? `${currentBidder.name}'s turn` : "Resolving…"}
+          {/* Active bidder spotlight */}
+          <div
+            className={`mt-3 rounded-lg border px-3 py-2 text-center text-sm font-black ${
+              isUrgent
+                ? "border-red-400 bg-red-950/60 text-red-200"
+                : "border-amber-400/40 bg-amber-900/40 text-amber-200"
+            }`}
+          >
+            {currentBidder ? `🔥 ${currentBidder.name}'s turn to bid` : "Resolving…"}
           </div>
 
           {/* Active / passed player lists */}
@@ -144,10 +219,10 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
                       key={id}
                       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
                         isBidding
-                          ? "bg-amber-600 text-white"
+                          ? "bg-amber-500 text-slate-950"
                           : isLeading
-                            ? "bg-emerald-100 text-emerald-800"
-                            : "bg-amber-100 text-amber-800"
+                            ? "bg-emerald-900/60 text-emerald-300"
+                            : "bg-slate-800 text-amber-200"
                       }`}
                     >
                       {isBidding ? "▶ " : ""}
@@ -162,7 +237,7 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
               <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Passed</p>
               <div className="mt-1 flex flex-wrap gap-1">
                 {auction.passedPlayerIds.length === 0 ? (
-                  <span className="text-[10px] font-semibold text-slate-400">—</span>
+                  <span className="text-[10px] font-semibold text-slate-500">—</span>
                 ) : (
                   auction.passedPlayerIds.map((id) => {
                     const player = state.players.find((p) => p.id === id);
@@ -170,7 +245,7 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
                     return (
                       <span
                         key={id}
-                        className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-400 line-through"
+                        className="inline-flex items-center gap-1 rounded-full bg-slate-800/60 px-2 py-0.5 text-[10px] font-bold text-slate-500 line-through"
                       >
                         {player.name}
                       </span>
@@ -181,21 +256,22 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
             </div>
           </div>
 
-          {/* Bid/pass controls — gated to the active bidder only */}
+          {/* Bid/pass controls — gated to the active bidder only; everyone else sees a
+              read-only waiting state. No custom bid input is ever rendered. */}
           {currentBidder ? (
             isActiveBidder ? (
-              <div className="mt-4 rounded-xl border border-amber-300 bg-white p-3">
-                <p className="text-xs font-semibold text-slate-500">
+              <div className="mt-4 rounded-xl border border-amber-400/40 bg-slate-800 p-3">
+                <p className="text-xs font-semibold text-slate-400">
                   Cash: ${currentBidder.cash.toLocaleString()}
                 </p>
-                <div className="mt-3 grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
                   {bidOptions.map((opt) => (
                     <button
                       key={opt.label}
                       type="button"
                       disabled={opt.amount > currentBidder.cash}
                       onClick={() => handleBid(opt.amount)}
-                      className="rounded-lg bg-amber-500 px-2 py-2 text-sm font-black text-white transition-all duration-100 hover:bg-amber-600 active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+                      className="rounded-lg bg-amber-500 px-3 py-3 text-base font-black text-slate-950 shadow-[0_4px_0_rgba(0,0,0,0.25)] transition-all duration-100 hover:bg-amber-400 active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
                     >
                       {opt.label}
                     </button>
@@ -204,13 +280,13 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
                 <button
                   type="button"
                   onClick={() => dispatch({ type: "PASS_AUCTION" })}
-                  className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold text-slate-600 transition-all duration-100 hover:bg-white hover:border-slate-300 active:scale-[0.98]"
+                  className="mt-2 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-3 text-base font-bold text-slate-300 transition-all duration-100 hover:bg-slate-800 hover:border-slate-500 active:scale-[0.98]"
                 >
                   Pass
                 </button>
               </div>
             ) : (
-              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-center text-sm font-semibold text-slate-500">
+              <div className="mt-4 rounded-xl border border-slate-700 bg-slate-800/60 p-3 text-center text-sm font-semibold text-slate-400">
                 Waiting for {currentBidder.name}…
               </div>
             )

@@ -140,3 +140,45 @@ button {
     border-radius: 12px;
   }
 }
+
+/* ── Premium tile upgrade (Phase 4E.5) ──────────────────────────────── */
+
+/* Mini deed-card feel: inset shadow gives each tile physical depth. */
+.board-tile {
+  box-shadow: inset 0 1px 3px rgba(15, 26, 28, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+}
+
+/* Richer color strip — subtle top highlight + bottom depth instead of a flat fill. */
+.board-tile-color-strip {
+  box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.25), inset 0 -3px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Subtle, classy glow on tiles belonging to a completed color-group set. */
+@keyframes fullset-glow-pulse {
+  0%, 100% { box-shadow: inset 0 1px 3px rgba(15, 26, 28, 0.12), 0 0 0 2px rgba(245, 197, 66, 0.55), 0 0 10px rgba(245, 197, 66, 0.35); }
+  50%      { box-shadow: inset 0 1px 3px rgba(15, 26, 28, 0.12), 0 0 0 2px rgba(245, 197, 66, 0.85), 0 0 16px rgba(245, 197, 66, 0.55); }
+}
+
+.board-tile-fullset-glow {
+  animation: fullset-glow-pulse 2.6s ease-in-out infinite;
+}
+
+/* ── Premium auction modal (Phase 4E.6) ─────────────────────────────── */
+
+@keyframes auction-urgent-pulse {
+  0%, 100% { box-shadow: 0 32px 100px rgba(0, 0, 0, 0.6), 0 0 0 2px rgba(220, 38, 38, 0.6); }
+  50%      { box-shadow: 0 32px 100px rgba(0, 0, 0, 0.6), 0 0 0 2px rgba(248, 113, 113, 0.9); }
+}
+
+.auction-modal-urgent {
+  animation: auction-urgent-pulse 1s ease-in-out infinite;
+}
+
+@keyframes auction-ring-urgent-pulse {
+  0%, 100% { filter: drop-shadow(0 0 0 rgba(220, 38, 38, 0)); }
+  50%      { filter: drop-shadow(0 0 5px rgba(220, 38, 38, 0.8)); }
+}
+
+.auction-timer-ring-urgent {
+  animation: auction-ring-urgent-pulse 0.8s ease-in-out infinite;
+}

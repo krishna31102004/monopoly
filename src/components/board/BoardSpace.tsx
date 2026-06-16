@@ -1,4 +1,5 @@
 import { PlayerToken } from "@/components/board/PlayerToken";
+import { getOwnerBadgeLabel, getOwnerBadgePlacement, isFullSetOwner } from "@/lib/ui/boardTilePresentation";
 import type {
   BoardSpace as BoardSpaceType,
   CityColorGroup,
@@ -142,27 +143,34 @@ function MortgageOverlay() {
   );
 }
 
-/** Pill badge absolutely positioned over the color strip — does not affect layout flow. */
-function OwnerNameBadge({ owner }: { owner: Player }) {
-  const label = owner.name.length > 5 ? owner.name.slice(0, 4) + "…" : owner.name;
+const EDGE_POSITION_STYLE: Record<ReturnType<typeof getOwnerBadgePlacement>, React.CSSProperties> = {
+  bottom: { bottom: "2px", left: "50%", transform: "translateX(-50%)" },
+  top: { top: "2px", left: "50%", transform: "translateX(-50%)" },
+  left: { left: "2px", top: "2px" },
+  right: { right: "2px", top: "2px" },
+};
+
+/** Compact, edge-attached owner badge — initials only, never overlaps the city name, price,
+ *  player tokens, or houses/hotels (which live in the tile's vertical center/footer). */
+function OwnerNameBadge({ owner, spaceIndex }: { owner: Player; spaceIndex: number }) {
+  const label = getOwnerBadgeLabel(owner.name);
+  const placement = getOwnerBadgePlacement(spaceIndex);
   return (
     <div
       title={`Owned by ${owner.name}`}
       style={{
         position: "absolute",
-        top: "2px",
-        left: "50%",
-        transform: "translateX(-50%)",
         zIndex: 8,
         backgroundColor: owner.color,
         borderRadius: "999px",
         padding: "1px clamp(2px, 0.5vw, 4px)",
         boxShadow: "0 1px 3px rgba(0,0,0,0.35)",
-        border: "1px solid rgba(255,255,255,0.3)",
+        border: "1px solid rgba(255,255,255,0.35)",
         pointerEvents: "none",
         whiteSpace: "nowrap",
-        maxWidth: "85%",
+        maxWidth: "60%",
         overflow: "hidden",
+        ...EDGE_POSITION_STYLE[placement],
       }}
     >
       <span
@@ -193,10 +201,10 @@ function PropertyBuildings({ ownership }: { ownership: PropertyOwnership }) {
           className="flex items-center justify-center rounded font-black text-white shadow-sm"
           style={{
             backgroundColor: "#c0392b",
-            width: "clamp(10px,2.2vw,16px)",
-            height: "clamp(7px,1.5vw,11px)",
-            fontSize: "clamp(4px,0.8vw,7px)",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.2)",
+            width: "clamp(13px,2.8vw,20px)",
+            height: "clamp(9px,1.9vw,14px)",
+            fontSize: "clamp(5px,1vw,9px)",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.25)",
           }}
           title="Hotel"
         >
@@ -214,9 +222,9 @@ function PropertyBuildings({ ownership }: { ownership: PropertyOwnership }) {
             className="rounded-sm"
             style={{
               backgroundColor: "#27ae60",
-              width: "clamp(5px,1.2vw,8px)",
-              height: "clamp(5px,1.2vw,8px)",
-              boxShadow: "0 1px 2px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.2)",
+              width: "clamp(7px,1.6vw,11px)",
+              height: "clamp(7px,1.6vw,11px)",
+              boxShadow: "0 1px 2px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.25)",
             }}
             title={`${ownership.houses} house${ownership.houses > 1 ? "s" : ""}`}
           />
@@ -240,12 +248,15 @@ export function BoardSpace({ space, players, allPlayers = [], ownerships = [], l
 
   const displayName = boardDisplayName(space);
 
+  const isFullSet =
+    space.kind === "city" && owner ? isFullSetOwner(space, ownerships, owner.id) : false;
+
   const content = (
     <>
       {/* Color strip for cities */}
       {space.kind === "city" ? (
         <span
-          className={`block shrink-0 border-b border-[var(--board-border)] ${colorGroupClasses[space.colorGroup]}`}
+          className={`board-tile-color-strip block shrink-0 border-b border-[var(--board-border)] ${colorGroupClasses[space.colorGroup]}`}
           style={{ height: isCorner ? "0" : "clamp(11px, 24%, 18px)" }}
         />
       ) : null}
@@ -267,8 +278,8 @@ export function BoardSpace({ space, players, allPlayers = [], ownerships = [], l
       {/* Mortgage overlay — diagonal stripes, sits below text/tokens via z-index */}
       {!isCorner && ownership?.isMortgaged ? <MortgageOverlay /> : null}
 
-      {/* Owner pill badge — absolute over color strip, never disrupts layout flow */}
-      {!isCorner && owner ? <OwnerNameBadge owner={owner} /> : null}
+      {/* Owner pill badge — absolute, edge-attached, never disrupts layout flow */}
+      {!isCorner && owner ? <OwnerNameBadge owner={owner} spaceIndex={space.index} /> : null}
 
       {/* z-index:5 ensures all text/icons paint above the mortgage overlay (z-index:4) */}
       <div className="relative z-[5] flex min-h-0 flex-1 flex-col items-center justify-between gap-0.5 p-0.5 sm:p-1">
@@ -328,10 +339,11 @@ export function BoardSpace({ space, players, allPlayers = [], ownerships = [], l
 
   const sharedClasses = [
     "relative min-w-0 overflow-hidden border border-[var(--board-border)] bg-[var(--board-paper)]",
-    "flex flex-col text-center",
+    "flex flex-col text-center board-tile",
     canOpen
       ? "cursor-pointer transition-colors duration-100 hover:bg-amber-50 board-space-focus"
       : "",
+    isFullSet ? "board-tile-fullset-glow" : "",
   ]
     .filter(Boolean)
     .join(" ");
