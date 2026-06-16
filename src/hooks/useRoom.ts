@@ -13,6 +13,10 @@ import type {
   RoomJoinedPayload,
   RoomPublicView,
   RoomUpdatePayload,
+  TradeDraftState,
+  TradeDraftStartPayload,
+  TradeDraftUpdatePayload,
+  TradeDraftStatePayload,
 } from "@/types/multiplayer";
 import type { GameRules, GameState } from "@/types/game";
 
@@ -34,6 +38,7 @@ export type RoomHookState = {
   gameState: GameState | null;
   error: string | null;
   lastPlayerEvent: PlayerEventPayload | null;
+  tradeDraft: TradeDraftState | null;
 };
 
 export function useRoom() {
@@ -46,6 +51,7 @@ export function useRoom() {
     gameState: null,
     error: null,
     lastPlayerEvent: null,
+    tradeDraft: null,
   });
 
   // Keep a ref to current state for use inside socket callbacks without stale closures
@@ -128,6 +134,10 @@ export function useRoom() {
       setState((s) => ({ ...s, error: data.message }));
     });
 
+    socket.on("trade:draftState", (data: TradeDraftStatePayload) => {
+      setState((s) => ({ ...s, tradeDraft: data.draft }));
+    });
+
     socket.on("player:connected", (data: PlayerEventPayload) => {
       setState((s) => ({ ...s, lastPlayerEvent: data }));
     });
@@ -137,7 +147,7 @@ export function useRoom() {
     });
 
     socket.on("room:ended", () => {
-      setState((s) => ({ ...s, room: null, gameState: null }));
+      setState((s) => ({ ...s, room: null, gameState: null, tradeDraft: null }));
       sessionStorage.removeItem(SESSION_PLAYER_ID);
       sessionStorage.removeItem(SESSION_ROOM_CODE);
       sessionStorage.removeItem(SESSION_PLAYER_NAME);
@@ -157,6 +167,7 @@ export function useRoom() {
       socket.off("room:update");
       socket.off("game:state");
       socket.off("game:error");
+      socket.off("trade:draftState");
       socket.off("player:connected");
       socket.off("player:disconnected");
       socket.off("room:ended");
@@ -221,6 +232,24 @@ export function useRoom() {
     [],
   );
 
+  const startTradeDraft = useCallback((payload: TradeDraftStartPayload) => {
+    setState((s) => ({ ...s, error: null }));
+    getSocket().emit("trade:draftStart", payload);
+  }, []);
+
+  const updateTradeDraft = useCallback((payload: TradeDraftUpdatePayload) => {
+    getSocket().emit("trade:draftUpdate", payload);
+  }, []);
+
+  const cancelTradeDraft = useCallback(() => {
+    getSocket().emit("trade:draftCancel");
+  }, []);
+
+  const submitTradeDraft = useCallback(() => {
+    setState((s) => ({ ...s, error: null }));
+    getSocket().emit("trade:draftSubmit");
+  }, []);
+
   return {
     ...state,
     createRoom,
@@ -231,5 +260,9 @@ export function useRoom() {
     requestGameSync,
     clearError,
     sendAction,
+    startTradeDraft,
+    updateTradeDraft,
+    cancelTradeDraft,
+    submitTradeDraft,
   };
 }

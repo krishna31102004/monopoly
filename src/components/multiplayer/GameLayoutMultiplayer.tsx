@@ -17,7 +17,7 @@ import { TradePanel } from "@/components/TradePanel";
 import { MobileActionBar } from "@/components/MobileActionBar";
 import { boardSpaces } from "@/data/board";
 import type { GameAction, GameState } from "@/types/game";
-import type { GameActionIntent, RoomPublicView } from "@/types/multiplayer";
+import type { GameActionIntent, RoomPublicView, TradeDraftState, TradeDraftStartPayload, TradeDraftUpdatePayload } from "@/types/multiplayer";
 import type { OwnableSpace } from "@/types/board";
 
 import type { ConnectionStatus } from "@/hooks/useRoom";
@@ -31,6 +31,11 @@ type Props = {
   connectionStatus: ConnectionStatus;
   onLeave: () => void;
   onRequestSync: () => void;
+  tradeDraft: TradeDraftState | null;
+  startTradeDraft: (payload: TradeDraftStartPayload) => void;
+  updateTradeDraft: (payload: TradeDraftUpdatePayload) => void;
+  cancelTradeDraft: () => void;
+  submitTradeDraft: () => void;
 };
 
 // Determine which player ID should be acting right now
@@ -40,7 +45,21 @@ function getActorId(gs: GameState): string {
   return gs.players[gs.currentPlayerIndex]?.id ?? "";
 }
 
-export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction, error, connectionStatus, onLeave, onRequestSync }: Props) {
+export function GameLayoutMultiplayer({
+  gameState,
+  myPlayerId,
+  room,
+  sendAction,
+  error,
+  connectionStatus,
+  onLeave,
+  onRequestSync,
+  tradeDraft,
+  startTradeDraft,
+  updateTradeDraft,
+  cancelTradeDraft,
+  submitTradeDraft,
+}: Props) {
   const [selectedSpace, setSelectedSpace] = useState<OwnableSpace | null>(null);
   const { displayPositions, isAnimating, landingPlayerIds } = usePlayerMovementAnimation(gameState.players);
   const { showLandingPanel, showCardPanel, showCardResolved, presentationPhase } = useGameplayPresentation(gameState, isAnimating);
@@ -202,7 +221,16 @@ export function GameLayoutMultiplayer({ gameState, myPlayerId, room, sendAction,
             ) : null}
             {showLandingPanel ? <LandingActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} /> : null}
             <BankruptcyPanel state={gameState} dispatch={dispatch} />
-            <TradePanel state={gameState} dispatch={dispatch} myPlayerId={myPlayerId} />
+            <TradePanel
+              state={gameState}
+              dispatch={dispatch}
+              myPlayerId={myPlayerId}
+              tradeDraft={tradeDraft}
+              onDraftStart={(recipientId) => startTradeDraft({ recipientId })}
+              onDraftUpdate={updateTradeDraft}
+              onDraftCancel={cancelTradeDraft}
+              onDraftSubmit={submitTradeDraft}
+            />
             <GameLogDrawer entries={gameState.gameLog} />
           </div>
 

@@ -1,9 +1,12 @@
 import { createInitialGameState } from "@/lib/game/createInitialGameState";
 import { gameReducer } from "@/lib/game/gameReducer";
+import { validateTrade } from "@/lib/game/trade";
 import { generateRoomCode } from "@/lib/multiplayer/roomCode";
-import type { RoomPlayer, RoomPublicView, RoomStatus, GameActionIntent } from "@/types/multiplayer";
+import type { RoomPlayer, RoomPublicView, RoomStatus, GameActionIntent, TradeDraftState } from "@/types/multiplayer";
 import type { PlayerToken } from "@/types/player";
-import type { GameState, GameAction, DiceRoll, GameRules } from "@/types/game";
+import type { GameState, GameAction, DiceRoll, GameRules, TradeOffer } from "@/types/game";
+
+const EMPTY_TRADE_OFFER: TradeOffer = { cash: 0, propertySpaceIndices: [], getOutOfJailFreeCards: 0 };
 
 export const MAX_PLAYERS = 6;
 const INACTIVITY_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
@@ -20,6 +23,7 @@ type InternalRoom = {
   createdAt: number;
   lastActivityAt: number;
   maxPlayers: number;
+  tradeDraft: TradeDraftState | null;
 };
 
 export type CreateRoomInput = {
@@ -103,6 +107,7 @@ export class RoomManager {
       createdAt: now,
       lastActivityAt: now,
       maxPlayers: MAX_PLAYERS,
+      tradeDraft: null,
     };
 
     this.rooms.set(roomCode, room);
@@ -326,7 +331,130 @@ export class RoomManager {
 
     room.gameState = newState;
     this.touch(room);
+
+    // Drop a stale draft if the turn/phase moved on without it being submitted.
+    if (room.tradeDraft && room.tradeDraft.proposerId !== this.expectedProposerId(newState)) {
+      room.tradeDraft = null;
+    }
+
     return { ok: true, value: newState };
+  }
+
+  // ── Live trade draft (room-level, ephemeral) ──────────────────────────────
+  // The draft is never trusted from the client's claimed identity — every
+  // method below takes the server-resolved `playerId` (looked up from the
+  // socket) and re-derives the expected proposer from game state itself.
+
+  private expectedProposerId(gs: GameState): string {
+    return gs.phase === "bankruptcyPending" && gs.bankruptcy
+      ? gs.bankruptcy.debtorPlayerId
+      : gs.players[gs.currentPlayerIndex].id;
+  }
+
+  startTradeDraft(roomCode: string, playerId: string, recipientId: string): RoomResult<TradeDraftState> {
+    const room = this.rooms.get(roomCode);
+    if (!room) return { ok: false, error: "Room not found." };
+    if (!room.gameState) return { ok: false, error: "No game in progress." };
+    const gs = room.gameState;
+
+    const expected = this.expectedProposerId(gs);
+    if (playerId !== expected) {
+      return { ok: false, error: "Only the current player can start a trade." };
+    }
+    if (gs.trade) return { ok: false, error: "A trade is already pending." };
+    if (room.tradeDraft) return { ok: false, error: "A trade draft is already in progress." };
+    const recipient = gs.players.find((p) => p.id === recipientId);
+    if (!recipient || recipient.isBankrupt || recipient.id === playerId) {
+      return { ok: false, error: "Invalid trade recipient." };
+    }
+
+    const draft: TradeDraftState = {
+      proposerId: playerId,
+      recipientId,
+      offerFromProposer: { ...EMPTY_TRADE_OFFER },
+      offerFromRecipient: { ...EMPTY_TRADE_OFFER },
+      updatedAt: Date.now(),
+    };
+    room.tradeDraft = draft;
+    this.touch(room);
+    return { ok: true, value: draft };
+  }
+
+  updateTradeDraft(
+    roomCode: string,
+    playerId: string,
+    patch: { recipientId?: string; offerFromProposer?: TradeOffer; offerFromRecipient?: TradeOffer },
+  ): RoomResult<TradeDraftState> {
+    const room = this.rooms.get(roomCode);
+    if (!room) return { ok: false, error: "Room not found." };
+    if (!room.tradeDraft) return { ok: false, error: "No trade draft in progress." };
+    if (room.tradeDraft.proposerId !== playerId) {
+      return { ok: false, error: "Only the proposer can edit this trade draft." };
+    }
+
+    const next: TradeDraftState = {
+      ...room.tradeDraft,
+      recipientId: patch.recipientId ?? room.tradeDraft.recipientId,
+      offerFromProposer: patch.offerFromProposer ?? room.tradeDraft.offerFromProposer,
+      offerFromRecipient: patch.offerFromRecipient ?? room.tradeDraft.offerFromRecipient,
+      updatedAt: Date.now(),
+    };
+    room.tradeDraft = next;
+    this.touch(room);
+    return { ok: true, value: next };
+  }
+
+  cancelTradeDraft(roomCode: string, playerId: string): RoomResult<null> {
+    const room = this.rooms.get(roomCode);
+    if (!room) return { ok: false, error: "Room not found." };
+    if (!room.tradeDraft) return { ok: true, value: null };
+    if (room.tradeDraft.proposerId !== playerId) {
+      return { ok: false, error: "Only the proposer can cancel this trade draft." };
+    }
+    room.tradeDraft = null;
+    this.touch(room);
+    return { ok: true, value: null };
+  }
+
+  submitTradeDraft(roomCode: string, playerId: string): RoomResult<GameState> {
+    const room = this.rooms.get(roomCode);
+    if (!room) return { ok: false, error: "Room not found." };
+    if (!room.tradeDraft) return { ok: false, error: "No trade draft in progress." };
+    if (room.tradeDraft.proposerId !== playerId) {
+      return { ok: false, error: "Only the proposer can submit this trade draft." };
+    }
+    if (!room.gameState) return { ok: false, error: "No game in progress." };
+
+    const draft = room.tradeDraft;
+    const check = validateTrade(
+      room.gameState,
+      draft.proposerId,
+      draft.recipientId,
+      draft.offerFromProposer,
+      draft.offerFromRecipient,
+    );
+    if (!check.ok) return { ok: false, error: check.reason };
+
+    const result = this.applyGameAction(
+      roomCode,
+      playerId,
+      {
+        type: "PROPOSE_TRADE",
+        initiatorId: draft.proposerId,
+        recipientId: draft.recipientId,
+        offerFromInitiator: draft.offerFromProposer,
+        offerFromRecipient: draft.offerFromRecipient,
+      },
+      null,
+    );
+    if (!result.ok) return result;
+
+    room.tradeDraft = null;
+    return result;
+  }
+
+  getTradeDraft(roomCode: string): TradeDraftState | null {
+    return this.rooms.get(roomCode)?.tradeDraft ?? null;
   }
 
   // ── Getters ────────────────────────────────────────────────────────────────

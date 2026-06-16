@@ -1,4 +1,4 @@
-import type { GameState } from "@/types/game";
+import type { GameState, TradeOffer } from "@/types/game";
 import type { PlayerToken } from "@/types/player";
 
 export type RoomStatus = "lobby" | "inGame" | "gameOver" | "ended";
@@ -102,4 +102,32 @@ export type GameActionIntent =
 export type GameActionPayload = {
   playerId: string;
   action: GameActionIntent;
+};
+
+// ── Live trade draft (room-level, ephemeral, not part of GameState) ─────────
+// A draft exists only while the proposer is composing an offer. The server is
+// the sole source of truth for who may edit it; clients never send their own
+// player/actor id for authorization — the server infers it from the socket's
+// room membership (see RoomManager.startTradeDraft / updateTradeDraft).
+
+export type TradeDraftState = {
+  proposerId: string;
+  recipientId: string;
+  offerFromProposer: TradeOffer;
+  offerFromRecipient: TradeOffer;
+  updatedAt: number;
+};
+
+export type TradeDraftStartPayload = {
+  recipientId: string;
+};
+
+export type TradeDraftUpdatePayload = {
+  recipientId?: string;
+  offerFromProposer?: TradeOffer;
+  offerFromRecipient?: TradeOffer;
+};
+
+export type TradeDraftStatePayload = {
+  draft: TradeDraftState | null;
 };

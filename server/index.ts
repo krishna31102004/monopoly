@@ -8,6 +8,8 @@ import type {
   CreateRoomPayload,
   JoinRoomPayload,
   GameActionPayload,
+  TradeDraftStartPayload,
+  TradeDraftUpdatePayload,
 } from "../src/types/multiplayer.js";
 import type { GameRules, GameState } from "../src/types/game.js";
 
@@ -147,6 +149,10 @@ io.on("connection", (socket) => {
       if (gameState) {
         socket.emit("game:state", { gameState });
       }
+      const draft = rooms.getTradeDraft(room.roomCode);
+      if (draft) {
+        socket.emit("trade:draftState", { draft });
+      }
     } catch (err) {
       console.error("[room:join] error:", err);
       socket.emit("game:error", { message: "Failed to join room." });
@@ -229,6 +235,74 @@ io.on("connection", (socket) => {
     }
   });
 
+  // ── trade:draftStart ─────────────────────────────────────────────────────
+  // The server never trusts a client-supplied actor id — playerId is resolved
+  // from the socket's room membership, just like every other action.
+  socket.on("trade:draftStart", (payload: TradeDraftStartPayload) => {
+    const roomCode = rooms.getRoomCodeBySocketId(socket.id);
+    const playerId = rooms.getPlayerIdBySocketId(socket.id);
+    if (!roomCode || !playerId) {
+      socket.emit("game:error", { message: "Not in a room." });
+      return;
+    }
+    const result = rooms.startTradeDraft(roomCode, playerId, payload?.recipientId);
+    if (!result.ok) {
+      socket.emit("game:error", { message: result.error });
+      return;
+    }
+    io.to(roomCode).emit("trade:draftState", { draft: result.value });
+  });
+
+  // ── trade:draftUpdate ────────────────────────────────────────────────────
+  socket.on("trade:draftUpdate", (payload: TradeDraftUpdatePayload) => {
+    const roomCode = rooms.getRoomCodeBySocketId(socket.id);
+    const playerId = rooms.getPlayerIdBySocketId(socket.id);
+    if (!roomCode || !playerId) {
+      socket.emit("game:error", { message: "Not in a room." });
+      return;
+    }
+    const result = rooms.updateTradeDraft(roomCode, playerId, payload ?? {});
+    if (!result.ok) {
+      socket.emit("game:error", { message: result.error });
+      return;
+    }
+    io.to(roomCode).emit("trade:draftState", { draft: result.value });
+  });
+
+  // ── trade:draftCancel ────────────────────────────────────────────────────
+  socket.on("trade:draftCancel", () => {
+    const roomCode = rooms.getRoomCodeBySocketId(socket.id);
+    const playerId = rooms.getPlayerIdBySocketId(socket.id);
+    if (!roomCode || !playerId) {
+      socket.emit("game:error", { message: "Not in a room." });
+      return;
+    }
+    const result = rooms.cancelTradeDraft(roomCode, playerId);
+    if (!result.ok) {
+      socket.emit("game:error", { message: result.error });
+      return;
+    }
+    io.to(roomCode).emit("trade:draftState", { draft: null });
+  });
+
+  // ── trade:draftSubmit ────────────────────────────────────────────────────
+  socket.on("trade:draftSubmit", () => {
+    const roomCode = rooms.getRoomCodeBySocketId(socket.id);
+    const playerId = rooms.getPlayerIdBySocketId(socket.id);
+    if (!roomCode || !playerId) {
+      socket.emit("game:error", { message: "Not in a room." });
+      return;
+    }
+    const result = rooms.submitTradeDraft(roomCode, playerId);
+    if (!result.ok) {
+      socket.emit("game:error", { message: result.error });
+      return;
+    }
+    io.to(roomCode).emit("trade:draftState", { draft: null });
+    io.to(roomCode).emit("game:state", { gameState: result.value });
+    console.log(`[trade] draft submitted by ${playerId} in ${roomCode}`);
+  });
+
   // ── room:reconnect ───────────────────────────────────────────────────────
   // Explicit reconnect event: client sends saved identity to re-attach to a room.
   socket.on(
@@ -283,6 +357,8 @@ io.on("connection", (socket) => {
     if (room) socket.emit("room:update", { room });
     const gameState = rooms.getGameState(roomCode);
     if (gameState) socket.emit("game:state", { gameState });
+    const draft = rooms.getTradeDraft(roomCode);
+    if (draft) socket.emit("trade:draftState", { draft });
   });
 
   // ── game:requestSync ─────────────────────────────────────────────────────

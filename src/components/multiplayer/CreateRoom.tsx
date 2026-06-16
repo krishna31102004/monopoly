@@ -24,6 +24,11 @@ export function CreateRoom() {
     clearError,
     sendAction,
     requestGameSync,
+    tradeDraft,
+    startTradeDraft,
+    updateTradeDraft,
+    cancelTradeDraft,
+    submitTradeDraft,
   } = useRoom();
 
   const [name, setName] = useState("");
@@ -53,6 +58,11 @@ export function CreateRoom() {
         connectionStatus={status}
         onLeave={leaveRoom}
         onRequestSync={requestGameSync}
+        tradeDraft={tradeDraft}
+        startTradeDraft={startTradeDraft}
+        updateTradeDraft={updateTradeDraft}
+        cancelTradeDraft={cancelTradeDraft}
+        submitTradeDraft={submitTradeDraft}
       />
     );
   }
