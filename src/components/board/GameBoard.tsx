@@ -2,10 +2,12 @@
 
 import { useRef } from "react";
 import { BoardSpace } from "@/components/board/BoardSpace";
+import { GameEventBanner } from "@/components/GameEventBanner";
 import { getBoardGridPlacement } from "@/lib/board-grid";
 import { scrollBoardToSpace, MOBILE_BOARD_SIZE_PX } from "@/lib/animation/boardScroll";
+import type { BoardCenterStatus } from "@/lib/ui/gameEventPresentation";
 import type { BoardSpace as BoardSpaceType, OwnableSpace } from "@/types/board";
-import type { PropertyOwnership } from "@/types/game";
+import type { GameLogEntry, PropertyOwnership } from "@/types/game";
 import type { Player } from "@/types/player";
 
 type GameBoardProps = {
@@ -19,6 +21,10 @@ type GameBoardProps = {
   onOpenProperty: (space: OwnableSpace) => void;
   /** Index of the player whose turn it is — used by "Find me" on mobile */
   currentPlayerIndex?: number;
+  /** Dynamic center-of-board status (turn, dice, auction, trade, pot, etc.) */
+  centerStatus?: BoardCenterStatus;
+  /** Most recent gameLog entry, used to drive the cinematic event banner */
+  latestLogEntry?: GameLogEntry | null;
 };
 
 export function GameBoard({
@@ -29,6 +35,8 @@ export function GameBoard({
   landingPlayerIds,
   onOpenProperty,
   currentPlayerIndex = 0,
+  centerStatus,
+  latestLogEntry,
 }: GameBoardProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -67,40 +75,58 @@ export function GameBoard({
             "xl:max-w-[min(76vw,calc(100vh-2rem),1100px)]",
           ].join(" ")}
         >
-          <div
-            className="grid aspect-square grid-cols-11 grid-rows-11 overflow-hidden border-[3px] border-[var(--board-border)] bg-[var(--board-line)] shadow-[0_24px_80px_rgba(15,26,28,0.25)]"
-            aria-label="World Cities game board"
-          >
-            {/* Board centre */}
-            <div className="col-start-2 col-span-9 row-start-2 row-span-9 flex flex-col items-center justify-center border border-[var(--board-border)] bg-[var(--board-paper)] p-4 text-center">
-              <p className="text-[9px] font-black uppercase tracking-[0.22em] text-slate-500 sm:text-[11px]">
-                Private Board Game
-              </p>
-              <h1 className="mt-1 text-xl font-black leading-none tracking-tight text-slate-950 sm:text-3xl lg:text-[2.6rem]">
-                World Cities
-              </h1>
-              <div className="mt-2 flex gap-1 sm:gap-1.5">
-                {["🇲🇽","🇮🇳","🇩🇪","🇦🇪","🇮🇹","🇦🇺","🇬🇧","🇺🇸"].map((flag) => (
-                  <span key={flag} className="text-sm sm:text-lg lg:text-xl" aria-hidden="true">{flag}</span>
-                ))}
-              </div>
-              <p className="mt-2 hidden text-[10px] font-semibold leading-5 text-slate-500 sm:block sm:text-xs">
-                Buy cities · Collect rent · Win the world
-              </p>
-            </div>
+          <div className="board-hero-frame relative">
+            <div
+              className="relative grid aspect-square grid-cols-11 grid-rows-11 overflow-hidden rounded-[10px] border-[3px] border-[var(--board-border)] bg-[var(--board-line)] shadow-[inset_0_2px_6px_rgba(0,0,0,0.35)]"
+              aria-label="World Cities game board"
+            >
+              {/* Board centre */}
+              <div className="col-start-2 col-span-9 row-start-2 row-span-9 flex flex-col items-center justify-center gap-1 border border-[var(--board-border)] bg-gradient-to-br from-[var(--board-paper)] via-[var(--board-paper)] to-amber-50 p-4 text-center shadow-[inset_0_0_40px_rgba(15,26,28,0.06)]">
+                <p className="text-[9px] font-black uppercase tracking-[0.22em] text-slate-500 sm:text-[11px]">
+                  Private Board Game
+                </p>
+                <h1 className="mt-0.5 text-xl font-black leading-none tracking-tight text-slate-950 sm:text-3xl lg:text-[2.6rem]">
+                  World Cities
+                </h1>
+                <div className="mt-1 flex gap-1 sm:gap-1.5">
+                  {["🇲🇽","🇮🇳","🇩🇪","🇦🇪","🇮🇹","🇦🇺","🇬🇧","🇺🇸"].map((flag) => (
+                    <span key={flag} className="text-sm sm:text-lg lg:text-xl" aria-hidden="true">{flag}</span>
+                  ))}
+                </div>
 
-            {spaces.map((space) => (
-              <BoardSpace
-                key={space.index}
-                space={space}
-                players={playersByPosition[space.index] ?? []}
-                allPlayers={players}
-                ownerships={ownerships}
-                landingPlayerIds={landingPlayerIds}
-                style={getBoardGridPlacement(space.index)}
-                onOpenProperty={onOpenProperty}
-              />
-            ))}
+                {centerStatus ? (
+                  <div className="mt-2 rounded-full border border-amber-300 bg-white/80 px-3 py-1.5 shadow-sm backdrop-blur-sm">
+                    <p className="text-[10px] font-black leading-tight text-slate-900 sm:text-xs">
+                      {centerStatus.title}
+                    </p>
+                    {centerStatus.subtitle ? (
+                      <p className="mt-0.5 text-[9px] font-bold leading-tight text-amber-700 sm:text-[10px]">
+                        {centerStatus.subtitle}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="mt-1 hidden text-[10px] font-semibold leading-5 text-slate-500 sm:block sm:text-xs">
+                    Buy cities · Collect rent · Win the world
+                  </p>
+                )}
+              </div>
+
+              {spaces.map((space) => (
+                <BoardSpace
+                  key={space.index}
+                  space={space}
+                  players={playersByPosition[space.index] ?? []}
+                  allPlayers={players}
+                  ownerships={ownerships}
+                  landingPlayerIds={landingPlayerIds}
+                  style={getBoardGridPlacement(space.index)}
+                  onOpenProperty={onOpenProperty}
+                />
+              ))}
+
+              <GameEventBanner latestLogEntry={latestLogEntry} />
+            </div>
           </div>
         </div>
       </div>
