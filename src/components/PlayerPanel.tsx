@@ -10,6 +10,7 @@ import {
   getOwnedPropertyChips,
   getPlayerStatusChips,
   getWealthBarPercent,
+  PLAYER_CARD_DEFAULT_EXPANDED,
   type PlayerStatusChip,
 } from "@/lib/game/playerPanelHelpers";
 import type { BoardSpace, CityColorGroup } from "@/types/board";
@@ -70,7 +71,10 @@ export function PlayerPanel({
   isInActiveAuction,
   isInDebt,
 }: PlayerPanelProps) {
-  const [expanded, setExpanded] = useState(isCurrentPlayer);
+  // Every card starts collapsed — current-player emphasis is purely visual
+  // (border/glow/badge), never a structural difference, so expand state
+  // can't silently diverge between cards.
+  const [expanded, setExpanded] = useState(PLAYER_CARD_DEFAULT_EXPANDED);
 
   const position = getBoardSpaceByIndex(player.position);
   const ownedSpaceIds = getOwnedSpaceIds(ownerships, player.id);
@@ -130,11 +134,7 @@ export function PlayerPanel({
       ) : null}
 
       {/* Header row: token, name, status, cash */}
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-center gap-3 px-3 py-3 text-left"
-      >
+      <div className="flex w-full items-center gap-3 px-3 py-3 text-left">
         <TokenIcon
           token={player.token}
           color={player.color}
@@ -167,7 +167,7 @@ export function PlayerPanel({
             </div>
           ) : null}
         </div>
-      </button>
+      </div>
 
       {/* Compact jail status row */}
       <div className="border-t border-slate-100/80 px-3 py-2">
@@ -234,6 +234,16 @@ export function PlayerPanel({
           <p className="text-xs font-semibold text-slate-400">No properties owned</p>
         </div>
       )}
+
+      {/* Explicit expand/collapse affordance — same on every card */}
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+        className="flex w-full items-center justify-center gap-1 border-t border-slate-100/80 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-600"
+      >
+        Details {expanded ? "▴" : "▾"}
+      </button>
 
       {/* Expanded detail section */}
       {expanded ? (

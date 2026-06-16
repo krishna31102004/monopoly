@@ -239,16 +239,11 @@ export function GameLayoutMultiplayer({
             <GameLogDrawer entries={gameState.gameLog} />
           </div>
 
-          <div className="mb-3 flex items-end justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-                Players
-              </p>
-              <h2 className="text-lg font-black text-slate-950">Player Panels</h2>
-            </div>
-            <span className="rounded-full border border-blue-300 bg-blue-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-blue-700">
-              Online
-            </span>
+          <div className="mb-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+              Players
+            </p>
+            <h2 className="text-lg font-black text-slate-950">Player Panels</h2>
           </div>
 
           <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-1">

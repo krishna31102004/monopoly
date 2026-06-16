@@ -14,6 +14,14 @@ export const COLOR_GROUP_SIZE: Record<CityColorGroup, number> = {
   "dark-blue": 2,
 };
 
+/**
+ * Single source of truth for whether a player card starts expanded.
+ * Every card — current player or not — must use this same default so the
+ * portfolio-detail section never appears on one card but not another
+ * without an explicit user click.
+ */
+export const PLAYER_CARD_DEFAULT_EXPANDED = false;
+
 export type PropertyChipKind = "city" | "airport" | "utility";
 
 export type PropertyChip = {

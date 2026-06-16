@@ -1227,3 +1227,23 @@ flags into both `GameLayout.tsx` (local) and `GameLayoutMultiplayer.tsx`.
 
 Tests: added `src/__tests__/playerPanelHelpers.test.ts` (18 tests). Full
 suite: 838/838 passing, typecheck/lint/build clean.
+
+## Phase 4E.3: Consistent Premium Player Card System Status ✅
+
+Fixed the inconsistency from 4E.2: the expand state defaulted to
+`isCurrentPlayer`, so the current-player card silently rendered with the
+portfolio-detail section open while every other card rendered closed —
+making the cards look like two different components instead of one design
+with stronger emphasis. All cards now default to collapsed via a single
+exported constant (`PLAYER_CARD_DEFAULT_EXPANDED` in
+`playerPanelHelpers.ts`) and expose the same explicit `Details ▾/▴` toggle
+button. The current-player card keeps the same section skeleton — only the
+border/glow, background gradient, and "Now Playing" strip differ. Removed
+the global "Online" pill from the multiplayer player-panel section header
+(`GameLayoutMultiplayer.tsx`) since it duplicated the new per-player ONLINE
+status chip.
+
+Tests: added `src/__tests__/playerCardPresentation.test.ts` and
+`src/__tests__/playerPanelUi.test.ts` (skeleton-consistency, status-chip
+dedup, and per-kind portfolio chip coverage). Full suite: 856/856 passing,
+typecheck/lint/build clean.
