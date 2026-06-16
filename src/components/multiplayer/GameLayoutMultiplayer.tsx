@@ -8,6 +8,7 @@ import { CardPanel } from "@/components/CardPanel";
 import { GameBoard } from "@/components/board/GameBoard";
 import { GameControls } from "@/components/GameControls";
 import { GameLogDrawer } from "@/components/GameLogDrawer";
+import { GameStatusStrip } from "@/components/GameStatusStrip";
 import { JailActionPanel } from "@/components/JailActionPanel";
 import { LandingActionPanel } from "@/components/LandingActionPanel";
 import { PlayerPanel } from "@/components/PlayerPanel";
@@ -154,40 +155,22 @@ export function GameLayoutMultiplayer({
         </div>
       ) : null}
 
-      {/* Turn indicator */}
+      {/* Status strip — sticky on mobile, slim inline on desktop */}
       <div className="mx-auto mb-3 max-w-[1560px]">
-        <div
-          className={`flex flex-wrap items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold ${
-            isMyTurn
-              ? "border-emerald-300 bg-emerald-50 text-emerald-800"
-              : "border-slate-200 bg-slate-50 text-slate-600"
-          }`}
-        >
-          {isMyTurn ? (
-            <span>Your turn</span>
-          ) : (
-            <span>Waiting for {currentActor?.name ?? "another player"}…</span>
-          )}
-          {myPlayer ? (
-            <span className="text-xs font-normal text-slate-400">You: {myPlayer.name}</span>
-          ) : null}
-          <span className="ml-auto text-xs font-normal text-slate-400">
-            {room.roomCode}
-          </span>
-          <button
-            onClick={onRequestSync}
-            className="rounded-md border border-slate-300 px-2 py-0.5 text-xs font-bold text-slate-500 hover:bg-slate-100"
-            title="Resync game state from server"
-          >
-            Sync
-          </button>
-          <button
-            onClick={onLeave}
-            className="text-xs text-slate-400 underline hover:text-slate-600"
-          >
-            Leave
-          </button>
-        </div>
+        <GameStatusStrip
+          state={gameState}
+          isMultiplayer
+          roomCode={room.roomCode}
+          myName={myPlayer?.name ?? null}
+          connectionStatus={connectionStatus === "connected" || connectionStatus === "reconnecting" || connectionStatus === "disconnected" ? connectionStatus : null}
+          onSync={onRequestSync}
+          onLeave={onLeave}
+        />
+        {!isMyTurn ? (
+          <p className="mt-1 px-1 text-xs font-semibold text-slate-500">
+            Waiting for {currentActor?.name ?? "another player"}…
+          </p>
+        ) : null}
       </div>
 
       {/* Server error display */}

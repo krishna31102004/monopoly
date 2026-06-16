@@ -1,14 +1,28 @@
 "use client";
 
 import { useState } from "react";
+import { getGroupedGameLogEntries, type GameLogTone } from "@/lib/ui/gameLogTimeline";
 import type { GameLogEntry } from "@/types/game";
 
 type GameLogDrawerProps = {
   entries: GameLogEntry[];
 };
 
+/** Collapsed-by-default count of entries previewed at the top of the drawer header. */
+const COLLAPSED_PREVIEW_COUNT = 2;
+
+const TONE_DOT_CLASS: Record<GameLogTone, string> = {
+  success: "bg-emerald-500",
+  danger: "bg-red-500",
+  warning: "bg-amber-500",
+  info: "bg-blue-500",
+  neutral: "bg-slate-300",
+};
+
 export function GameLogDrawer({ entries }: GameLogDrawerProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const grouped = getGroupedGameLogEntries(entries);
+  const preview = grouped.slice(0, COLLAPSED_PREVIEW_COUNT);
 
   return (
     <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -18,20 +32,26 @@ export function GameLogDrawer({ entries }: GameLogDrawerProps) {
         onClick={() => setIsOpen((v) => !v)}
         aria-expanded={isOpen}
       >
-        <div className="flex items-center gap-2">
-          <div>
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="min-w-0">
             <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
-              Game Log
+              Timeline
             </p>
-            <h2 className="text-base font-black text-slate-950">Recent Actions</h2>
+            {!isOpen && preview.length > 0 ? (
+              <p className="truncate text-xs font-bold text-slate-700">
+                <span aria-hidden="true">{preview[0].icon}</span> {preview[0].entry.message}
+              </p>
+            ) : (
+              <h2 className="text-base font-black text-slate-950">Recent Actions</h2>
+            )}
           </div>
           {!isOpen && entries.length > 0 && (
-            <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700">
+            <span className="ml-1 shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700">
               {entries.length}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {isOpen && (
             <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black text-slate-600">
               {entries.length}
@@ -44,24 +64,27 @@ export function GameLogDrawer({ entries }: GameLogDrawerProps) {
       </button>
 
       {isOpen && (
-        <ol className="max-h-52 overflow-y-auto divide-y divide-slate-100">
-          {entries.map((entry, index) => (
+        <ol className="max-h-64 overflow-y-auto divide-y divide-slate-100">
+          {grouped.map(({ entry, icon, tone }, index) => (
             <li
               key={entry.id}
-              className={`flex items-start gap-2 px-4 py-2.5 ${
+              className={`flex items-start gap-2.5 px-4 py-2.5 ${
                 index === 0 ? "bg-slate-50" : ""
               }`}
             >
-              {index === 0 ? (
-                <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden="true" />
-              ) : (
-                <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-200" aria-hidden="true" />
-              )}
+              <span
+                className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] ${TONE_DOT_CLASS[tone]} ${
+                  index === 0 ? "" : "opacity-70"
+                }`}
+                aria-hidden="true"
+              >
+                {icon}
+              </span>
               <div className="min-w-0 flex-1">
                 <p className={`text-xs leading-5 ${index === 0 ? "font-bold text-slate-900" : "font-semibold text-slate-600"}`}>
                   {entry.message}
                 </p>
-                <time className="text-[9px] font-semibold text-slate-400">
+                <time className="text-[9px] font-medium text-slate-400">
                   {new Date(entry.createdAt).toLocaleTimeString([], {
                     hour: "numeric",
                     minute: "2-digit",

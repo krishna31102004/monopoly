@@ -8,6 +8,7 @@ import { CardPanel } from "@/components/CardPanel";
 import { GameBoard } from "@/components/board/GameBoard";
 import { GameControls } from "@/components/GameControls";
 import { GameLogDrawer } from "@/components/GameLogDrawer";
+import { GameStatusStrip } from "@/components/GameStatusStrip";
 import { JailActionPanel } from "@/components/JailActionPanel";
 import { LandingActionPanel } from "@/components/LandingActionPanel";
 import { PlayerPanel } from "@/components/PlayerPanel";
@@ -78,6 +79,10 @@ export function GameLayout() {
           </p>
         </div>
       ) : null}
+
+      <div className="mx-auto mb-3 max-w-[1560px]">
+        <GameStatusStrip state={state} isMultiplayer={false} />
+      </div>
 
       <div className="mx-auto grid max-w-[1560px] gap-4 xl:grid-cols-[minmax(680px,1fr)_370px]">
         {/* Board */}

@@ -1,5 +1,6 @@
 import { PlayerToken } from "@/components/board/PlayerToken";
 import { getOwnerBadgeClassName, getOwnerBadgeLabel, isFullSetOwner } from "@/lib/ui/boardTilePresentation";
+import { getBoardSpaceAnchorId } from "@/lib/ui/mobileLayoutHelpers";
 import type {
   BoardSpace as BoardSpaceType,
   CityColorGroup,
@@ -348,6 +349,7 @@ export function BoardSpace({ space, players, allPlayers = [], ownerships = [], l
     return (
       <button
         type="button"
+        id={getBoardSpaceAnchorId(space.index)}
         className={sharedClasses}
         style={style}
         onClick={() => onOpenProperty(space)}
@@ -359,7 +361,7 @@ export function BoardSpace({ space, players, allPlayers = [], ownerships = [], l
   }
 
   return (
-    <div className={sharedClasses} style={style}>
+    <div id={getBoardSpaceAnchorId(space.index)} className={sharedClasses} style={style}>
       {content}
     </div>
   );

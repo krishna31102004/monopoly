@@ -99,6 +99,18 @@ button {
   }
 }
 
+/* ── Mobile-native status strip (Phase 4E.7/4E.8) ───────────────────── */
+
+/* On mobile, the status strip sticks to the top of the viewport so the current
+   turn/phase stays visible while the player scrolls the board or log. */
+@media (max-width: 639px) {
+  .game-status-strip {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+}
+
 /* ── Cinematic event feedback (Phase 4E.4) ──────────────────────────── */
 
 @keyframes event-banner-in {
