@@ -35,7 +35,13 @@ export function GameLayout() {
   const [state, dispatch] = useReducer(gameReducer, undefined, createSetupGameState);
   const [selectedSpace, setSelectedSpace] = useState<OwnableSpace | null>(null);
   const [pendingRollOff, setPendingRollOff] = useState<{ players: StartGamePlayer[]; rules: GameRules } | null>(null);
-  const { displayPositions, isAnimating, landingPlayerIds } = usePlayerMovementAnimation(state.players);
+  // diceKey: opaque string that changes exactly once per new roll — passed to
+  // usePlayerMovementAnimation so it can self-gate movement until dice finish.
+  const diceKey =
+    state.diceRoll && state.currentPlayerHasRolled
+      ? `${state.currentPlayerIndex}:${state.doublesCount}:${state.diceRoll.die1}:${state.diceRoll.die2}`
+      : null;
+  const { displayPositions, isAnimating, landingPlayerIds } = usePlayerMovementAnimation(state.players, diceKey);
   const { showLandingPanel, showCardPanel, showCardResolved, presentationPhase } = useGameplayPresentation(state, isAnimating);
 
   const presentationStatus =

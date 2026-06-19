@@ -67,7 +67,11 @@ export function GameLayoutMultiplayer({
   submitTradeDraft,
 }: Props) {
   const [selectedSpace, setSelectedSpace] = useState<OwnableSpace | null>(null);
-  const { displayPositions, isAnimating, landingPlayerIds } = usePlayerMovementAnimation(gameState.players);
+  const diceKey =
+    gameState.diceRoll && gameState.currentPlayerHasRolled
+      ? `${gameState.currentPlayerIndex}:${gameState.doublesCount}:${gameState.diceRoll.die1}:${gameState.diceRoll.die2}`
+      : null;
+  const { displayPositions, isAnimating, landingPlayerIds } = usePlayerMovementAnimation(gameState.players, diceKey);
   const { showLandingPanel, showCardPanel, showCardResolved, presentationPhase } = useGameplayPresentation(gameState, isAnimating);
 
   const presentationStatus =

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   DICE_ROLL_MS,
+  DICE_RESULT_HOLD_MS,
   LANDING_REVEAL_DELAY_MS,
 } from "@/lib/animation/timing";
 import type { GameState } from "@/types/game";
@@ -26,6 +27,9 @@ export type GameplayPresentationPhase =
  *   showCardResolved  — gate for the resolvedMessage inside CardPanel
  *   diceRolling       — true while the local dice animation should play
  *   presentationPhase — current phase, useful for status messages
+ *
+ * Movement gating is handled inside usePlayerMovementAnimation via the
+ * diceKey param — no circular dependency needed here.
  */
 export function useGameplayPresentation(state: GameState, isAnimating: boolean): {
   showLandingPanel: boolean;
@@ -85,19 +89,19 @@ export function useGameplayPresentation(state: GameState, isAnimating: boolean):
       setDiceRolling(true);
       setPresentationPhase("rollingDice");
 
-      // Stop dice rolling, enter "result hold" phase
+      // Stop dice rolling, enter result-hold phase
       addTimer(() => {
         setDiceRolling(false);
         setPresentationPhase("showingDiceResult");
       }, DICE_ROLL_MS);
 
-      // Fallback: reveal panels if token never moves (no position change)
-      // e.g. jail turn, staying on same space
+      // Fallback: reveal panels if token never moves (jail turn, no position change).
+      // Fires after dice roll + result hold + buffer so it clears after the movement
+      // gate opens in usePlayerMovementAnimation (DICE_ROLL_MS + DICE_RESULT_HOLD_MS).
       addTimer(() => {
         if (sequenceActiveRef.current) revealAll();
-      }, DICE_ROLL_MS + LANDING_REVEAL_DELAY_MS * 2);
+      }, DICE_ROLL_MS + DICE_RESULT_HOLD_MS + LANDING_REVEAL_DELAY_MS * 3);
     }
-    // diceKey is a stable derived string; clearTimers/addTimer use refs only
   }, [diceKey]);
 
   // Track isAnimating transitions
@@ -112,20 +116,16 @@ export function useGameplayPresentation(state: GameState, isAnimating: boolean):
     }
 
     if (wasAnimating && !isAnimating && sequenceActiveRef.current) {
-      // Movement ended (token reached its space and the landing bounce settled) —
-      // start the reveal sequence. Card display is non-blocking and can appear
-      // once movement is done.
+      // Movement ended — start the reveal sequence
       clearTimers();
       setPresentationPhase("landing");
-
       addTimer(() => revealAll(), LANDING_REVEAL_DELAY_MS);
     }
-    // isAnimating is the only reactive input; state.drawnCard is read by ref via closure
+    // isAnimating is the only reactive input
   }, [isAnimating]);
 
   useEffect(() => {
     return () => clearTimers();
-    // clearTimers only uses timersRef, no reactive deps needed
   }, []);
 
   return {
