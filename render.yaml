@@ -7,20 +7,13 @@
 #   1. Go to https://dashboard.render.com
 #   2. New → Blueprint → connect https://github.com/krishna31102004/monopoly
 #   3. Render reads this file and creates the service automatically.
-#   4. Set environment variables in the Render dashboard after creation
-#      (see "Required env vars" below).
-#
-# Required env vars (set in Render dashboard, not here):
-#   NODE_ENV=production
-#   CLIENT_ORIGIN=https://your-app.vercel.app
-#   (PORT is injected by Render automatically)
 
 services:
   - type: web
     name: worldcities-monopoly-server
     runtime: node
-    region: oregon          # change to the region closest to your users
-    plan: free              # free tier is fine for private use; upgrade for always-on
+    region: oregon
+    plan: free
     # npm ci --include=dev installs devDependencies (tsx, typescript) even when
     # NODE_ENV=production is set, so the TypeScript server can run on Render.
     buildCommand: npm ci --include=dev
@@ -31,8 +24,8 @@ services:
         value: production
       - key: NODE_VERSION
         value: "20"
-      # CLIENT_ORIGIN must be set manually in the Render dashboard after the
-      # Vercel frontend is deployed. Example:
-      #   CLIENT_ORIGIN=https://your-app.vercel.app
-      - key: CLIENT_ORIGIN
-        sync: false         # marks it as "manual" — Render will prompt you to fill it in
+      # CLIENT_ORIGINS allows comma-separated origins. The Vercel frontend is
+      # hardcoded here so CORS works out of the box on every deploy.
+      # Add more origins by appending ,https://other-preview.vercel.app
+      - key: CLIENT_ORIGINS
+        value: "https://monopoly-blue-eta.vercel.app"

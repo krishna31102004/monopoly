@@ -29,6 +29,23 @@ function corsCheck(
 }
 
 const app = express();
+
+// Express CORS middleware — covers HTTP routes like /room/:code that the browser
+// fetches directly (e.g. token-preview before joining). Socket.IO has its own
+// CORS config below; both use the same allowed-origins logic.
+app.use((req, res, next) => {
+  const origin = req.headers.origin as string | undefined;
+  if (isAllowedOrigin(origin, allowedOrigins)) {
+    if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Vary", "Origin");
+  }
+  if (req.method === "OPTIONS") { res.sendStatus(204); return; }
+  next();
+});
+
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
@@ -291,58 +308,73 @@ io.on("connection", (socket) => {
   // The server never trusts a client-supplied actor id — playerId is resolved
   // from the socket's room membership, just like every other action.
   socket.on("trade:draftStart", (payload: TradeDraftStartPayload) => {
-    const roomCode = rooms.getRoomCodeBySocketId(socket.id);
-    const playerId = rooms.getPlayerIdBySocketId(socket.id);
-    if (!roomCode || !playerId) {
-      socket.emit("game:error", { message: "Not in a room." });
-      return;
+    try {
+      const roomCode = rooms.getRoomCodeBySocketId(socket.id);
+      const playerId = rooms.getPlayerIdBySocketId(socket.id);
+      if (!roomCode || !playerId) {
+        socket.emit("game:error", { message: "Not in a room." });
+        return;
+      }
+      const result = rooms.startTradeDraft(roomCode, playerId, payload?.recipientId);
+      if (!result.ok) {
+        socket.emit("game:error", { message: result.error });
+        return;
+      }
+      io.to(roomCode).emit("trade:draftState", { draft: result.value });
+    } catch (err) {
+      console.error("[trade:draftStart] error:", err);
+      socket.emit("game:error", { message: "Failed to start trade draft." });
     }
-    const result = rooms.startTradeDraft(roomCode, playerId, payload?.recipientId);
-    if (!result.ok) {
-      socket.emit("game:error", { message: result.error });
-      return;
-    }
-    io.to(roomCode).emit("trade:draftState", { draft: result.value });
   });
 
   // ── trade:draftUpdate ────────────────────────────────────────────────────
   socket.on("trade:draftUpdate", (payload: TradeDraftUpdatePayload) => {
-    const roomCode = rooms.getRoomCodeBySocketId(socket.id);
-    const playerId = rooms.getPlayerIdBySocketId(socket.id);
-    if (!roomCode || !playerId) {
-      socket.emit("game:error", { message: "Not in a room." });
-      return;
+    try {
+      const roomCode = rooms.getRoomCodeBySocketId(socket.id);
+      const playerId = rooms.getPlayerIdBySocketId(socket.id);
+      if (!roomCode || !playerId) {
+        socket.emit("game:error", { message: "Not in a room." });
+        return;
+      }
+      const result = rooms.updateTradeDraft(roomCode, playerId, payload ?? {});
+      if (!result.ok) {
+        socket.emit("game:error", { message: result.error });
+        return;
+      }
+      io.to(roomCode).emit("trade:draftState", { draft: result.value });
+    } catch (err) {
+      console.error("[trade:draftUpdate] error:", err);
+      socket.emit("game:error", { message: "Failed to update trade draft." });
     }
-    const result = rooms.updateTradeDraft(roomCode, playerId, payload ?? {});
-    if (!result.ok) {
-      socket.emit("game:error", { message: result.error });
-      return;
-    }
-    io.to(roomCode).emit("trade:draftState", { draft: result.value });
   });
 
   // ── trade:draftCancel ────────────────────────────────────────────────────
   socket.on("trade:draftCancel", () => {
-    const roomCode = rooms.getRoomCodeBySocketId(socket.id);
-    const playerId = rooms.getPlayerIdBySocketId(socket.id);
-    if (!roomCode || !playerId) {
-      socket.emit("game:error", { message: "Not in a room." });
-      return;
-    }
-    // If a counter-trade was in progress, also clear it from game state.
-    const gs = rooms.getGameState(roomCode);
-    const hadCounter = gs?.counterTrade != null;
-    const result = rooms.cancelTradeDraft(roomCode, playerId);
-    if (!result.ok) {
-      socket.emit("game:error", { message: result.error });
-      return;
-    }
-    io.to(roomCode).emit("trade:draftState", { draft: null });
-    if (hadCounter) {
-      const cancelResult = rooms.dispatchAction(roomCode, playerId, { type: "CANCEL_COUNTER_TRADE" });
-      if (cancelResult.ok) {
-        io.to(roomCode).emit("game:state", { gameState: cancelResult.value });
+    try {
+      const roomCode = rooms.getRoomCodeBySocketId(socket.id);
+      const playerId = rooms.getPlayerIdBySocketId(socket.id);
+      if (!roomCode || !playerId) {
+        socket.emit("game:error", { message: "Not in a room." });
+        return;
       }
+      // If a counter-trade was in progress, also clear it from game state.
+      const gs = rooms.getGameState(roomCode);
+      const hadCounter = gs?.counterTrade != null;
+      const result = rooms.cancelTradeDraft(roomCode, playerId);
+      if (!result.ok) {
+        socket.emit("game:error", { message: result.error });
+        return;
+      }
+      io.to(roomCode).emit("trade:draftState", { draft: null });
+      if (hadCounter) {
+        const cancelResult = rooms.dispatchAction(roomCode, playerId, { type: "CANCEL_COUNTER_TRADE" });
+        if (cancelResult.ok) {
+          io.to(roomCode).emit("game:state", { gameState: cancelResult.value });
+        }
+      }
+    } catch (err) {
+      console.error("[trade:draftCancel] error:", err);
+      socket.emit("game:error", { message: "Failed to cancel trade draft." });
     }
   });
 
@@ -350,51 +382,61 @@ io.on("connection", (socket) => {
   // Recipient of a pending offer clicks Counter Offer: clears the pending
   // trade, flips proposer/recipient, and starts an empty counter draft.
   socket.on("trade:counter", () => {
-    const roomCode = rooms.getRoomCodeBySocketId(socket.id);
-    const playerId = rooms.getPlayerIdBySocketId(socket.id);
-    if (!roomCode || !playerId) {
-      socket.emit("game:error", { message: "Not in a room." });
-      return;
+    try {
+      const roomCode = rooms.getRoomCodeBySocketId(socket.id);
+      const playerId = rooms.getPlayerIdBySocketId(socket.id);
+      if (!roomCode || !playerId) {
+        socket.emit("game:error", { message: "Not in a room." });
+        return;
+      }
+      // Dispatch COUNTER_TRADE — clears pending trade, sets counterTrade in game state.
+      const counterResult = rooms.dispatchAction(roomCode, playerId, { type: "COUNTER_TRADE" });
+      if (!counterResult.ok) {
+        socket.emit("game:error", { message: counterResult.error });
+        return;
+      }
+      const newGs = counterResult.value;
+      if (!newGs.counterTrade) {
+        socket.emit("game:error", { message: "Counter trade state missing after action." });
+        return;
+      }
+      // Start an empty draft for the counter-proposer (the original recipient).
+      const draftResult = rooms.startCounterTradeDraft(
+        roomCode,
+        newGs.counterTrade.allowedProposerId,
+        newGs.counterTrade.allowedRecipientId,
+      );
+      // Broadcast updated game state (pending trade cleared) + new draft.
+      io.to(roomCode).emit("game:state", { gameState: newGs });
+      io.to(roomCode).emit("trade:draftState", { draft: draftResult.ok ? draftResult.value : null });
+      console.log(`[trade] counter by ${playerId} in ${roomCode}`);
+    } catch (err) {
+      console.error("[trade:counter] error:", err);
+      socket.emit("game:error", { message: "Failed to start counter-offer." });
     }
-    // Dispatch COUNTER_TRADE — clears pending trade, sets counterTrade in game state.
-    const counterResult = rooms.dispatchAction(roomCode, playerId, { type: "COUNTER_TRADE" });
-    if (!counterResult.ok) {
-      socket.emit("game:error", { message: counterResult.error });
-      return;
-    }
-    const newGs = counterResult.value;
-    if (!newGs.counterTrade) {
-      socket.emit("game:error", { message: "Counter trade state missing after action." });
-      return;
-    }
-    // Start an empty draft for the counter-proposer (the original recipient).
-    const draftResult = rooms.startCounterTradeDraft(
-      roomCode,
-      newGs.counterTrade.allowedProposerId,
-      newGs.counterTrade.allowedRecipientId,
-    );
-    // Broadcast updated game state (pending trade cleared) + new draft.
-    io.to(roomCode).emit("game:state", { gameState: newGs });
-    io.to(roomCode).emit("trade:draftState", { draft: draftResult.ok ? draftResult.value : null });
-    console.log(`[trade] counter by ${playerId} in ${roomCode}`);
   });
 
   // ── trade:draftSubmit ────────────────────────────────────────────────────
   socket.on("trade:draftSubmit", () => {
-    const roomCode = rooms.getRoomCodeBySocketId(socket.id);
-    const playerId = rooms.getPlayerIdBySocketId(socket.id);
-    if (!roomCode || !playerId) {
-      socket.emit("game:error", { message: "Not in a room." });
-      return;
+    try {
+      const roomCode = rooms.getRoomCodeBySocketId(socket.id);
+      const playerId = rooms.getPlayerIdBySocketId(socket.id);
+      if (!roomCode || !playerId) {
+        socket.emit("game:error", { message: "Not in a room." });
+        return;
+      }
+      const result = rooms.submitTradeDraft(roomCode, playerId);
+      if (!result.ok) {
+        socket.emit("game:error", { message: result.error });
+        return;
+      }
+      io.to(roomCode).emit("trade:draftState", { draft: null });
+      io.to(roomCode).emit("game:state", { gameState: result.value });
+      console.log(`[trade] draft submitted by ${playerId} in ${roomCode}`);
+    } catch (err) {
+      console.error("[trade:draftSubmit] error:", err);
+      socket.emit("game:error", { message: "Failed to submit trade draft." });
     }
-    const result = rooms.submitTradeDraft(roomCode, playerId);
-    if (!result.ok) {
-      socket.emit("game:error", { message: result.error });
-      return;
-    }
-    io.to(roomCode).emit("trade:draftState", { draft: null });
-    io.to(roomCode).emit("game:state", { gameState: result.value });
-    console.log(`[trade] draft submitted by ${playerId} in ${roomCode}`);
   });
 
   // ── room:reconnect ───────────────────────────────────────────────────────
