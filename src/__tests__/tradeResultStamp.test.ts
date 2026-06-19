@@ -16,11 +16,13 @@ describe("classifyTradeResultFromLogMessage", () => {
   });
 
   it("returns declined for declined log message", () => {
-    expect(classifyTradeResultFromLogMessage("kb declined the trade offer from ansh.")).toBe("declined");
+    // Exact message from gameReducer.ts DECLINE_TRADE case
+    expect(classifyTradeResultFromLogMessage("kb declined the trade.")).toBe("declined");
   });
 
   it("returns cancelled for cancelled log message", () => {
-    expect(classifyTradeResultFromLogMessage("ansh cancelled the trade offer.")).toBe("cancelled");
+    // Exact message from gameReducer.ts CANCEL_TRADE case
+    expect(classifyTradeResultFromLogMessage("ansh cancelled the trade.")).toBe("cancelled");
   });
 
   it("returns null for unrelated log messages", () => {
