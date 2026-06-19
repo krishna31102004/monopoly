@@ -14,27 +14,29 @@ import type { TradeDraftState } from "@/types/multiplayer";
 const ROOT = join(process.cwd(), "src");
 function read(rel: string) { return readFileSync(join(ROOT, rel), "utf-8"); }
 
-// ── Source-text assertions for TradePanel premium UI ─────────────────────────
+// ── Source-text assertions for TradePanel layout ──────────────────────────────
 
-describe("TradePanel — premium UI source assertions", () => {
+describe("TradePanel — layout source assertions", () => {
   const src = read("components/TradePanel.tsx");
 
   it("renders DealTray component", () => {
     expect(src).toMatch(/DealTray/);
   });
 
-  it("renders TradeSideColumn component", () => {
-    expect(src).toMatch(/TradeSideColumn/);
+  it("renders TradeSidePanel component (equal columns)", () => {
+    expect(src).toMatch(/TradeSidePanel/);
   });
 
-  it("renders ExchangeColumn with ⇄ symbol", () => {
-    expect(src).toMatch(/ExchangeColumn/);
+  it("renders TwoSideLayout for balanced two-column layout", () => {
+    expect(src).toMatch(/TwoSideLayout/);
+  });
+
+  it("uses grid two-column layout (sm:grid-cols-2)", () => {
+    expect(src).toMatch(/sm:grid-cols-2/);
+  });
+
+  it("renders ⇄ exchange symbol between sides", () => {
     expect(src).toMatch(/⇄/);
-  });
-
-  it("renders CashInput component with $ prefix", () => {
-    expect(src).toMatch(/CashInput/);
-    expect(src).toMatch(/\$/);
   });
 
   it("renders PropertyChip with color strip", () => {
@@ -42,28 +44,30 @@ describe("TradePanel — premium UI source assertions", () => {
     expect(src).toMatch(/colorHex/);
   });
 
-  it("shows 'Nothing selected yet' for empty deal tray", () => {
-    expect(src).toMatch(/Nothing selected yet/);
+  it("shows 'Nothing selected' for empty deal tray", () => {
+    expect(src).toMatch(/Nothing selected/);
   });
 
-  it("shows 'Listed value' label in deal tray", () => {
+  it("shows 'Listed value' label", () => {
     expect(src).toMatch(/Listed value/);
   });
 
-  it("shows 'Cash after trade' in deal tray", () => {
-    expect(src).toMatch(/Cash after trade/);
-  });
-
-  it("shows 'Not enough cash' for invalid cash offers", () => {
-    expect(src).toMatch(/Not enough cash/);
-  });
-
-  it("shows 'Balance:' in cash input", () => {
-    expect(src).toMatch(/Balance:/);
+  it("shows 'After' remaining cash in MoneyCounter", () => {
+    expect(src).toMatch(/After/);
+    expect(src).toMatch(/getAfterTradeCash/);
   });
 
   it("shows 'Exceeds balance' when cash is over limit", () => {
     expect(src).toMatch(/Exceeds balance/);
+  });
+
+  it("shows 'Available' balance near cash input", () => {
+    expect(src).toMatch(/Available/);
+  });
+
+  it("cash input uses text type with inputMode numeric (no browser spinner)", () => {
+    expect(src).toMatch(/type="text"/);
+    expect(src).toMatch(/inputMode="numeric"/);
   });
 
   it("imports getTradeSideListedValue from tradeHelpers", () => {
@@ -78,15 +82,15 @@ describe("TradePanel — premium UI source assertions", () => {
     expect(src).toMatch(/getTradePropertyCardPresentation/);
   });
 
-  it("has gradient dark header (premium modal style)", () => {
-    expect(src).toMatch(/from-indigo-900/);
+  it("has compact dark header (bg-indigo-900)", () => {
+    expect(src).toMatch(/bg-indigo-900/);
   });
 
   it("proposer-only draft edit: toggleProp checks isProposer", () => {
     expect(src).toMatch(/if.*!isProposer.*return/);
   });
 
-  it("recipient cannot start or cancel draft (no close handler for non-proposer)", () => {
+  it("recipient cannot cancel draft (onClose only for isProposer)", () => {
     expect(src).toMatch(/isProposer.*onDraftCancel/);
   });
 
@@ -101,9 +105,13 @@ describe("TradePanel — premium UI source assertions", () => {
   it("spectator sees read-only message", () => {
     expect(src).toMatch(/Watching trade negotiation/);
   });
+
+  it("Deal tray label exists per side", () => {
+    expect(src).toMatch(/Deal tray/);
+  });
 });
 
-// ── Permission regression tests (logic level) ─────────────────────────────────
+// ── Permission regression (logic) ─────────────────────────────────────────────
 
 describe("trade permission regression", () => {
   const draft: TradeDraftState = {
@@ -128,21 +136,13 @@ describe("trade permission regression", () => {
 
   it("proposer can submit valid draft", () => {
     const state = makeGameState(2);
-    const liveDraft: TradeDraftState = {
-      ...draft,
-      proposerId: state.players[0].id,
-      recipientId: state.players[1].id,
-    };
+    const liveDraft: TradeDraftState = { ...draft, proposerId: state.players[0].id, recipientId: state.players[1].id };
     expect(canSubmitTradeDraft(state, liveDraft.proposerId, liveDraft)).toBe(true);
   });
 
   it("recipient cannot submit draft", () => {
     const state = makeGameState(2);
-    const liveDraft: TradeDraftState = {
-      ...draft,
-      proposerId: state.players[0].id,
-      recipientId: state.players[1].id,
-    };
+    const liveDraft: TradeDraftState = { ...draft, proposerId: state.players[0].id, recipientId: state.players[1].id };
     expect(canSubmitTradeDraft(state, liveDraft.recipientId, liveDraft)).toBe(false);
   });
 
@@ -154,7 +154,7 @@ describe("trade permission regression", () => {
   });
 });
 
-// ── Deal tray logic ───────────────────────────────────────────────────────────
+// ── Deal tray and cash summary (logic) ────────────────────────────────────────
 
 describe("deal tray: listed value and cash summary", () => {
   it("empty offer has listed value of 0", () => {
