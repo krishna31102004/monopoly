@@ -412,22 +412,34 @@ export class RoomManager {
       intent.type === "PROPOSE_TRADE" ||
       intent.type === "ACCEPT_TRADE" ||
       intent.type === "DECLINE_TRADE" ||
-      intent.type === "CANCEL_TRADE";
+      intent.type === "CANCEL_TRADE" ||
+      intent.type === "COUNTER_TRADE" ||
+      intent.type === "CANCEL_COUNTER_TRADE";
 
     let action: GameAction;
 
     if (isTradeAction) {
       if (intent.type === "PROPOSE_TRADE") {
-        // During bankruptcyPending, only the debtor may propose; otherwise only the current player
-        const expectedProposerId =
-          gs.phase === "bankruptcyPending" && gs.bankruptcy
-            ? gs.bankruptcy.debtorPlayerId
-            : actorId;
-        if (playerId !== expectedProposerId) {
-          return { ok: false, error: gs.phase === "bankruptcyPending" ? "Only the debtor can propose a trade during bankruptcy." : "Only the current player can propose a trade." };
-        }
-        if (playerId !== intent.initiatorId) {
-          return { ok: false, error: "You can only propose a trade as yourself." };
+        // Counter-offer in progress: the allowed counter-proposer may submit regardless of turn
+        if (gs.counterTrade) {
+          if (playerId !== gs.counterTrade.allowedProposerId) {
+            return { ok: false, error: "Only the counter-proposer can submit this counter-offer." };
+          }
+          if (playerId !== intent.initiatorId) {
+            return { ok: false, error: "You can only propose a trade as yourself." };
+          }
+        } else {
+          // During bankruptcyPending, only the debtor may propose; otherwise only the current player
+          const expectedProposerId =
+            gs.phase === "bankruptcyPending" && gs.bankruptcy
+              ? gs.bankruptcy.debtorPlayerId
+              : actorId;
+          if (playerId !== expectedProposerId) {
+            return { ok: false, error: gs.phase === "bankruptcyPending" ? "Only the debtor can propose a trade during bankruptcy." : "Only the current player can propose a trade." };
+          }
+          if (playerId !== intent.initiatorId) {
+            return { ok: false, error: "You can only propose a trade as yourself." };
+          }
         }
         action = { ...intent, actorPlayerId: playerId };
       } else if (intent.type === "ACCEPT_TRADE") {
@@ -442,13 +454,25 @@ export class RoomManager {
           return { ok: false, error: "Only the trade recipient can decline." };
         }
         action = { type: "DECLINE_TRADE", actorPlayerId: playerId };
-      } else {
-        // CANCEL_TRADE
+      } else if (intent.type === "CANCEL_TRADE") {
         if (!gs.trade) return { ok: false, error: "No trade is pending." };
         if (playerId !== gs.trade.initiatorPlayerId) {
           return { ok: false, error: "Only the trade initiator can cancel." };
         }
         action = { type: "CANCEL_TRADE", actorPlayerId: playerId };
+      } else if (intent.type === "COUNTER_TRADE") {
+        if (!gs.trade) return { ok: false, error: "No trade is pending." };
+        if (playerId !== gs.trade.recipientPlayerId) {
+          return { ok: false, error: "Only the trade recipient can counter." };
+        }
+        action = { type: "COUNTER_TRADE", actorPlayerId: playerId };
+      } else {
+        // CANCEL_COUNTER_TRADE
+        if (!gs.counterTrade) return { ok: false, error: "No counter-offer in progress." };
+        if (playerId !== gs.counterTrade.allowedProposerId) {
+          return { ok: false, error: "Only the counter-proposer can cancel the counter-offer." };
+        }
+        action = { type: "CANCEL_COUNTER_TRADE", actorPlayerId: playerId };
       }
     } else {
       if (playerId !== actorId) {
@@ -483,7 +507,9 @@ export class RoomManager {
     this.touch(room);
 
     // Drop a stale draft if the turn/phase moved on without it being submitted.
-    if (room.tradeDraft && room.tradeDraft.proposerId !== this.expectedProposerId(newState)) {
+    // Exception: counter-trade draft is valid even if proposer is not the current turn player.
+    const allowedDraftProposerId = newState.counterTrade?.allowedProposerId ?? this.expectedProposerId(newState);
+    if (room.tradeDraft && room.tradeDraft.proposerId !== allowedDraftProposerId) {
       room.tradeDraft = null;
     }
 
@@ -521,6 +547,33 @@ export class RoomManager {
     const draft: TradeDraftState = {
       proposerId: playerId,
       recipientId,
+      offerFromProposer: { ...EMPTY_TRADE_OFFER },
+      offerFromRecipient: { ...EMPTY_TRADE_OFFER },
+      updatedAt: Date.now(),
+    };
+    room.tradeDraft = draft;
+    this.touch(room);
+    return { ok: true, value: draft };
+  }
+
+  startCounterTradeDraft(
+    roomCode: string,
+    counterProposerId: string,
+    counterRecipientId: string,
+  ): RoomResult<TradeDraftState> {
+    const room = this.rooms.get(roomCode);
+    if (!room) return { ok: false, error: "Room not found." };
+    if (!room.gameState) return { ok: false, error: "No game in progress." };
+    const gs = room.gameState;
+    // Must have counterTrade set to match the provided players
+    if (!gs.counterTrade) return { ok: false, error: "No counter trade in progress." };
+    if (gs.counterTrade.allowedProposerId !== counterProposerId) return { ok: false, error: "Mismatched counter-proposer." };
+    if (gs.counterTrade.allowedRecipientId !== counterRecipientId) return { ok: false, error: "Mismatched counter-recipient." };
+    if (room.tradeDraft) return { ok: false, error: "A trade draft is already in progress." };
+
+    const draft: TradeDraftState = {
+      proposerId: counterProposerId,
+      recipientId: counterRecipientId,
       offerFromProposer: { ...EMPTY_TRADE_OFFER },
       offerFromRecipient: { ...EMPTY_TRADE_OFFER },
       updatedAt: Date.now(),

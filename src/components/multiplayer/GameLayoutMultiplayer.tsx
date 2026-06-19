@@ -42,6 +42,7 @@ type Props = {
   updateTradeDraft: (payload: TradeDraftUpdatePayload) => void;
   cancelTradeDraft: () => void;
   submitTradeDraft: () => void;
+  counterTradeDraft: () => void;
 };
 
 // Determine which player ID should be acting right now
@@ -65,6 +66,7 @@ export function GameLayoutMultiplayer({
   updateTradeDraft,
   cancelTradeDraft,
   submitTradeDraft,
+  counterTradeDraft,
 }: Props) {
   const [selectedSpace, setSelectedSpace] = useState<OwnableSpace | null>(null);
   const diceKey =
@@ -222,6 +224,7 @@ export function GameLayoutMultiplayer({
               onDraftUpdate={updateTradeDraft}
               onDraftCancel={cancelTradeDraft}
               onDraftSubmit={submitTradeDraft}
+              onCounterOffer={counterTradeDraft}
             />
             <GameLogDrawer entries={gameState.gameLog} />
           </div>

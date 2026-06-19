@@ -108,8 +108,8 @@ describe("LiveDraftModal — spectator clarity source assertions", () => {
   });
 
   it("draft modal subtitle changes for spectator vs proposer", () => {
-    // Subtitle uses isSpectator conditional
-    expect(src).toMatch(/isSpectator[\s\S]{0,200}Watching live draft|Watching live draft[\s\S]{0,200}isSpectator/);
+    // Subtitle uses isSpectator conditional (text may be in isCounter branch)
+    expect(src).toMatch(/isSpectator[\s\S]{0,400}Watching[\s\S]{0,50}draft|Watching[\s\S]{0,50}draft[\s\S]{0,400}isSpectator/);
   });
 
   it("draft modal footer has read-only message for non-proposers", () => {
@@ -151,7 +151,8 @@ describe("PendingTradeView — spectator clarity source assertions", () => {
   });
 
   it("spectator footer text references the recipient's role", () => {
-    expect(src).toMatch(/accept or decline/i);
+    // Updated to include counter option: "accept, decline, or counter"
+    expect(src).toMatch(/accept.*decline|accept or decline/i);
   });
 });
 
@@ -159,14 +160,14 @@ describe("PendingTradeView — spectator clarity source assertions", () => {
 
 describe("trade authorization regression", () => {
   it("ACCEPT_TRADE uses recipientPlayerId as actorPlayerId", () => {
-    expect(src).toMatch(/ACCEPT_TRADE.*actorPlayerId.*recipientPlayerId|recipientPlayerId.*ACCEPT_TRADE/s);
+    expect(src).toMatch(/ACCEPT_TRADE[\s\S]{0,100}actorPlayerId[\s\S]{0,100}recipientPlayerId|recipientPlayerId[\s\S]{0,100}ACCEPT_TRADE/);
   });
 
   it("DECLINE_TRADE uses recipientPlayerId as actorPlayerId", () => {
-    expect(src).toMatch(/DECLINE_TRADE.*actorPlayerId.*recipientPlayerId|recipientPlayerId.*DECLINE_TRADE/s);
+    expect(src).toMatch(/DECLINE_TRADE[\s\S]{0,100}actorPlayerId[\s\S]{0,100}recipientPlayerId|recipientPlayerId[\s\S]{0,100}DECLINE_TRADE/);
   });
 
   it("CANCEL_TRADE uses initiatorPlayerId as actorPlayerId", () => {
-    expect(src).toMatch(/CANCEL_TRADE.*actorPlayerId.*initiatorPlayerId|initiatorPlayerId.*CANCEL_TRADE/s);
+    expect(src).toMatch(/CANCEL_TRADE[\s\S]{0,100}actorPlayerId[\s\S]{0,100}initiatorPlayerId|initiatorPlayerId[\s\S]{0,100}CANCEL_TRADE/);
   });
 });

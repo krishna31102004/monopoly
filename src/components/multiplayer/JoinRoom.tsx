@@ -37,6 +37,7 @@ export function JoinRoom({ initialCode = "" }: Props) {
     updateTradeDraft,
     cancelTradeDraft,
     submitTradeDraft,
+    counterTradeDraft,
   } = useRoom();
 
   const [name, setName] = useState("");
@@ -111,6 +112,7 @@ export function JoinRoom({ initialCode = "" }: Props) {
         updateTradeDraft={updateTradeDraft}
         cancelTradeDraft={cancelTradeDraft}
         submitTradeDraft={submitTradeDraft}
+        counterTradeDraft={counterTradeDraft}
       />
     );
   }

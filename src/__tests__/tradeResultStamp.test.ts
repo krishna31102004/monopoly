@@ -53,15 +53,15 @@ describe("TradePanel — stamp source assertions", () => {
   });
 
   it("accepted config uses success tone (emerald)", () => {
-    expect(src).toMatch(/accepted.*emerald|emerald.*accepted/s);
+    expect(src).toMatch(/accepted[\s\S]{0,200}emerald|emerald[\s\S]{0,200}accepted/);
   });
 
   it("declined config uses danger tone (red)", () => {
-    expect(src).toMatch(/declined.*red|red.*declined/s);
+    expect(src).toMatch(/declined[\s\S]{0,200}red|red[\s\S]{0,200}declined/);
   });
 
   it("cancelled config uses neutral tone (slate)", () => {
-    expect(src).toMatch(/cancelled.*slate|slate.*cancelled/s);
+    expect(src).toMatch(/cancelled[\s\S]{0,200}slate|slate[\s\S]{0,200}cancelled/);
   });
 
   it("stamp shows DEAL ACCEPTED label", () => {

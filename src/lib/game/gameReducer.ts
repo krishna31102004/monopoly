@@ -831,8 +831,15 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         state.phase === "awaitingPurchaseDecision"
       ) return state;
       if (state.trade) return state;
-      // During bankruptcyPending, only the debtor can propose a trade (emergency trade to raise cash)
-      if (state.phase === "bankruptcyPending") {
+
+      if (state.counterTrade) {
+        // Counter-offer in progress: allow the designated counter-proposer to propose,
+        // regardless of turn order, but only to the designated counter-recipient.
+        if (action.actorPlayerId !== state.counterTrade.allowedProposerId) return state;
+        if (action.initiatorId !== state.counterTrade.allowedProposerId) return state;
+        if (action.recipientId !== state.counterTrade.allowedRecipientId) return state;
+      } else if (state.phase === "bankruptcyPending") {
+        // During bankruptcyPending, only the debtor can propose a trade (emergency trade)
         if (!state.bankruptcy) return state;
         if (action.actorPlayerId !== state.bankruptcy.debtorPlayerId) return state;
         if (action.actorPlayerId !== action.initiatorId) return state;
@@ -842,6 +849,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         if (action.actorPlayerId !== currentActorId) return state;
         if (action.actorPlayerId !== action.initiatorId) return state;
       }
+
       const check = validateTrade(
         state,
         action.initiatorId,
@@ -853,6 +861,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       return {
         ...state,
+        counterTrade: null, // counter state consumed on successful proposal
         trade: {
           initiatorPlayerId: action.initiatorId,
           recipientPlayerId: action.recipientId,
@@ -983,6 +992,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         players: nextPlayers,
         ownerships: nextOwnerships,
         trade: null,
+        counterTrade: null,
         gameLog: addLogEntry(state.gameLog, msg),
       };
     }
@@ -995,6 +1005,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         trade: null,
+        counterTrade: null,
         gameLog: addLogEntry(state.gameLog, msg),
       };
     }
@@ -1004,7 +1015,36 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (action.actorPlayerId !== state.trade.initiatorPlayerId) return state;
       const initiator = state.players.find((p) => p.id === state.trade!.initiatorPlayerId);
       const msg = `${initiator?.name ?? "Proposer"} cancelled the trade.`;
-      return { ...state, trade: null, gameLog: addLogEntry(state.gameLog, msg) };
+      return { ...state, trade: null, counterTrade: null, gameLog: addLogEntry(state.gameLog, msg) };
+    }
+
+    case "COUNTER_TRADE": {
+      // Only the pending trade recipient may counter. Clears the pending offer and
+      // sets counterTrade so the counter-proposer can submit a new offer regardless of turn.
+      if (!state.trade) return state;
+      if (action.actorPlayerId !== state.trade.recipientPlayerId) return state;
+      const counterActor = state.players.find((p) => p.id === action.actorPlayerId);
+      if (!counterActor || counterActor.isBankrupt) return state;
+      const oldInitiator = state.players.find((p) => p.id === state.trade!.initiatorPlayerId);
+      const msg = `${counterActor.name} is making a counter-offer to ${oldInitiator?.name ?? "the other player"}.`;
+      return {
+        ...state,
+        trade: null,
+        counterTrade: {
+          allowedProposerId: action.actorPlayerId,
+          allowedRecipientId: state.trade.initiatorPlayerId,
+        },
+        gameLog: addLogEntry(state.gameLog, msg),
+      };
+    }
+
+    case "CANCEL_COUNTER_TRADE": {
+      // Counter-proposer cancels the counter before submitting.
+      if (!state.counterTrade) return state;
+      if (action.actorPlayerId !== state.counterTrade.allowedProposerId) return state;
+      const actor = state.players.find((p) => p.id === action.actorPlayerId);
+      const msg = `${actor?.name ?? "Player"} cancelled the trade.`;
+      return { ...state, counterTrade: null, gameLog: addLogEntry(state.gameLog, msg) };
     }
 
     case "RESOLVE_BANKRUPTCY_IF_SOLVENT": {

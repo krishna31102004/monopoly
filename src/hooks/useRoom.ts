@@ -266,6 +266,11 @@ export function useRoom() {
     getSocket().emit("trade:draftSubmit");
   }, []);
 
+  const counterTradeDraft = useCallback(() => {
+    setState((s) => ({ ...s, error: null }));
+    getSocket().emit("trade:counter");
+  }, []);
+
   return {
     ...state,
     createRoom,
@@ -282,5 +287,6 @@ export function useRoom() {
     updateTradeDraft,
     cancelTradeDraft,
     submitTradeDraft,
+    counterTradeDraft,
   };
 }
