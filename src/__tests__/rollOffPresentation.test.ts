@@ -29,8 +29,9 @@ describe("RollOffScreen presentation source assertions", () => {
     expect(src).toMatch(/rolling/);
   });
 
-  it("shows gameReady conditional for final order screen", () => {
-    expect(src).toMatch(/gameReady/);
+  it("uses canShowFinalOrder gate (not bare gameReady) for final order screen", () => {
+    expect(src).toMatch(/canShowFinalOrder/);
+    expect(src).toMatch(/presentationReady/);
   });
 
   it("shows Begin Game button for host", () => {
