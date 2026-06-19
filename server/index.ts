@@ -367,7 +367,7 @@ io.on("connection", (socket) => {
       }
       io.to(roomCode).emit("trade:draftState", { draft: null });
       if (hadCounter) {
-        const cancelResult = rooms.dispatchAction(roomCode, playerId, { type: "CANCEL_COUNTER_TRADE" });
+        const cancelResult = rooms.applyGameAction(roomCode, playerId, { type: "CANCEL_COUNTER_TRADE" }, null);
         if (cancelResult.ok) {
           io.to(roomCode).emit("game:state", { gameState: cancelResult.value });
         }
@@ -390,7 +390,7 @@ io.on("connection", (socket) => {
         return;
       }
       // Dispatch COUNTER_TRADE — clears pending trade, sets counterTrade in game state.
-      const counterResult = rooms.dispatchAction(roomCode, playerId, { type: "COUNTER_TRADE" });
+      const counterResult = rooms.applyGameAction(roomCode, playerId, { type: "COUNTER_TRADE" }, null);
       if (!counterResult.ok) {
         socket.emit("game:error", { message: counterResult.error });
         return;

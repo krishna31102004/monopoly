@@ -179,6 +179,17 @@ describe("server/index.ts — CORS and error handling source assertions", () => 
     expect(serverSrc).toMatch(/parseAllowedOrigins/);
     expect(serverSrc).toMatch(/isAllowedOrigin/);
   });
+
+  it("trade:counter uses applyGameAction not dispatchAction (regression)", () => {
+    // Bug: trade:counter and trade:draftCancel called rooms.dispatchAction which
+    // doesn't exist — TypeError at runtime → catch block → "Failed to start counter-offer"
+    expect(serverSrc).not.toMatch(/rooms\.dispatchAction/);
+    expect(serverSrc).toMatch(/applyGameAction[\s\S]{0,300}COUNTER_TRADE/);
+  });
+
+  it("CANCEL_COUNTER_TRADE uses applyGameAction not dispatchAction", () => {
+    expect(serverSrc).toMatch(/applyGameAction[\s\S]{0,300}CANCEL_COUNTER_TRADE/);
+  });
 });
 
 describe("render.yaml — production CORS config", () => {
