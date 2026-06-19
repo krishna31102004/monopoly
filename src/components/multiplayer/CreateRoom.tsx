@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRoom } from "@/hooks/useRoom";
 import { TokenPicker } from "@/components/multiplayer/TokenPicker";
 import { RoomLobby } from "@/components/multiplayer/RoomLobby";
+import { RollOffScreen } from "@/components/multiplayer/RollOffScreen";
 import { GameLayoutMultiplayer } from "@/components/multiplayer/GameLayoutMultiplayer";
 import type { PlayerToken } from "@/types/player";
 import type { GameRules } from "@/types/game";
@@ -17,9 +18,11 @@ export function CreateRoom() {
     room,
     myPlayerId,
     gameState,
+    rollOff,
     error,
     createRoom,
     startGame,
+    rollForOrder,
     leaveRoom,
     clearError,
     sendAction,
@@ -44,6 +47,18 @@ export function CreateRoom() {
     setNameError("");
     clearError();
     createRoom({ displayName: trimmed, token, tokenLabel, color: tokenColor });
+  }
+
+  // Show roll-off screen during roll-off phase
+  if (room && myPlayerId && room.status === "rollOff" && rollOff) {
+    return (
+      <RollOffScreen
+        rollOff={rollOff}
+        players={room.players}
+        myPlayerId={myPlayerId}
+        onRoll={rollForOrder}
+      />
+    );
   }
 
   // Show game board once game is in progress

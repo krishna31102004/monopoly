@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRoom } from "@/hooks/useRoom";
 import { TokenPicker } from "@/components/multiplayer/TokenPicker";
 import { RoomLobby } from "@/components/multiplayer/RoomLobby";
+import { RollOffScreen } from "@/components/multiplayer/RollOffScreen";
 import { GameLayoutMultiplayer } from "@/components/multiplayer/GameLayoutMultiplayer";
 import type { PlayerToken } from "@/types/player";
 import type { GameRules } from "@/types/game";
@@ -21,9 +22,11 @@ export function JoinRoom({ initialCode = "" }: Props) {
     room,
     myPlayerId,
     gameState,
+    rollOff,
     error,
     joinRoom,
     startGame,
+    rollForOrder,
     leaveRoom,
     clearError,
     sendAction,
@@ -76,6 +79,18 @@ export function JoinRoom({ initialCode = "" }: Props) {
   }
 
   const takenTokens = room?.takenTokens ?? previewTokens;
+
+  // Show roll-off screen during roll-off phase
+  if (room && myPlayerId && room.status === "rollOff" && rollOff) {
+    return (
+      <RollOffScreen
+        rollOff={rollOff}
+        players={room.players}
+        myPlayerId={myPlayerId}
+        onRoll={rollForOrder}
+      />
+    );
+  }
 
   if (room && myPlayerId && gameState && room.status === "inGame") {
     return (

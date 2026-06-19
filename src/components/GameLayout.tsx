@@ -17,6 +17,7 @@ import { BankruptcyPanel } from "@/components/BankruptcyPanel";
 import { TradePanel } from "@/components/TradePanel";
 import { GameSaveControls } from "@/components/GameSaveControls";
 import { GameSetup } from "@/components/setup/GameSetup";
+import { LocalRollOffScreen } from "@/components/setup/LocalRollOffScreen";
 import { MobileActionBar } from "@/components/MobileActionBar";
 import { boardSpaces } from "@/data/board";
 import { createSetupGameState } from "@/lib/game/createInitialGameState";
@@ -28,10 +29,12 @@ import {
   isPlayerInDebt,
 } from "@/lib/game/playerPanelHelpers";
 import type { OwnableSpace } from "@/types/board";
+import type { StartGamePlayer, GameRules } from "@/types/game";
 
 export function GameLayout() {
   const [state, dispatch] = useReducer(gameReducer, undefined, createSetupGameState);
   const [selectedSpace, setSelectedSpace] = useState<OwnableSpace | null>(null);
+  const [pendingRollOff, setPendingRollOff] = useState<{ players: StartGamePlayer[]; rules: GameRules } | null>(null);
   const { displayPositions, isAnimating, landingPlayerIds } = usePlayerMovementAnimation(state.players);
   const { showLandingPanel, showCardPanel, showCardResolved, presentationPhase } = useGameplayPresentation(state, isAnimating);
 
@@ -57,8 +60,24 @@ export function GameLayout() {
     }
   }, [state]);
 
-  if (state.phase === "setup") {
-    return <GameSetup onStartGame={(players, rules) => dispatch({ type: "START_GAME", players, rules })} />;
+  if (state.phase === "setup" && !pendingRollOff) {
+    return (
+      <GameSetup
+        onStartGame={(players, rules) => setPendingRollOff({ players, rules })}
+      />
+    );
+  }
+
+  if (state.phase === "setup" && pendingRollOff) {
+    return (
+      <LocalRollOffScreen
+        players={pendingRollOff.players}
+        onComplete={(sortedPlayers) => {
+          dispatch({ type: "START_GAME", players: sortedPlayers, rules: pendingRollOff.rules });
+          setPendingRollOff(null);
+        }}
+      />
+    );
   }
 
   const winner = state.winnerId ? state.players.find((p) => p.id === state.winnerId) : null;

@@ -2,14 +2,33 @@ import { createInitialGameState } from "@/lib/game/createInitialGameState";
 import { gameReducer } from "@/lib/game/gameReducer";
 import { validateTrade } from "@/lib/game/trade";
 import { generateRoomCode } from "@/lib/multiplayer/roomCode";
+import {
+  buildInitialAgenda,
+  advanceRollOffAgenda,
+  getCurrentRollingGroup,
+  isAgendaResolved,
+  flattenAgenda,
+  type RollOffAgendaItem,
+  type RollOffEntry,
+} from "@/lib/game/rollOff";
 import type { RoomPlayer, RoomPublicView, RoomStatus, GameActionIntent, TradeDraftState } from "@/types/multiplayer";
 import type { PlayerToken } from "@/types/player";
 import type { GameState, GameAction, DiceRoll, GameRules, TradeOffer } from "@/types/game";
+import { DEFAULT_RULES } from "@/types/game";
 
 const EMPTY_TRADE_OFFER: TradeOffer = { cash: 0, propertySpaceIndices: [], getOutOfJailFreeCards: 0 };
 
 export const MAX_PLAYERS = 6;
 const INACTIVITY_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+
+type RollOffData = {
+  rules: GameRules;
+  agenda: RollOffAgendaItem[];
+  currentRound: number;
+  rollingThisRound: string[];
+  roundRolls: Record<string, RollOffEntry>;
+  resolvedOrder: string[] | null;
+};
 
 // Internal room representation (not sent to clients)
 type InternalRoom = {
@@ -20,6 +39,7 @@ type InternalRoom = {
   socketIds: Map<string, string>; // playerId → socketId
   status: RoomStatus;
   gameState: GameState | null;
+  rollOffData: RollOffData | null;
   createdAt: number;
   lastActivityAt: number;
   maxPlayers: number;
@@ -66,12 +86,23 @@ export class RoomManager {
   }
 
   private toPublicView(room: InternalRoom): RoomPublicView {
+    const ro = room.rollOffData;
+    const rollOff = ro
+      ? {
+          round: ro.currentRound,
+          rollingThisRound: ro.rollingThisRound,
+          pendingPlayerIds: ro.rollingThisRound.filter((id) => !(id in ro.roundRolls)),
+          rolls: ro.roundRolls,
+          resolvedOrder: ro.resolvedOrder,
+        }
+      : null;
     return {
       roomCode: room.roomCode,
       status: room.status,
       players: room.players,
       maxPlayers: room.maxPlayers,
       takenTokens: room.players.filter((p) => p.connected).map((p) => p.token),
+      rollOff,
     };
   }
 
@@ -104,6 +135,7 @@ export class RoomManager {
       socketIds,
       status: "lobby",
       gameState: null,
+      rollOffData: null,
       createdAt: now,
       lastActivityAt: now,
       maxPlayers: MAX_PLAYERS,
@@ -137,8 +169,8 @@ export class RoomManager {
       // playerId not found in room — fall through to new join (session may have reset)
     }
 
-    // Cannot join in-progress game as new player
-    if (room.status === "inGame" || room.status === "gameOver") {
+    // Cannot join as a new player once roll-off or game is underway
+    if (room.status === "rollOff" || room.status === "inGame" || room.status === "gameOver") {
       return { ok: false, error: "Game is already in progress." };
     }
 
@@ -199,6 +231,105 @@ export class RoomManager {
       this.touch(room);
     }
     return true;
+  }
+
+  // ── Roll-off ──────────────────────────────────────────────────────────────
+
+  /** Host triggers the roll-off phase. All active players must roll for turn order. */
+  startRollOff(roomCode: string, playerId: string, rules?: GameRules): RoomResult<RoomPublicView> {
+    const room = this.rooms.get(roomCode);
+    if (!room) return { ok: false, error: "Room not found." };
+    if (room.hostPlayerId !== playerId) return { ok: false, error: "Only the host can start the game." };
+    if (room.status !== "lobby") return { ok: false, error: "Game is not in lobby state." };
+
+    const activePlayers = room.players.filter((p) => p.connected);
+    if (activePlayers.length < 2) return { ok: false, error: "Need at least 2 players to start." };
+    if (activePlayers.length > MAX_PLAYERS) return { ok: false, error: "Too many players." };
+
+    const participantIds = activePlayers.map((p) => p.playerId);
+    room.rollOffData = {
+      rules: rules ?? DEFAULT_RULES,
+      agenda: [{ kind: "tied", playerIds: participantIds }],
+      currentRound: 1,
+      rollingThisRound: participantIds,
+      roundRolls: {},
+      resolvedOrder: null,
+    };
+    room.status = "rollOff";
+    this.touch(room);
+    return { ok: true, value: this.toPublicView(room) };
+  }
+
+  /** A player rolls their dice for the roll-off. Server generates the dice value. */
+  applyRollOffRoll(
+    roomCode: string,
+    playerId: string,
+    dice: RollOffEntry,
+  ): RoomResult<{ room: RoomPublicView; gameState: GameState | null }> {
+    const room = this.rooms.get(roomCode);
+    if (!room) return { ok: false, error: "Room not found." };
+    if (room.status !== "rollOff") return { ok: false, error: "Roll-off is not in progress." };
+    const ro = room.rollOffData;
+    if (!ro) return { ok: false, error: "No roll-off data." };
+    if (ro.resolvedOrder) return { ok: false, error: "Roll-off is already complete." };
+
+    // Validate the player belongs to the current rolling group
+    if (!ro.rollingThisRound.includes(playerId)) {
+      return { ok: false, error: "You are not in the current roll-off group." };
+    }
+    if (playerId in ro.roundRolls) {
+      return { ok: false, error: "You have already rolled this round." };
+    }
+
+    ro.roundRolls[playerId] = dice;
+    this.touch(room);
+
+    // Check if the entire current group has rolled
+    const allRolled = ro.rollingThisRound.every((id) => id in ro.roundRolls);
+    if (!allRolled) {
+      return { ok: true, value: { room: this.toPublicView(room), gameState: null } };
+    }
+
+    // Advance the agenda with this round's results
+    const isFirstRound = ro.currentRound === 1;
+    const newAgenda: RollOffAgendaItem[] = isFirstRound
+      ? buildInitialAgenda(ro.rollingThisRound, ro.roundRolls)
+      : advanceRollOffAgenda(ro.agenda, ro.roundRolls);
+
+    if (isAgendaResolved(newAgenda)) {
+      // All done — create the game with sorted players
+      const resolvedOrder = flattenAgenda(newAgenda);
+      ro.resolvedOrder = resolvedOrder;
+      ro.agenda = newAgenda;
+
+      const resolvedPlayers = resolvedOrder
+        .map((id) => room.players.find((p) => p.playerId === id))
+        .filter(Boolean) as RoomPlayer[];
+
+      const startPlayers = resolvedPlayers.map((p) => ({
+        id: p.playerId,
+        name: p.displayName,
+        token: p.token,
+        tokenLabel: p.tokenLabel,
+        color: p.color,
+      }));
+
+      const gameState = createInitialGameState(startPlayers, ro.rules);
+      room.gameState = gameState;
+      room.status = "inGame";
+      this.touch(room);
+
+      return { ok: true, value: { room: this.toPublicView(room), gameState } };
+    }
+
+    // Ties remain — advance to next round
+    const nextGroup = getCurrentRollingGroup(newAgenda);
+    ro.agenda = newAgenda;
+    ro.currentRound += 1;
+    ro.rollingThisRound = nextGroup;
+    ro.roundRolls = {};
+
+    return { ok: true, value: { room: this.toPublicView(room), gameState: null } };
   }
 
   // ── Start game ────────────────────────────────────────────────────────────

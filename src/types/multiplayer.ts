@@ -1,7 +1,7 @@
 import type { GameState, TradeOffer } from "@/types/game";
 import type { PlayerToken } from "@/types/player";
 
-export type RoomStatus = "lobby" | "inGame" | "gameOver" | "ended";
+export type RoomStatus = "lobby" | "rollOff" | "inGame" | "gameOver" | "ended";
 
 export type RoomPlayer = {
   playerId: string;
@@ -14,12 +14,23 @@ export type RoomPlayer = {
   joinedAt: string;
 };
 
+export type RollOffEntry = { die1: number; die2: number; total: number };
+
+export type RollOffPublicView = {
+  round: number;
+  rollingThisRound: string[]; // playerIds in current tie group
+  pendingPlayerIds: string[]; // subset of rollingThisRound who haven't rolled yet
+  rolls: Record<string, RollOffEntry>; // current round's completed rolls
+  resolvedOrder: string[] | null; // null until fully resolved
+};
+
 export type RoomPublicView = {
   roomCode: string;
   status: RoomStatus;
   players: RoomPlayer[];
   maxPlayers: number;
   takenTokens: PlayerToken[];
+  rollOff: RollOffPublicView | null;
 };
 
 // ── Client → Server event payloads ───────────────────────────────────────────

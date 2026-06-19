@@ -39,6 +39,7 @@ export type RoomHookState = {
   error: string | null;
   lastPlayerEvent: PlayerEventPayload | null;
   tradeDraft: TradeDraftState | null;
+  rollOff: import("@/types/multiplayer").RollOffPublicView | null;
 };
 
 export function useRoom() {
@@ -52,6 +53,7 @@ export function useRoom() {
     error: null,
     lastPlayerEvent: null,
     tradeDraft: null,
+    rollOff: null,
   });
 
   // Keep a ref to current state for use inside socket callbacks without stale closures
@@ -113,17 +115,21 @@ export function useRoom() {
     socket.on("room:created", (data: RoomCreatedPayload) => {
       sessionStorage.setItem(SESSION_PLAYER_ID, data.playerId);
       sessionStorage.setItem(SESSION_ROOM_CODE, data.room.roomCode);
-      setState((s) => ({ ...s, myPlayerId: data.playerId, room: data.room, error: null }));
+      setState((s) => ({ ...s, myPlayerId: data.playerId, room: data.room, rollOff: data.room.rollOff ?? null, error: null }));
     });
 
     socket.on("room:joined", (data: RoomJoinedPayload) => {
       sessionStorage.setItem(SESSION_PLAYER_ID, data.playerId);
       sessionStorage.setItem(SESSION_ROOM_CODE, data.room.roomCode);
-      setState((s) => ({ ...s, myPlayerId: data.playerId, room: data.room, error: null }));
+      setState((s) => ({ ...s, myPlayerId: data.playerId, room: data.room, rollOff: data.room.rollOff ?? null, error: null }));
     });
 
     socket.on("room:update", (data: RoomUpdatePayload) => {
-      setState((s) => ({ ...s, room: data.room }));
+      setState((s) => ({
+        ...s,
+        room: data.room,
+        rollOff: data.room.rollOff ?? null,
+      }));
     });
 
     socket.on("game:state", (data: GameStatePayload) => {
@@ -210,6 +216,11 @@ export function useRoom() {
     getSocket().emit("room:startGame", rules ? { rules } : undefined);
   }, []);
 
+  const rollForOrder = useCallback(() => {
+    setState((s) => ({ ...s, error: null }));
+    getSocket().emit("rolloff:roll");
+  }, []);
+
   const requestSync = useCallback(() => {
     getSocket().emit("room:requestSync");
   }, []);
@@ -256,6 +267,7 @@ export function useRoom() {
     joinRoom,
     leaveRoom,
     startGame,
+    rollForOrder,
     requestSync,
     requestGameSync,
     clearError,
