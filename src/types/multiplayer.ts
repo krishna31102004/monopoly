@@ -21,6 +21,7 @@ export type RollOffPublicView = {
   rollingThisRound: string[]; // playerIds in current tie group
   pendingPlayerIds: string[]; // subset of rollingThisRound who haven't rolled yet
   rolls: Record<string, RollOffEntry>; // current round's completed rolls
+  lastRoundRolls: Record<string, RollOffEntry>; // previous round's rolls (for reveal delay after tie)
   allRolls: Record<string, RollOffEntry>; // all rolls ever made (accumulated across rounds)
   resolvedOrder: string[] | null; // null until all ties resolved
   gameReady: boolean; // true when order resolved and host can begin game

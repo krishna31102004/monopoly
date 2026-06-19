@@ -27,6 +27,7 @@ type RollOffData = {
   currentRound: number;
   rollingThisRound: string[];
   roundRolls: Record<string, RollOffEntry>;
+  lastRoundRolls: Record<string, RollOffEntry>; // previous round's completed rolls (for reveal delay)
   allRolls: Record<string, RollOffEntry>; // accumulated across all rounds
   resolvedOrder: string[] | null;
   gameReady: boolean; // order resolved, waiting for host to begin
@@ -95,6 +96,7 @@ export class RoomManager {
           rollingThisRound: ro.rollingThisRound,
           pendingPlayerIds: ro.rollingThisRound.filter((id) => !(id in ro.roundRolls)),
           rolls: ro.roundRolls,
+          lastRoundRolls: ro.lastRoundRolls,
           allRolls: ro.allRolls,
           resolvedOrder: ro.resolvedOrder,
           gameReady: ro.gameReady,
@@ -257,6 +259,7 @@ export class RoomManager {
       currentRound: 1,
       rollingThisRound: participantIds,
       roundRolls: {},
+      lastRoundRolls: {},
       allRolls: {},
       resolvedOrder: null,
       gameReady: false,
@@ -318,6 +321,7 @@ export class RoomManager {
     ro.agenda = newAgenda;
     ro.currentRound += 1;
     ro.rollingThisRound = nextGroup;
+    ro.lastRoundRolls = { ...ro.roundRolls }; // preserve for client reveal delay
     ro.roundRolls = {};
 
     return { ok: true, value: { room: this.toPublicView(room), gameState: null } };

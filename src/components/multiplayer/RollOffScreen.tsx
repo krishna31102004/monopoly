@@ -138,14 +138,13 @@ export function RollOffScreen({
   onRoll,
   onBeginGame,
 }: Props) {
-  const { round, rollingThisRound, pendingPlayerIds, rolls, allRolls, resolvedOrder, gameReady } =
+  const { round, rollingThisRound, pendingPlayerIds, rolls, lastRoundRolls, allRolls, resolvedOrder, gameReady } =
     rollOff;
 
   const isTieBreaker = round > 1;
   const myIsRolling = rollingThisRound.includes(myPlayerId);
   const myHasRolled = myPlayerId in rolls;
   const canRoll = myIsRolling && !myHasRolled;
-  const myResult = rolls[myPlayerId];
 
   const playerMap = new Map(players.map((p) => [p.playerId, p]));
 
@@ -160,11 +159,22 @@ export function RollOffScreen({
     onRoll();
   }
 
-  // When my result arrives from server, stop rolling anim and start linger
-  const prevMyResult = useRef<typeof myResult>(undefined);
+  // ── FIX: Watch allRolls[myPlayerId] to detect my result ──────────────────
+  //
+  // Bug: When the last roll creates a tie, the server immediately advances the
+  // round — resetting `rolls` to {}. The old code watched `rolls[myPlayerId]`,
+  // which became undefined, so the effect never fired and myRolling stayed true
+  // forever (stuck "Rolling...").
+  //
+  // Fix: Watch `allRolls[myPlayerId]` which accumulates across rounds. This
+  // detects when my result was recorded regardless of round advancement.
+  //
+  const myAllRollsResult = allRolls[myPlayerId];
+  const prevMyAllRollsRef = useRef<typeof myAllRollsResult>(undefined);
+
   useEffect(() => {
-    if (myResult && myResult !== prevMyResult.current) {
-      prevMyResult.current = myResult;
+    if (myAllRollsResult && myAllRollsResult !== prevMyAllRollsRef.current) {
+      prevMyAllRollsRef.current = myAllRollsResult;
       const t = setTimeout(() => {
         setMyRolling(false);
         setLingerActive(true);
@@ -173,23 +183,50 @@ export function RollOffScreen({
       }, ANIMATION_MS);
       return () => clearTimeout(t);
     }
-  }, [myResult]);
+  }, [myAllRollsResult]);
+
+  // ── FIX: Show last round's results before showing tie-breaker header ─────
+  //
+  // Bug: When all players roll and create a tie, the server immediately advances
+  // the round. The client receives the new state (round N+1, rolls={}) and
+  // instantly shows "Tie Breaker — Round N+1" without showing the final player's
+  // dice result first.
+  //
+  // Fix: When `round` changes (tie-breaker starts), enter a `showingLastRound`
+  // state for RESULT_LINGER_MS, displaying `lastRoundRolls` (the previous
+  // round's results preserved by the server). Only after the delay do we show
+  // the new round's tie banner and empty player rows.
+  //
+  const prevRoundRef = useRef(round);
+  const [showingLastRound, setShowingLastRound] = useState(false);
+
+  useEffect(() => {
+    const prevRound = prevRoundRef.current;
+    prevRoundRef.current = round;
+
+    if (round !== prevRound && !gameReady) {
+      // Round just advanced due to a tie — reset stale animation flags from
+      // the previous round and show the previous results briefly before
+      // transitioning to the new round UI.
+      setMyRolling(false);
+      setLingerActive(false);
+      setShowingLastRound(true);
+      const t = setTimeout(() => setShowingLastRound(false), RESULT_LINGER_MS);
+      return () => clearTimeout(t);
+    }
+  }, [round, gameReady]);
 
   const { animDie1, animDie2, phase: animPhase } = useDiceAnimation(
-    myRolling && !!myResult,
-    myResult?.die1 ?? 1,
-    myResult?.die2 ?? 1,
+    myRolling && !!myAllRollsResult,
+    myAllRollsResult?.die1 ?? 1,
+    myAllRollsResult?.die2 ?? 1,
   );
 
   // ── Presentation gate: delay final order until reveal completes ───────────
   //
-  // Problem: when gameReady becomes true (server resolved the order), React
-  // renders the final order screen immediately — skipping the animation and
-  // result reveal for the final player (and observers).
-  //
-  // Fix: presentationReady starts as `gameReady` (so reconnect into an already-
-  // resolved room shows immediately). When gameReady transitions false→true,
-  // wait REVEAL_GATE_MS before setting presentationReady=true.
+  // When gameReady becomes true (server resolved the order), wait REVEAL_GATE_MS
+  // before showing the final order screen so the last player's dice result is
+  // visible first. Reconnecting into an already-resolved room shows immediately.
   //
   const [presentationReady, setPresentationReady] = useState(gameReady);
   const prevGameReadyRef = useRef(gameReady);
@@ -204,6 +241,13 @@ export function RollOffScreen({
 
   const canShowFinalOrder = gameReady && resolvedOrder && presentationReady;
 
+  // During showingLastRound: display the previous round's rolls for the players
+  // who just rolled (to show the result that caused the tie), using the same
+  // rollingThisRound group (tied players are the same in both rounds).
+  const displayRolls = showingLastRound ? lastRoundRolls : rolls;
+  // Show tie banner only after the reveal delay ends (not while showing last round's result)
+  const showTieBanner = isTieBreaker && !showingLastRound;
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -217,9 +261,13 @@ export function RollOffScreen({
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-200">
             {canShowFinalOrder
               ? "Results"
-              : isTieBreaker
+              : showTieBanner
                 ? `Tie Breaker — Round ${round}`
-                : "Pre-Game"}
+                : showingLastRound && round > 1
+                  ? `Tie Breaker — Round ${round - 1}`
+                  : isTieBreaker
+                    ? `Tie Breaker — Round ${round}`
+                    : "Pre-Game"}
           </p>
           <h2 id="rolloff-title" className="mt-1 text-xl font-black text-white">
             {canShowFinalOrder ? "Turn Order Decided!" : "Roll for Turn Order"}
@@ -227,9 +275,13 @@ export function RollOffScreen({
           <p className="mt-1 text-xs text-amber-100/70">
             {canShowFinalOrder
               ? "The dice have spoken."
-              : isTieBreaker
-                ? "Tied players roll again to break the tie."
-                : "Highest total goes first. Roll your dice!"}
+              : showingLastRound && round > 1
+                ? "All rolled — checking for ties…"
+                : showTieBanner
+                  ? "Tied players roll again to break the tie."
+                  : isTieBreaker
+                    ? "Tied players roll again to break the tie."
+                    : "Highest total goes first. Roll your dice!"}
           </p>
         </div>
 
@@ -291,8 +343,8 @@ export function RollOffScreen({
           ) : (
             /* ── Rolling / reveal phase ── */
             <>
-              {/* Tie banner */}
-              {isTieBreaker && (
+              {/* Tie banner — only after the reveal delay */}
+              {showTieBanner && (
                 <div className="rounded-lg border border-amber-500/30 bg-amber-900/20 px-3 py-2 text-center text-xs font-bold text-amber-300">
                   Tie!{" "}
                   {rollingThisRound
@@ -311,7 +363,7 @@ export function RollOffScreen({
                   <PlayerRow
                     key={id}
                     player={player}
-                    rollEntry={rolls[id]}
+                    rollEntry={isMe ? myAllRollsResult : displayRolls[id]}
                     isMe={isMe}
                     animDie1={animDie1}
                     animDie2={animDie2}
@@ -350,14 +402,19 @@ export function RollOffScreen({
 
               {/* CTA */}
               <div className="mt-1">
-                {canRoll && !gameReady ? (
+                {showingLastRound ? (
+                  /* Revealing last round's results — no action yet */
+                  <div className="rounded-xl border border-amber-700/30 bg-amber-900/10 px-6 py-3 text-center text-sm font-semibold text-amber-400">
+                    Checking for ties…
+                  </div>
+                ) : canRoll && !gameReady ? (
                   <button
                     type="button"
                     onClick={handleRoll}
                     disabled={isSubmitting}
                     className="w-full rounded-xl bg-amber-500 px-6 py-4 text-base font-black text-slate-950 shadow-[0_4px_0_rgba(0,0,0,0.25)] transition-all hover:bg-amber-400 active:translate-y-0.5 active:shadow-none disabled:opacity-60"
                   >
-                    {isSubmitting ? "Rolling…" : "🎲 Roll for Order"}
+                    {isSubmitting ? "Rolling…" : isTieBreaker ? "🎲 Roll Tie-Breaker" : "🎲 Roll for Order"}
                   </button>
                 ) : gameReady && !presentationReady ? (
                   /* Final roll revealed — showing results before order screen */
@@ -374,16 +431,6 @@ export function RollOffScreen({
                   <div className="rounded-xl border border-slate-700 bg-slate-800/60 px-6 py-4 text-center text-sm font-semibold text-slate-400">
                     Waiting for others to roll…
                   </div>
-                ) : canRoll && gameReady ? (
-                  /* Edge case: my turn to roll but it's already resolved (shouldn't happen) */
-                  <button
-                    type="button"
-                    onClick={handleRoll}
-                    disabled={isSubmitting}
-                    className="w-full rounded-xl bg-amber-500 px-6 py-4 text-base font-black text-slate-950 shadow-[0_4px_0_rgba(0,0,0,0.25)] transition-all hover:bg-amber-400 active:translate-y-0.5 active:shadow-none disabled:opacity-60"
-                  >
-                    {isSubmitting ? "Rolling…" : "🎲 Roll for Order"}
-                  </button>
                 ) : null}
               </div>
             </>
