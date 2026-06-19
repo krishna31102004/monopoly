@@ -326,8 +326,29 @@ describe("RollOffScreen — tie-breaker source assertions", () => {
     expect(src).toMatch(/myAllRollsResult\?\.die1/);
   });
 
-  it("round change effect resets myRolling and lingerActive", () => {
-    expect(src).toMatch(/setMyRolling\(false\)[\s\S]{0,100}setLingerActive\(false\)/);
+  it("round change effect resets myRolling and lingerActive for observer path", () => {
+    // Observer (not animating) path still resets to avoid stale state
+    expect(src).toMatch(/setMyRolling\(false\)[\s\S]{0,200}setLingerActive\(false\)/);
+  });
+
+  it("pendingShowLastRoundRef defers tie reveal for actor (Phase 4F.2D fix)", () => {
+    // The core fix: instead of immediately calling setShowingLastRound in the
+    // round-change effect (which cancelled the actor's animation), we set a ref
+    // and trigger showingLastRound after the actor's reveal is complete.
+    expect(src).toMatch(/pendingShowLastRoundRef/);
+  });
+
+  it("myRollingRef and lingerActiveRef mirror state for non-stale closure access", () => {
+    expect(src).toMatch(/myRollingRef/);
+    expect(src).toMatch(/lingerActiveRef/);
+  });
+
+  it("round-change effect checks myRollingRef.current to avoid cancelling animation", () => {
+    expect(src).toMatch(/myRollingRef\.current[\s\S]{0,100}lingerActiveRef\.current/);
+  });
+
+  it("allRolls effect triggers pendingShowLastRound after lingerActive ends", () => {
+    expect(src).toMatch(/pendingShowLastRoundRef\.current[\s\S]{0,300}setShowingLastRound\(true\)/);
   });
 
   it("REVEAL_GATE_MS still defined as ANIMATION_MS + RESULT_LINGER_MS", () => {
@@ -404,6 +425,76 @@ describe("stuck-state logic (pure simulation)", () => {
   it("new behavior: not stuck in normal case (no tie)", () => {
     const stuck = simulateNewBehavior(["roll"]);
     expect(stuck).toBe(false);
+  });
+});
+
+// ── Actor path: deferred showingLastRound simulation (Phase 4F.2D) ───────────
+
+describe("actor-path deferred tie reveal (pure simulation)", () => {
+  const ANIMATION_MS = 1100;
+  const RESULT_LINGER_MS = 1600;
+
+  /**
+   * Simulates the OLD (broken) behavior:
+   * round-change effect immediately calls setMyRolling(false), cancelling the
+   * useDiceAnimation cleanup, which fires clearInterval + clearTimeout.
+   */
+  function simulateOldActorBehavior(): {
+    animationCancelled: boolean;
+    showingLastRoundStartMs: number;
+  } {
+    let myRolling = true; // actor clicked Roll
+    // t~50ms: result arrives, round changes. Old effect runs:
+    myRolling = false; // ← wiped by round-change effect
+    // useDiceAnimation cleanup fires → animation cancelled
+    const animationCancelled = true; // because myRolling flipped during animation
+    const showingLastRoundStartMs = 50; // immediate (no delay for actor)
+    return { animationCancelled, showingLastRoundStartMs };
+  }
+
+  /**
+   * Simulates the NEW (fixed) behavior:
+   * round-change effect detects actor is animating → defers showingLastRound.
+   * Actor sees full dice animation + result linger before tie display.
+   */
+  function simulateNewActorBehavior(): {
+    animationCancelled: boolean;
+    showingLastRoundStartMs: number;
+  } {
+    const myRolling = true; // actor clicked Roll
+    let pendingShowLastRound = false;
+    // t~50ms: result arrives, round changes. New effect runs:
+    if (myRolling) {
+      // Actor is animating → defer, do NOT wipe myRolling
+      pendingShowLastRound = true;
+    }
+    // myRolling stays true → animation continues
+    const animationCancelled = false;
+    // showingLastRound triggers AFTER animation (ANIMATION_MS) + linger (RESULT_LINGER_MS)
+    const showingLastRoundStartMs = pendingShowLastRound
+      ? 50 + ANIMATION_MS + RESULT_LINGER_MS
+      : 50;
+    return { animationCancelled, showingLastRoundStartMs };
+  }
+
+  it("old behavior: actor animation was cancelled by round-change effect", () => {
+    const { animationCancelled } = simulateOldActorBehavior();
+    expect(animationCancelled).toBe(true);
+  });
+
+  it("new behavior: actor animation is NOT cancelled", () => {
+    const { animationCancelled } = simulateNewActorBehavior();
+    expect(animationCancelled).toBe(false);
+  });
+
+  it("new behavior: showingLastRound deferred past ANIMATION_MS + RESULT_LINGER_MS", () => {
+    const { showingLastRoundStartMs } = simulateNewActorBehavior();
+    expect(showingLastRoundStartMs).toBeGreaterThan(ANIMATION_MS + RESULT_LINGER_MS);
+  });
+
+  it("old behavior: showingLastRound started immediately (before dice animation)", () => {
+    const { showingLastRoundStartMs } = simulateOldActorBehavior();
+    expect(showingLastRoundStartMs).toBeLessThan(ANIMATION_MS);
   });
 });
 

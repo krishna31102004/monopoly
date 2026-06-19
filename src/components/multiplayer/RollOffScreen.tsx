@@ -27,7 +27,14 @@ function nextTick() {
   return rollingTick;
 }
 
-/** Shuffles die faces for animation, then snaps to final values after ANIMATION_MS. */
+/**
+ * Dice animation hook. Starts shuffling immediately when `active` becomes true.
+ * Snaps to `finalDie1/finalDie2` after ANIMATION_MS.
+ *
+ * IMPORTANT: `active` must stay true for the full ANIMATION_MS or the cleanup
+ * function will fire (clearInterval + clearTimeout), cancelling the animation.
+ * Callers must NOT flip `active` back to false during the animation window.
+ */
 function useDiceAnimation(active: boolean, finalDie1: number, finalDie2: number) {
   const [animDie1, setAnimDie1] = useState(finalDie1);
   const [animDie2, setAnimDie2] = useState(finalDie2);
@@ -148,10 +155,21 @@ export function RollOffScreen({
 
   const playerMap = new Map(players.map((p) => [p.playerId, p]));
 
-  // ── Local animation for MY own roll ──────────────────────────────────────
+  // ── My own roll animation state ───────────────────────────────────────────
   const [myRolling, setMyRolling] = useState(false);
   const [lingerActive, setLingerActive] = useState(false);
   const isSubmitting = myRolling || lingerActive;
+
+  // Refs that mirror myRolling/lingerActive — used inside effects to avoid stale
+  // closures without needing to add them as effect dependencies.
+  const myRollingRef = useRef(false);
+  const lingerActiveRef = useRef(false);
+  myRollingRef.current = myRolling;
+  lingerActiveRef.current = lingerActive;
+
+  // Flag: round advanced while we were animating — show lastRoundRolls banner
+  // AFTER our own reveal instead of immediately.
+  const pendingShowLastRoundRef = useRef(false);
 
   function handleRoll() {
     if (!canRoll || isSubmitting) return;
@@ -159,15 +177,12 @@ export function RollOffScreen({
     onRoll();
   }
 
-  // ── FIX: Watch allRolls[myPlayerId] to detect my result ──────────────────
+  // ── Detect my result from server ──────────────────────────────────────────
   //
-  // Bug: When the last roll creates a tie, the server immediately advances the
-  // round — resetting `rolls` to {}. The old code watched `rolls[myPlayerId]`,
-  // which became undefined, so the effect never fired and myRolling stayed true
-  // forever (stuck "Rolling...").
-  //
-  // Fix: Watch `allRolls[myPlayerId]` which accumulates across rounds. This
-  // detects when my result was recorded regardless of round advancement.
+  // Watch `allRolls[myPlayerId]` (accumulates across rounds) rather than
+  // `rolls[myPlayerId]` (resets to {} when round advances). This prevents a
+  // stuck "Rolling..." state when ansh's roll is the one that creates a tie
+  // and the server immediately resets `rolls`.
   //
   const myAllRollsResult = allRolls[myPlayerId];
   const prevMyAllRollsRef = useRef<typeof myAllRollsResult>(undefined);
@@ -175,27 +190,40 @@ export function RollOffScreen({
   useEffect(() => {
     if (myAllRollsResult && myAllRollsResult !== prevMyAllRollsRef.current) {
       prevMyAllRollsRef.current = myAllRollsResult;
+      // Wait for the dice animation to play out, then enter the result-reveal linger.
       const t = setTimeout(() => {
         setMyRolling(false);
+        myRollingRef.current = false;
         setLingerActive(true);
-        const t2 = setTimeout(() => setLingerActive(false), RESULT_LINGER_MS);
+        lingerActiveRef.current = true;
+        const t2 = setTimeout(() => {
+          setLingerActive(false);
+          lingerActiveRef.current = false;
+          // If the round advanced while we were revealing, trigger lastRound display NOW.
+          if (pendingShowLastRoundRef.current) {
+            pendingShowLastRoundRef.current = false;
+            setShowingLastRound(true);
+            setTimeout(() => setShowingLastRound(false), RESULT_LINGER_MS);
+          }
+        }, RESULT_LINGER_MS);
         return () => clearTimeout(t2);
       }, ANIMATION_MS);
       return () => clearTimeout(t);
     }
   }, [myAllRollsResult]);
 
-  // ── FIX: Show last round's results before showing tie-breaker header ─────
+  // ── Round-change: show previous round's results before tie banner ─────────
   //
-  // Bug: When all players roll and create a tie, the server immediately advances
-  // the round. The client receives the new state (round N+1, rolls={}) and
-  // instantly shows "Tie Breaker — Round N+1" without showing the final player's
-  // dice result first.
+  // Root-cause fix (Phase 4F.2D):
   //
-  // Fix: When `round` changes (tie-breaker starts), enter a `showingLastRound`
-  // state for RESULT_LINGER_MS, displaying `lastRoundRolls` (the previous
-  // round's results preserved by the server). Only after the delay do we show
-  // the new round's tie banner and empty player rows.
+  // Old code called setMyRolling(false) here immediately when the round advanced.
+  // This caused React to re-run useDiceAnimation's effect with active=false, which
+  // fired the cleanup function (clearInterval + clearTimeout), cancelling the
+  // animation. The actor (last to roll in a tie) never saw their own dice roll.
+  //
+  // Fix: if the actor is currently in their own animation or linger phase, defer
+  // the lastRound display until after the reveal completes (handled above in the
+  // allRolls effect). Only immediately show lastRound for observers (myRolling=false).
   //
   const prevRoundRef = useRef(round);
   const [showingLastRound, setShowingLastRound] = useState(false);
@@ -205,28 +233,43 @@ export function RollOffScreen({
     prevRoundRef.current = round;
 
     if (round !== prevRound && !gameReady) {
-      // Round just advanced due to a tie — reset stale animation flags from
-      // the previous round and show the previous results briefly before
-      // transitioning to the new round UI.
-      setMyRolling(false);
-      setLingerActive(false);
-      setShowingLastRound(true);
-      const t = setTimeout(() => setShowingLastRound(false), RESULT_LINGER_MS);
-      return () => clearTimeout(t);
+      if (myRollingRef.current || lingerActiveRef.current) {
+        // Actor is in the middle of their own roll reveal.
+        // Do NOT reset myRolling/lingerActive — that would cancel the dice animation.
+        // Instead, set a flag so the allRolls effect triggers lastRound after reveal.
+        pendingShowLastRoundRef.current = true;
+      } else {
+        // Observer path: not animating, immediately show previous round's results.
+        setMyRolling(false);
+        setLingerActive(false);
+        setShowingLastRound(true);
+        const t = setTimeout(() => setShowingLastRound(false), RESULT_LINGER_MS);
+        return () => clearTimeout(t);
+      }
     }
   }, [round, gameReady]);
 
+  // ── useDiceAnimation: active only when both myRolling AND result are in ───
+  //
+  // `active = myRolling && !!myAllRollsResult` ensures the animation snap-to-final
+  // values are ready when the animation starts (preventing a wrong dice snap if
+  // the result arrives after ANIMATION_MS). In practice server results arrive in
+  // <<ANIMATION_MS on any reasonable connection.
+  //
+  // CRITICAL: `active` must stay true for the full ANIMATION_MS. The round-change
+  // fix above ensures we no longer flip myRolling=false during the animation.
+  //
   const { animDie1, animDie2, phase: animPhase } = useDiceAnimation(
     myRolling && !!myAllRollsResult,
     myAllRollsResult?.die1 ?? 1,
     myAllRollsResult?.die2 ?? 1,
   );
 
-  // ── Presentation gate: delay final order until reveal completes ───────────
+  // ── Presentation gate: delay final order screen until reveal completes ────
   //
-  // When gameReady becomes true (server resolved the order), wait REVEAL_GATE_MS
-  // before showing the final order screen so the last player's dice result is
-  // visible first. Reconnecting into an already-resolved room shows immediately.
+  // When gameReady becomes true, wait REVEAL_GATE_MS before showing the final
+  // order so the last player's dice result is visible. Reconnecting into an
+  // already-resolved room skips the delay.
   //
   const [presentationReady, setPresentationReady] = useState(gameReady);
   const prevGameReadyRef = useRef(gameReady);
@@ -241,11 +284,11 @@ export function RollOffScreen({
 
   const canShowFinalOrder = gameReady && resolvedOrder && presentationReady;
 
-  // During showingLastRound: display the previous round's rolls for the players
-  // who just rolled (to show the result that caused the tie), using the same
-  // rollingThisRound group (tied players are the same in both rounds).
+  // During showingLastRound: use previous round's preserved rolls for display.
+  // This ensures all players see the result that caused the tie before the
+  // "Tie Breaker — Round N" banner and fresh empty player rows appear.
   const displayRolls = showingLastRound ? lastRoundRolls : rolls;
-  // Show tie banner only after the reveal delay ends (not while showing last round's result)
+  // Show tie banner only after the reveal delay (not while showing last round's result).
   const showTieBanner = isTieBreaker && !showingLastRound;
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -261,10 +304,10 @@ export function RollOffScreen({
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-200">
             {canShowFinalOrder
               ? "Results"
-              : showTieBanner
-                ? `Tie Breaker — Round ${round}`
-                : showingLastRound && round > 1
-                  ? `Tie Breaker — Round ${round - 1}`
+              : showingLastRound && round > 1
+                ? `Tie Breaker — Round ${round - 1}`
+                : showTieBanner
+                  ? `Tie Breaker — Round ${round}`
                   : isTieBreaker
                     ? `Tie Breaker — Round ${round}`
                     : "Pre-Game"}
@@ -343,7 +386,7 @@ export function RollOffScreen({
           ) : (
             /* ── Rolling / reveal phase ── */
             <>
-              {/* Tie banner — only after the reveal delay */}
+              {/* Tie banner — only after the result-reveal delay */}
               {showTieBanner && (
                 <div className="rounded-lg border border-amber-500/30 bg-amber-900/20 px-3 py-2 text-center text-xs font-bold text-amber-300">
                   Tie!{" "}
