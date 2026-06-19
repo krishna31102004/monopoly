@@ -26,7 +26,6 @@ type Props = {
   onDraftUpdate?: (patch: TradeDraftUpdatePayload) => void;
   onDraftCancel?: () => void;
   onDraftSubmit?: () => void;
-  onCounterOffer?: () => void;
 };
 
 const EMPTY_OFFER: TradeOffer = { cash: 0, propertySpaceIndices: [], getOutOfJailFreeCards: 0 };
@@ -646,7 +645,7 @@ function LocalTradeForm({ state, dispatch, myPlayerId }: Props) {
 // ── Live draft modal (multiplayer) ────────────────────────────────────────────
 
 function LiveDraftModal({
-  state, myPlayerId, draft, onDraftUpdate, onDraftCancel, onDraftSubmit, isCounter,
+  state, myPlayerId, draft, onDraftUpdate, onDraftCancel, onDraftSubmit,
 }: {
   state: GameState;
   myPlayerId?: string;
@@ -654,7 +653,6 @@ function LiveDraftModal({
   onDraftUpdate: (patch: TradeDraftUpdatePayload) => void;
   onDraftCancel: () => void;
   onDraftSubmit: () => void;
-  isCounter?: boolean;
 }) {
   const role = getTradeModalRole(myPlayerId, draft);
   const isProposer = role === "proposer";
@@ -677,21 +675,19 @@ function LiveDraftModal({
     onDraftUpdate({ [side]: { ...offer, propertySpaceIndices: next } });
   }
 
-  const statusBadgeText = isCounter
-    ? (isProposer ? "Counter Draft" : "Watching Counter")
-    : getTradeStatusBadgeText({ hasDraft: true, hasPendingTrade: false, isProposer });
+  const statusBadgeText = getTradeStatusBadgeText({ hasDraft: true, hasPendingTrade: false, isProposer });
 
   return (
     <TradeModalShell
-      statusLabel={isCounter ? "Counter Offer" : "Trade Negotiation"}
+      statusLabel="Trade Negotiation"
       statusBadge={{ text: statusBadgeText, tone: "live" }}
-      title={isCounter ? `Counter: ${proposer?.name ?? "?"} → ${recipient?.name ?? "?"}` : `${proposer?.name ?? "Proposer"} ↔ ${recipient?.name ?? "Recipient"}`}
+      title={`${proposer?.name ?? "Proposer"} ↔ ${recipient?.name ?? "Recipient"}`}
       subtitle={
         isSpectator
-          ? `Watching ${isCounter ? "counter-offer" : "live draft"} · Only ${proposer?.name ?? "the proposer"} can edit`
+          ? `Watching live draft · Only ${proposer?.name ?? "the proposer"} can edit`
           : isProposer
-          ? isCounter ? "Build your counter-offer. Edits update for everyone." : "Your edits update for everyone in real time"
-          : `Watching ${proposer?.name ?? "the proposer"} ${isCounter ? "build a counter-offer" : "build this offer"}`
+          ? "Your edits update for everyone in real time"
+          : `Watching ${proposer?.name ?? "the proposer"} build this offer`
       }
       onClose={isProposer ? onDraftCancel : undefined}
       footer={
@@ -701,7 +697,7 @@ function LiveDraftModal({
             <div className="flex gap-2">
               <button disabled={!validation.ok} onClick={onDraftSubmit}
                 className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-black text-white shadow-sm hover:bg-indigo-700 active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500">
-                {isCounter ? "Send Counter Offer" : "Send Offer"}
+                Send Offer
               </button>
               <button onClick={onDraftCancel}
                 className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 active:scale-[0.97]">
@@ -752,7 +748,7 @@ function LiveDraftModal({
 
 // ── Pending trade / contract mode ─────────────────────────────────────────────
 
-function PendingTradeView({ state, dispatch, myPlayerId, onCounterOffer }: Props) {
+function PendingTradeView({ state, dispatch, myPlayerId }: Props) {
   const { trade } = state;
   if (!trade) return null;
 
@@ -764,16 +760,6 @@ function PendingTradeView({ state, dispatch, myPlayerId, onCounterOffer }: Props
 
   const initiatorValue = getTradeSideListedValue(trade.offerFromInitiator, state.ownerships);
   const recipientValue = getTradeSideListedValue(trade.offerFromRecipient, state.ownerships);
-
-  function handleCounter() {
-    if (onCounterOffer) {
-      // Multiplayer: delegate to parent (emits trade:counter socket event)
-      onCounterOffer();
-    } else {
-      // Local: dispatch COUNTER_TRADE (reducer clears trade + sets counterTrade)
-      dispatch({ type: "COUNTER_TRADE", actorPlayerId: trade!.recipientPlayerId });
-    }
-  }
 
   return (
     <TradeModalShell
@@ -787,7 +773,7 @@ function PendingTradeView({ state, dispatch, myPlayerId, onCounterOffer }: Props
         isSpectator
           ? `Watching trade offer · Only ${recipient?.name ?? "the recipient"} can respond`
           : isRecipient && !isInitiator
-          ? "Review the offer carefully. Accept, decline, or counter."
+          ? "Review the offer carefully. Accept or decline."
           : isInitiator && !isRecipient
           ? `Waiting for ${recipient?.name ?? "the recipient"} to respond…`
           : undefined
@@ -795,7 +781,7 @@ function PendingTradeView({ state, dispatch, myPlayerId, onCounterOffer }: Props
       footer={
         isSpectator ? (
           <p className="text-xs text-slate-500 italic">
-            Spectator view — only {recipient?.name ?? "the recipient"} can accept, decline, or counter.
+            Spectator view — only {recipient?.name ?? "the recipient"} can accept or decline.
           </p>
         ) : (
           <div className="flex flex-wrap items-center gap-2">
@@ -812,12 +798,6 @@ function PendingTradeView({ state, dispatch, myPlayerId, onCounterOffer }: Props
                   onClick={() => dispatch({ type: "DECLINE_TRADE", actorPlayerId: trade.recipientPlayerId })}
                 >
                   Decline
-                </button>
-                <button
-                  className="rounded-lg border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700 shadow-sm hover:bg-indigo-100 active:scale-[0.97]"
-                  onClick={handleCounter}
-                >
-                  Counter Offer
                 </button>
               </>
             )}
@@ -852,111 +832,10 @@ function PendingTradeView({ state, dispatch, myPlayerId, onCounterOffer }: Props
   );
 }
 
-// ── Local counter-offer form ──────────────────────────────────────────────────
-
-function LocalCounterForm({
-  state,
-  dispatch,
-  counterProposer,
-  counterRecipient,
-}: {
-  state: GameState;
-  dispatch: (action: GameAction) => void;
-  counterProposer: Player;
-  counterRecipient: Player;
-}) {
-  const [cash, setCash] = useState(0);
-  const [recipientCash, setRecipientCash] = useState(0);
-  const [props, setProps] = useState<number[]>([]);
-  const [recipientProps, setRecipientProps] = useState<number[]>([]);
-  const [gojf, setGojf] = useState(0);
-  const [recipientGojf, setRecipientGojf] = useState(0);
-
-  const offerFromProposer: TradeOffer = { cash, propertySpaceIndices: props, getOutOfJailFreeCards: gojf };
-  const offerFromRecipient: TradeOffer = { cash: recipientCash, propertySpaceIndices: recipientProps, getOutOfJailFreeCards: recipientGojf };
-
-  const validation = validateTradeDraft(
-    state,
-    counterProposer.id,
-    counterRecipient.id,
-    offerFromProposer,
-    offerFromRecipient,
-  );
-
-  function toggleProp(idx: number, side: "proposer" | "recipient") {
-    if (side === "proposer") {
-      setProps((p) => p.includes(idx) ? p.filter((i) => i !== idx) : [...p, idx]);
-    } else {
-      setRecipientProps((p) => p.includes(idx) ? p.filter((i) => i !== idx) : [...p, idx]);
-    }
-  }
-
-  function handleSubmit() {
-    if (!validation.ok) return;
-    dispatch({
-      type: "PROPOSE_TRADE",
-      actorPlayerId: counterProposer.id,
-      initiatorId: counterProposer.id,
-      recipientId: counterRecipient.id,
-      offerFromInitiator: offerFromProposer,
-      offerFromRecipient,
-    });
-  }
-
-  function handleCancel() {
-    dispatch({ type: "CANCEL_COUNTER_TRADE", actorPlayerId: counterProposer.id });
-  }
-
-  const proposerOwned = [...counterProposer.ownedCityIds, ...counterProposer.ownedAirportIds, ...counterProposer.ownedUtilityIds];
-  const recipientOwned = [...counterRecipient.ownedCityIds, ...counterRecipient.ownedAirportIds, ...counterRecipient.ownedUtilityIds];
-
-  return (
-    <TradeModalShell
-      statusLabel="Counter Offer"
-      statusBadge={{ text: "Counter Draft", tone: "live" }}
-      title={`Counter: ${counterProposer.name} → ${counterRecipient.name}`}
-      subtitle="Build your counter-offer."
-      onClose={handleCancel}
-      footer={
-        <>
-          {!validation.ok && <p className="mb-2 text-xs font-semibold text-red-600">{validation.reason}</p>}
-          <div className="flex gap-2">
-            <button disabled={!validation.ok} onClick={handleSubmit}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-black text-white shadow-sm hover:bg-indigo-700 active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500">
-              Send Counter Offer
-            </button>
-            <button onClick={handleCancel}
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 active:scale-[0.97]">
-              Cancel
-            </button>
-          </div>
-        </>
-      }
-    >
-      <TwoSideLayout
-        left={
-          <TradeSidePanel player={counterProposer} offer={offerFromProposer} cashReceived={recipientCash}
-            ownedIndices={proposerOwned} label="gives" editable={true} ownerships={state.ownerships}
-            onCashChange={setCash}
-            onToggleProp={(idx) => toggleProp(idx, "proposer")}
-            onGOJFChange={setGojf} />
-        }
-        right={
-          <TradeSidePanel player={counterRecipient} offer={offerFromRecipient} cashReceived={cash}
-            ownedIndices={recipientOwned} label="gives" editable={true} ownerships={state.ownerships}
-            onCashChange={setRecipientCash}
-            onToggleProp={(idx) => toggleProp(idx, "recipient")}
-            onGOJFChange={setRecipientGojf} />
-        }
-      />
-    </TradeModalShell>
-  );
-}
-
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 export function TradePanel(props: Props) {
-  const { state, dispatch, myPlayerId, tradeDraft, onDraftStart, onDraftUpdate, onDraftCancel, onDraftSubmit, onCounterOffer } = props;
+  const { state, dispatch, myPlayerId, tradeDraft, onDraftStart, onDraftUpdate, onDraftCancel, onDraftSubmit } = props;
 
   // Track when a trade/draft was open and then closed — detect result from newest log entry.
   // Logs are prepended (index 0 = newest), so always use [0].
@@ -964,7 +843,7 @@ export function TradePanel(props: Props) {
   const lastSeenLogIdRef = useRef<string | undefined>(undefined);
   const [resultStamp, setResultStamp] = useState<TradeResultKind | null>(null);
 
-  const isOpenNow = Boolean(state.trade) || Boolean(tradeDraft) || Boolean(state.counterTrade);
+  const isOpenNow = Boolean(state.trade) || Boolean(tradeDraft);
 
   useEffect(() => {
     const wasOpen = wasOpenRef.current;
@@ -990,29 +869,22 @@ export function TradePanel(props: Props) {
   if (state.phase === "gameOver") return null;
 
   if (state.trade) {
-    return <PendingTradeView state={state} dispatch={dispatch} myPlayerId={myPlayerId} onCounterOffer={onCounterOffer} />;
+    return <PendingTradeView state={state} dispatch={dispatch} myPlayerId={myPlayerId} />;
   }
 
   const isMultiplayerDraftMode = onDraftStart !== undefined;
 
   if (isMultiplayerDraftMode) {
     if (tradeDraft) {
-      // Counter-offer draft: show badge indicating it's a counter
-      const isCounter = Boolean(state.counterTrade);
       return (
         <LiveDraftModal
           state={state} myPlayerId={myPlayerId} draft={tradeDraft}
-          isCounter={isCounter}
           onDraftUpdate={onDraftUpdate ?? (() => {})}
           onDraftCancel={onDraftCancel ?? (() => {})}
           onDraftSubmit={onDraftSubmit ?? (() => {})}
         />
       );
     }
-
-    // Counter-offer in progress (multiplayer: state.counterTrade set, draft will arrive via socket)
-    // While waiting for draft socket event, show nothing (server is creating draft).
-    if (state.counterTrade) return null;
 
     const currentPlayerId = state.players[state.currentPlayerIndex]?.id;
     const authorizedProposerId = state.phase === "bankruptcyPending" && state.bankruptcy ? state.bankruptcy.debtorPlayerId : currentPlayerId;
@@ -1033,22 +905,6 @@ export function TradePanel(props: Props) {
         {!timingGate.ok && <p className="mt-1 px-1 text-[11px] font-semibold text-amber-700">{timingGate.reason}</p>}
       </div>
     );
-  }
-
-  // Local mode: handle counter-trade draft (state.counterTrade set but no tradeDraft)
-  if (state.counterTrade) {
-    const counterProposer = state.players.find((p) => p.id === state.counterTrade!.allowedProposerId);
-    const counterRecipient = state.players.find((p) => p.id === state.counterTrade!.allowedRecipientId);
-    if (counterProposer && counterRecipient) {
-      return (
-        <LocalCounterForm
-          state={state}
-          dispatch={dispatch}
-          counterProposer={counterProposer}
-          counterRecipient={counterRecipient}
-        />
-      );
-    }
   }
 
   return <LocalTradeForm {...props} />;

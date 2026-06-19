@@ -151,7 +151,6 @@ describe("PendingTradeView — spectator clarity source assertions", () => {
   });
 
   it("spectator footer text references the recipient's role", () => {
-    // Updated to include counter option: "accept, decline, or counter"
     expect(src).toMatch(/accept.*decline|accept or decline/i);
   });
 });

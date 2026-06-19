@@ -118,12 +118,6 @@ export type TradeState = {
   offerFromRecipient: TradeOffer;
 };
 
-/** Set when the recipient of a pending trade has countered but not yet submitted a new offer. */
-export type CounterTradeState = {
-  allowedProposerId: string;  // old recipient, now counter-proposer
-  allowedRecipientId: string; // old initiator, now counter-recipient
-};
-
 export type GameState = {
   players: Player[];
   ownerships: PropertyOwnership[];
@@ -141,7 +135,6 @@ export type GameState = {
   chanceDeck: string[];
   communityChestDeck: string[];
   trade: TradeState | null;
-  counterTrade: CounterTradeState | null;
   bankruptcy: BankruptcyState | null;
   rules: GameRules;
   freeParkingPot: number;
@@ -226,8 +219,6 @@ export type GameAction =
   | { type: "ACCEPT_TRADE"; actorPlayerId: string }
   | { type: "DECLINE_TRADE"; actorPlayerId: string }
   | { type: "CANCEL_TRADE"; actorPlayerId: string }
-  | { type: "COUNTER_TRADE"; actorPlayerId: string }
-  | { type: "CANCEL_COUNTER_TRADE"; actorPlayerId: string }
   | { type: "DECLARE_BANKRUPTCY" }
   | { type: "RESOLVE_BANKRUPTCY_IF_SOLVENT" }
   | { type: "RESET_GAME" }

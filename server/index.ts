@@ -357,62 +357,15 @@ io.on("connection", (socket) => {
         socket.emit("game:error", { message: "Not in a room." });
         return;
       }
-      // If a counter-trade was in progress, also clear it from game state.
-      const gs = rooms.getGameState(roomCode);
-      const hadCounter = gs?.counterTrade != null;
       const result = rooms.cancelTradeDraft(roomCode, playerId);
       if (!result.ok) {
         socket.emit("game:error", { message: result.error });
         return;
       }
       io.to(roomCode).emit("trade:draftState", { draft: null });
-      if (hadCounter) {
-        const cancelResult = rooms.applyGameAction(roomCode, playerId, { type: "CANCEL_COUNTER_TRADE" }, null);
-        if (cancelResult.ok) {
-          io.to(roomCode).emit("game:state", { gameState: cancelResult.value });
-        }
-      }
     } catch (err) {
       console.error("[trade:draftCancel] error:", err);
       socket.emit("game:error", { message: "Failed to cancel trade draft." });
-    }
-  });
-
-  // ── trade:counter ────────────────────────────────────────────────────────
-  // Recipient of a pending offer clicks Counter Offer: clears the pending
-  // trade, flips proposer/recipient, and starts an empty counter draft.
-  socket.on("trade:counter", () => {
-    try {
-      const roomCode = rooms.getRoomCodeBySocketId(socket.id);
-      const playerId = rooms.getPlayerIdBySocketId(socket.id);
-      if (!roomCode || !playerId) {
-        socket.emit("game:error", { message: "Not in a room." });
-        return;
-      }
-      // Dispatch COUNTER_TRADE — clears pending trade, sets counterTrade in game state.
-      const counterResult = rooms.applyGameAction(roomCode, playerId, { type: "COUNTER_TRADE" }, null);
-      if (!counterResult.ok) {
-        socket.emit("game:error", { message: counterResult.error });
-        return;
-      }
-      const newGs = counterResult.value;
-      if (!newGs.counterTrade) {
-        socket.emit("game:error", { message: "Counter trade state missing after action." });
-        return;
-      }
-      // Start an empty draft for the counter-proposer (the original recipient).
-      const draftResult = rooms.startCounterTradeDraft(
-        roomCode,
-        newGs.counterTrade.allowedProposerId,
-        newGs.counterTrade.allowedRecipientId,
-      );
-      // Broadcast updated game state (pending trade cleared) + new draft.
-      io.to(roomCode).emit("game:state", { gameState: newGs });
-      io.to(roomCode).emit("trade:draftState", { draft: draftResult.ok ? draftResult.value : null });
-      console.log(`[trade] counter by ${playerId} in ${roomCode}`);
-    } catch (err) {
-      console.error("[trade:counter] error:", err);
-      socket.emit("game:error", { message: "Failed to start counter-offer." });
     }
   });
 

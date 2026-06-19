@@ -150,11 +150,6 @@ describe("server/index.ts — CORS and error handling source assertions", () => 
     expect(serverSrc).toMatch(/Access-Control-Allow-Origin/);
   });
 
-  it("trade:counter handler has try/catch", () => {
-    // try block must appear inside trade:counter handler
-    expect(serverSrc).toMatch(/trade:counter[\s\S]{0,200}try\s*\{/);
-  });
-
   it("trade:draftCancel handler has try/catch", () => {
     expect(serverSrc).toMatch(/trade:draftCancel[\s\S]{0,200}try\s*\{/);
   });
@@ -180,15 +175,12 @@ describe("server/index.ts — CORS and error handling source assertions", () => 
     expect(serverSrc).toMatch(/isAllowedOrigin/);
   });
 
-  it("trade:counter uses applyGameAction not dispatchAction (regression)", () => {
-    // Bug: trade:counter and trade:draftCancel called rooms.dispatchAction which
-    // doesn't exist — TypeError at runtime → catch block → "Failed to start counter-offer"
-    expect(serverSrc).not.toMatch(/rooms\.dispatchAction/);
-    expect(serverSrc).toMatch(/applyGameAction[\s\S]{0,300}COUNTER_TRADE/);
+  it("does not expose trade:counter socket event (counter-offer removed)", () => {
+    expect(serverSrc).not.toMatch(/trade:counter/);
   });
 
-  it("CANCEL_COUNTER_TRADE uses applyGameAction not dispatchAction", () => {
-    expect(serverSrc).toMatch(/applyGameAction[\s\S]{0,300}CANCEL_COUNTER_TRADE/);
+  it("does not call rooms.dispatchAction (method does not exist, regression guard)", () => {
+    expect(serverSrc).not.toMatch(/rooms\.dispatchAction/);
   });
 });
 

@@ -110,8 +110,6 @@ export type GameActionIntent =
   | { type: "ACCEPT_TRADE" }
   | { type: "DECLINE_TRADE" }
   | { type: "CANCEL_TRADE" }
-  | { type: "COUNTER_TRADE" }
-  | { type: "CANCEL_COUNTER_TRADE" }
   | { type: "DECLARE_BANKRUPTCY" }
   | { type: "RESOLVE_BANKRUPTCY_IF_SOLVENT" };
 

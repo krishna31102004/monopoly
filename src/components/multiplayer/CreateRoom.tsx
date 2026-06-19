@@ -33,7 +33,6 @@ export function CreateRoom() {
     updateTradeDraft,
     cancelTradeDraft,
     submitTradeDraft,
-    counterTradeDraft,
   } = useRoom();
 
   const [name, setName] = useState("");
@@ -82,7 +81,6 @@ export function CreateRoom() {
         updateTradeDraft={updateTradeDraft}
         cancelTradeDraft={cancelTradeDraft}
         submitTradeDraft={submitTradeDraft}
-        counterTradeDraft={counterTradeDraft}
       />
     );
   }
