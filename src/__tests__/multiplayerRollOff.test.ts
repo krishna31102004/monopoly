@@ -121,7 +121,7 @@ describe("applyRollOffRoll", () => {
     if (!res.ok) expect(res.error).toMatch(/not in the current/i);
   });
 
-  it("resolves to game when all players roll without ties", () => {
+  it("resolves to gameReady=true but NOT inGame after all rolls — host must beginGame", () => {
     const manager = new RoomManager();
     const { roomCode, hostId, guestIds } = makeRoom(manager, 2);
     manager.startRollOff(roomCode, hostId);
@@ -129,25 +129,26 @@ describe("applyRollOffRoll", () => {
     const res = manager.applyRollOffRoll(roomCode, guestIds[0], roll(1, 2));
     expect(res.ok).toBe(true);
     if (!res.ok) return;
-    expect(res.value.gameState).not.toBeNull();
-    expect(res.value.room.status).toBe("inGame");
+    // Game NOT started yet
+    expect(res.value.gameState).toBeNull();
+    expect(res.value.room.status).toBe("rollOff");
+    expect(res.value.room.rollOff?.gameReady).toBe(true);
   });
 
-  it("first player in game matches highest roller", () => {
+  it("first player in game matches highest roller (after beginGame)", () => {
     const manager = new RoomManager();
     const { roomCode, hostId, guestIds } = makeRoom(manager, 2);
     manager.startRollOff(roomCode, hostId);
-    // Guest rolls higher
     manager.applyRollOffRoll(roomCode, guestIds[0], roll(6, 6));
-    const res = manager.applyRollOffRoll(roomCode, hostId, roll(1, 2));
+    manager.applyRollOffRoll(roomCode, hostId, roll(1, 2));
+
+    const res = manager.beginRollOffGame(roomCode, hostId);
     expect(res.ok).toBe(true);
     if (!res.ok) return;
-    const { gameState } = res.value;
-    expect(gameState).not.toBeNull();
-    expect(gameState!.players[0].id).toBe(guestIds[0]);
+    expect(res.value.gameState!.players[0].id).toBe(guestIds[0]);
   });
 
-  it("re-roll round resolves ties correctly", () => {
+  it("re-roll round resolves ties correctly; game starts after beginGame", () => {
     const manager = new RoomManager();
     const { roomCode, hostId, guestIds } = makeRoom(manager, 2);
     manager.startRollOff(roomCode, hostId);
@@ -166,8 +167,15 @@ describe("applyRollOffRoll", () => {
     const final = manager.applyRollOffRoll(roomCode, guestIds[0], roll(5, 5));
     expect(final.ok).toBe(true);
     if (!final.ok) return;
-    expect(final.value.gameState).not.toBeNull();
-    expect(final.value.gameState!.players[0].id).toBe(guestIds[0]);
+    // Still not started — waiting for host
+    expect(final.value.gameState).toBeNull();
+    expect(final.value.room.rollOff?.gameReady).toBe(true);
+
+    // Host begins game
+    const begun = manager.beginRollOffGame(roomCode, hostId);
+    expect(begun.ok).toBe(true);
+    if (!begun.ok) return;
+    expect(begun.value.gameState!.players[0].id).toBe(guestIds[0]);
   });
 
   it("pending list shrinks as players roll", () => {

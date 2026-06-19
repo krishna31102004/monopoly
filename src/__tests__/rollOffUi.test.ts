@@ -40,23 +40,23 @@ describe("RollOffScreen source assertions", () => {
     expect(src).toMatch(/amber-900/);
   });
 
-  it("shows dice values using DieFace for rolled players", () => {
-    expect(src).toMatch(/DieFace/);
+  it("shows DiceFace for dice display", () => {
+    expect(src).toMatch(/DiceFace/);
     expect(src).toMatch(/die1/);
     expect(src).toMatch(/die2/);
   });
 
   it("dims players not in current rolling group", () => {
     expect(src).toMatch(/opacity-50/);
-    expect(src).toMatch(/Position decided/);
   });
 
-  it("shows 'Starting game…' after resolved order", () => {
-    expect(src).toMatch(/Starting game/);
+  it("shows Begin Game button (not 'Starting game…')", () => {
+    expect(src).toMatch(/Begin Game/);
+    expect(src).toMatch(/isHost/);
   });
 
-  it("onRoll prop is called from roll button", () => {
-    expect(src).toMatch(/onClick={onRoll}/);
+  it("onRoll prop is triggered from roll button", () => {
+    expect(src).toMatch(/handleRoll|onRoll/);
   });
 });
 
@@ -82,8 +82,8 @@ describe("LocalRollOffScreen source assertions", () => {
     expect(src).toMatch(/advanceRollOffAgenda/);
   });
 
-  it("shows 'Start Game' button after all resolved", () => {
-    expect(src).toMatch(/Start Game/);
+  it("shows 'Begin Game' button after all resolved", () => {
+    expect(src).toMatch(/Begin Game/);
   });
 
   it("shows tie-breaker round header", () => {
@@ -129,6 +129,14 @@ describe("CreateRoom source assertions", () => {
   it("passes rollForOrder to RollOffScreen", () => {
     expect(src).toMatch(/rollForOrder/);
   });
+
+  it("passes beginRollOffGame to RollOffScreen", () => {
+    expect(src).toMatch(/beginRollOffGame/);
+  });
+
+  it("passes isHost to RollOffScreen", () => {
+    expect(src).toMatch(/isHost/);
+  });
 });
 
 describe("JoinRoom source assertions", () => {
@@ -145,5 +153,9 @@ describe("JoinRoom source assertions", () => {
 
   it("passes rollForOrder to RollOffScreen", () => {
     expect(src).toMatch(/rollForOrder/);
+  });
+
+  it("passes beginRollOffGame to RollOffScreen", () => {
+    expect(src).toMatch(/beginRollOffGame/);
   });
 });

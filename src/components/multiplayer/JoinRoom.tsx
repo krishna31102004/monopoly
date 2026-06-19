@@ -27,6 +27,7 @@ export function JoinRoom({ initialCode = "" }: Props) {
     joinRoom,
     startGame,
     rollForOrder,
+    beginRollOffGame,
     leaveRoom,
     clearError,
     sendAction,
@@ -87,7 +88,9 @@ export function JoinRoom({ initialCode = "" }: Props) {
         rollOff={rollOff}
         players={room.players}
         myPlayerId={myPlayerId}
+        isHost={room.players.find((p) => p.playerId === myPlayerId)?.isHost ?? false}
         onRoll={rollForOrder}
+        onBeginGame={beginRollOffGame}
       />
     );
   }

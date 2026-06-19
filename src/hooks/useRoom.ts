@@ -221,6 +221,11 @@ export function useRoom() {
     getSocket().emit("rolloff:roll");
   }, []);
 
+  const beginRollOffGame = useCallback(() => {
+    setState((s) => ({ ...s, error: null }));
+    getSocket().emit("rolloff:beginGame");
+  }, []);
+
   const requestSync = useCallback(() => {
     getSocket().emit("room:requestSync");
   }, []);
@@ -268,6 +273,7 @@ export function useRoom() {
     leaveRoom,
     startGame,
     rollForOrder,
+    beginRollOffGame,
     requestSync,
     requestGameSync,
     clearError,

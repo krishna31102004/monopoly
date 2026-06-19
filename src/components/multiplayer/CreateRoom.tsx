@@ -23,6 +23,7 @@ export function CreateRoom() {
     createRoom,
     startGame,
     rollForOrder,
+    beginRollOffGame,
     leaveRoom,
     clearError,
     sendAction,
@@ -56,7 +57,9 @@ export function CreateRoom() {
         rollOff={rollOff}
         players={room.players}
         myPlayerId={myPlayerId}
+        isHost={room.players.find((p) => p.playerId === myPlayerId)?.isHost ?? false}
         onRoll={rollForOrder}
+        onBeginGame={beginRollOffGame}
       />
     );
   }

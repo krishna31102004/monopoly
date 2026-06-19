@@ -27,7 +27,9 @@ type RollOffData = {
   currentRound: number;
   rollingThisRound: string[];
   roundRolls: Record<string, RollOffEntry>;
+  allRolls: Record<string, RollOffEntry>; // accumulated across all rounds
   resolvedOrder: string[] | null;
+  gameReady: boolean; // order resolved, waiting for host to begin
 };
 
 // Internal room representation (not sent to clients)
@@ -93,7 +95,9 @@ export class RoomManager {
           rollingThisRound: ro.rollingThisRound,
           pendingPlayerIds: ro.rollingThisRound.filter((id) => !(id in ro.roundRolls)),
           rolls: ro.roundRolls,
+          allRolls: ro.allRolls,
           resolvedOrder: ro.resolvedOrder,
+          gameReady: ro.gameReady,
         }
       : null;
     return {
@@ -253,7 +257,9 @@ export class RoomManager {
       currentRound: 1,
       rollingThisRound: participantIds,
       roundRolls: {},
+      allRolls: {},
       resolvedOrder: null,
+      gameReady: false,
     };
     room.status = "rollOff";
     this.touch(room);
@@ -282,6 +288,7 @@ export class RoomManager {
     }
 
     ro.roundRolls[playerId] = dice;
+    ro.allRolls[playerId] = dice; // accumulate for display
     this.touch(room);
 
     // Check if the entire current group has rolled
@@ -297,29 +304,13 @@ export class RoomManager {
       : advanceRollOffAgenda(ro.agenda, ro.roundRolls);
 
     if (isAgendaResolved(newAgenda)) {
-      // All done — create the game with sorted players
+      // Order resolved — mark ready for host to begin; do NOT create game yet
       const resolvedOrder = flattenAgenda(newAgenda);
       ro.resolvedOrder = resolvedOrder;
       ro.agenda = newAgenda;
-
-      const resolvedPlayers = resolvedOrder
-        .map((id) => room.players.find((p) => p.playerId === id))
-        .filter(Boolean) as RoomPlayer[];
-
-      const startPlayers = resolvedPlayers.map((p) => ({
-        id: p.playerId,
-        name: p.displayName,
-        token: p.token,
-        tokenLabel: p.tokenLabel,
-        color: p.color,
-      }));
-
-      const gameState = createInitialGameState(startPlayers, ro.rules);
-      room.gameState = gameState;
-      room.status = "inGame";
+      ro.gameReady = true;
       this.touch(room);
-
-      return { ok: true, value: { room: this.toPublicView(room), gameState } };
+      return { ok: true, value: { room: this.toPublicView(room), gameState: null } };
     }
 
     // Ties remain — advance to next round
@@ -330,6 +321,34 @@ export class RoomManager {
     ro.roundRolls = {};
 
     return { ok: true, value: { room: this.toPublicView(room), gameState: null } };
+  }
+
+  /** Host begins actual game after roll-off order is resolved. */
+  beginRollOffGame(roomCode: string, playerId: string): RoomResult<{ room: RoomPublicView; gameState: GameState }> {
+    const room = this.rooms.get(roomCode);
+    if (!room) return { ok: false, error: "Room not found." };
+    if (room.hostPlayerId !== playerId) return { ok: false, error: "Only the host can begin the game." };
+    if (room.status !== "rollOff") return { ok: false, error: "Roll-off is not in progress." };
+    const ro = room.rollOffData;
+    if (!ro?.gameReady || !ro.resolvedOrder) return { ok: false, error: "Roll-off is not resolved yet." };
+
+    const resolvedPlayers = ro.resolvedOrder
+      .map((id) => room.players.find((p) => p.playerId === id))
+      .filter(Boolean) as RoomPlayer[];
+
+    const startPlayers = resolvedPlayers.map((p) => ({
+      id: p.playerId,
+      name: p.displayName,
+      token: p.token,
+      tokenLabel: p.tokenLabel,
+      color: p.color,
+    }));
+
+    const gameState = createInitialGameState(startPlayers, ro.rules);
+    room.gameState = gameState;
+    room.status = "inGame";
+    this.touch(room);
+    return { ok: true, value: { room: this.toPublicView(room), gameState } };
   }
 
   // ── Start game ────────────────────────────────────────────────────────────

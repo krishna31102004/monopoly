@@ -217,14 +217,38 @@ io.on("connection", (socket) => {
       }
 
       io.to(roomCode).emit("room:update", { room: result.value.room });
-      if (result.value.gameState) {
-        io.to(roomCode).emit("game:state", { gameState: result.value.gameState });
-        scheduleAuctionTimer(roomCode, result.value.gameState);
-        console.log(`[room] roll-off complete, game started in ${roomCode}`);
+      if (result.value.room.rollOff?.gameReady) {
+        console.log(`[room] roll-off resolved, awaiting host begin in ${roomCode}`);
       }
     } catch (err) {
       console.error("[rolloff:roll] error:", err);
       socket.emit("game:error", { message: "Failed to apply roll-off roll." });
+    }
+  });
+
+  // ── rolloff:beginGame ─────────────────────────────────────────────────────
+  socket.on("rolloff:beginGame", () => {
+    try {
+      const roomCode = rooms.getRoomCodeBySocketId(socket.id);
+      const playerId = rooms.getPlayerIdBySocketId(socket.id);
+      if (!roomCode || !playerId) {
+        socket.emit("game:error", { message: "Not in a room." });
+        return;
+      }
+
+      const result = rooms.beginRollOffGame(roomCode, playerId);
+      if (!result.ok) {
+        socket.emit("game:error", { message: result.error });
+        return;
+      }
+
+      io.to(roomCode).emit("room:update", { room: result.value.room });
+      io.to(roomCode).emit("game:state", { gameState: result.value.gameState });
+      scheduleAuctionTimer(roomCode, result.value.gameState);
+      console.log(`[room] roll-off game begun in ${roomCode}`);
+    } catch (err) {
+      console.error("[rolloff:beginGame] error:", err);
+      socket.emit("game:error", { message: "Failed to begin game." });
     }
   });
 
