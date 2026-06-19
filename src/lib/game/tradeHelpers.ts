@@ -1,5 +1,6 @@
 import { validateTrade } from "@/lib/game/trade";
-import type { GameState, TradeOffer, TradeState } from "@/types/game";
+import { boardSpaces } from "@/data/board";
+import type { GameState, PropertyOwnership, TradeOffer, TradeState } from "@/types/game";
 import type { TradeDraftState } from "@/types/multiplayer";
 
 export type TradeModalRole = "proposer" | "recipient" | "spectator" | "none";
@@ -124,6 +125,112 @@ export function classifyTradeResultFromLogMessage(message: string | undefined): 
   if (message.includes("declined the trade")) return "declined";
   if (message.includes("cancelled the trade")) return "cancelled";
   return null;
+}
+
+// ── Value / cash helpers ──────────────────────────────────────────────────────
+
+/**
+ * Returns the sum of cash + list prices of selected properties on one side
+ * of a trade. Presentation-only — does not affect game logic.
+ */
+export function getTradeSideListedValue(
+  offer: TradeOffer,
+  ownerships?: PropertyOwnership[],
+): number {
+  const propValue = offer.propertySpaceIndices.reduce((sum, idx) => {
+    const space = boardSpaces[idx];
+    if (!space) return sum;
+    if (space.kind !== "city" && space.kind !== "airport" && space.kind !== "utility") return sum;
+    // Use list price (price field on all ownable spaces)
+    return sum + (space.price ?? 0);
+  }, 0);
+  return offer.cash + propValue;
+}
+
+/**
+ * Remaining cash a player would have after giving/receiving in a trade.
+ * Returns null if the cash given exceeds the player's balance.
+ */
+export function getAfterTradeCash(
+  playerCash: number,
+  cashGiven: number,
+  cashReceived: number,
+): { valid: true; amount: number } | { valid: false } {
+  const result = playerCash - cashGiven + cashReceived;
+  if (result < 0) return { valid: false };
+  return { valid: true, amount: result };
+}
+
+// ── Property card presentation ────────────────────────────────────────────────
+
+export type PropertyCardPresentation = {
+  name: string;
+  price: number;
+  kind: "city" | "airport" | "utility";
+  colorHex: string | null;
+  icon: string;
+  isMortgaged: boolean;
+  houses: number;
+};
+
+const CITY_COLOR_HEX: Record<string, string> = {
+  brown: "#8b5e3c",
+  "light-blue": "#6ec6ea",
+  pink: "#d946a8",
+  orange: "#f97316",
+  red: "#dc2626",
+  yellow: "#eab308",
+  green: "#16a34a",
+  "dark-blue": "#1d4ed8",
+};
+
+/**
+ * Returns visual presentation data for a property space used in trade chips.
+ * ownerships is optional — when provided adds mortgage/house state.
+ */
+export function getTradePropertyCardPresentation(
+  spaceIndex: number,
+  ownerships?: PropertyOwnership[],
+): PropertyCardPresentation | null {
+  const space = boardSpaces[spaceIndex];
+  if (!space) return null;
+  if (space.kind !== "city" && space.kind !== "airport" && space.kind !== "utility") return null;
+
+  const ownership = ownerships?.find((o) => o.spaceIndex === spaceIndex);
+  const isMortgaged = ownership?.isMortgaged ?? false;
+  const houses = ownership?.houses ?? 0;
+
+  if (space.kind === "city") {
+    return {
+      name: space.name,
+      price: space.price,
+      kind: "city",
+      colorHex: CITY_COLOR_HEX[space.colorGroup] ?? "#94a3b8",
+      icon: "🏙️",
+      isMortgaged,
+      houses,
+    };
+  }
+  if (space.kind === "airport") {
+    return {
+      name: space.name,
+      price: space.price,
+      kind: "airport",
+      colorHex: "#475569",
+      icon: "✈️",
+      isMortgaged,
+      houses: 0,
+    };
+  }
+  return {
+    name: space.name,
+    price: space.price,
+    kind: "utility",
+    colorHex: "#0d9488",
+    icon: "⚡",
+    isMortgaged,
+    houses: 0,
+  };
 }
 
 /** Status badge text shown in the trade modal header, per the modal's current stage. */

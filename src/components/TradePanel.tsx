@@ -8,10 +8,13 @@ import {
   getTradeModalRole,
   getTradeStatusBadgeText,
   classifyTradeResultFromLogMessage,
+  getTradeSideListedValue,
+  getAfterTradeCash,
+  getTradePropertyCardPresentation,
   type TradeResultKind,
 } from "@/lib/game/tradeHelpers";
 import { TokenIcon } from "@/components/board/TokenIcon";
-import type { GameAction, GameState, TradeOffer } from "@/types/game";
+import type { GameAction, GameState, PropertyOwnership, TradeOffer } from "@/types/game";
 import type { TradeDraftState, TradeDraftUpdatePayload } from "@/types/multiplayer";
 import type { Player } from "@/types/player";
 
@@ -19,7 +22,6 @@ type Props = {
   state: GameState;
   dispatch: (action: GameAction) => void;
   myPlayerId?: string;
-  /** Multiplayer-only: the live, server-synced trade draft (null in local mode). */
   tradeDraft?: TradeDraftState | null;
   onDraftStart?: (recipientId: string) => void;
   onDraftUpdate?: (patch: TradeDraftUpdatePayload) => void;
@@ -29,51 +31,194 @@ type Props = {
 
 const EMPTY_OFFER: TradeOffer = { cash: 0, propertySpaceIndices: [], getOutOfJailFreeCards: 0 };
 
-// ── Property chip ─────────────────────────────────────────────────────────────
+// ── Premium property chip ─────────────────────────────────────────────────────
 
 function PropertyChip({
   spaceIndex,
   selected,
   onToggle,
   disabled,
+  ownerships,
 }: {
   spaceIndex: number;
   selected: boolean;
   onToggle: () => void;
   disabled?: boolean;
+  ownerships?: PropertyOwnership[];
 }) {
-  const space = boardSpaces[spaceIndex];
-  if (!space) return null;
-  const color =
-    space.kind === "city"
-      ? ({
-          brown: "#8b5e3c", "light-blue": "#6ec6ea", pink: "#d946a8",
-          orange: "#f97316", red: "#dc2626", yellow: "#eab308",
-          green: "#16a34a", "dark-blue": "#1d4ed8",
-        } as Record<string, string>)[space.colorGroup] ?? "#94a3b8"
-      : space.kind === "airport"
-      ? "#475569"
-      : "#0d9488";
+  const card = getTradePropertyCardPresentation(spaceIndex, ownerships);
+  if (!card) return null;
 
   return (
     <button
       type="button"
       onClick={onToggle}
       disabled={disabled}
-      className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-left text-xs font-semibold transition-all duration-100 ${
+      className={`relative flex items-center gap-0 rounded-lg border text-left text-xs font-semibold transition-all duration-100 overflow-hidden ${
         selected
-          ? "border-transparent text-white shadow-sm scale-[1.02]"
+          ? "border-transparent shadow-md scale-[1.03] ring-2 ring-white/60"
           : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:shadow-sm"
-      } ${disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"}`}
-      style={selected ? { backgroundColor: color } : undefined}
-      title={space.name}
+      } ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
+      style={selected ? { backgroundColor: card.colorHex ?? "#94a3b8" } : undefined}
+      title={`${card.name} — $${card.price}${card.isMortgaged ? " (mortgaged)" : ""}`}
     >
+      {/* Color strip on the left */}
       <span
-        className="inline-block h-2 w-2 shrink-0 rounded-full"
-        style={{ backgroundColor: selected ? "rgba(255,255,255,0.6)" : color }}
+        className="inline-block w-2 shrink-0 self-stretch"
+        style={{ backgroundColor: selected ? "rgba(255,255,255,0.35)" : (card.colorHex ?? "#94a3b8") }}
       />
-      <span className="truncate max-w-[90px]">{space.name}</span>
+      <span className={`flex items-center gap-1 px-2 py-1.5 ${selected ? "text-white" : ""}`}>
+        <span className="text-[11px]">{card.icon}</span>
+        <span className="truncate max-w-[80px] leading-tight">{card.name}</span>
+        {card.isMortgaged && (
+          <span className={`ml-0.5 text-[9px] font-black ${selected ? "text-white/70" : "text-amber-600"}`}>M</span>
+        )}
+        {card.houses > 0 && card.houses < 5 && (
+          <span className={`ml-0.5 text-[9px] font-black ${selected ? "text-white/70" : "text-emerald-600"}`}>
+            {"●".repeat(card.houses)}
+          </span>
+        )}
+        {card.houses >= 5 && (
+          <span className={`ml-0.5 text-[9px] font-black ${selected ? "text-white/70" : "text-red-600"}`}>★</span>
+        )}
+      </span>
     </button>
+  );
+}
+
+// ── Deal tray — summarizes one side of the trade ──────────────────────────────
+
+function DealTray({
+  offer,
+  ownerships,
+  playerCash,
+  cashReceived,
+  label,
+  color,
+  isEmpty: noProps,
+}: {
+  offer: TradeOffer;
+  ownerships?: PropertyOwnership[];
+  playerCash: number;
+  cashReceived: number;
+  label: string;
+  color: string;
+  isEmpty?: boolean;
+}) {
+  const sideSummary = getTradeSideListedValue(offer, ownerships);
+  const afterTrade = getAfterTradeCash(playerCash, offer.cash, cashReceived);
+  const trayEmpty = offer.cash === 0 && offer.propertySpaceIndices.length === 0 && offer.getOutOfJailFreeCards === 0;
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 overflow-hidden">
+      <div
+        className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white"
+        style={{ backgroundColor: color }}
+      >
+        {label}
+      </div>
+      <div className="px-3 py-2.5 space-y-1 min-h-[56px]">
+        {trayEmpty ? (
+          <p className="text-[11px] italic text-slate-400">Nothing selected yet</p>
+        ) : (
+          <>
+            {offer.cash > 0 && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-black text-emerald-700">${offer.cash.toLocaleString()}</span>
+                <span className="text-[10px] text-slate-400">cash</span>
+              </div>
+            )}
+            {offer.propertySpaceIndices.map((idx) => {
+              const card = getTradePropertyCardPresentation(idx, ownerships);
+              if (!card) return null;
+              return (
+                <div key={idx} className="flex items-center gap-1.5">
+                  <span
+                    className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm"
+                    style={{ backgroundColor: card.colorHex ?? "#94a3b8" }}
+                  />
+                  <span className="text-[11px] font-semibold text-slate-700 truncate">{card.name}</span>
+                  <span className="text-[10px] text-slate-400 ml-auto">${card.price}</span>
+                </div>
+              );
+            })}
+            {offer.getOutOfJailFreeCards > 0 && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px]">🎟</span>
+                <span className="text-[11px] font-semibold text-slate-700">
+                  {offer.getOutOfJailFreeCards}× GOJF card
+                </span>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+      {/* Cash summary footer */}
+      <div className="border-t border-slate-200 bg-white px-3 py-2 space-y-0.5">
+        <div className="flex items-center justify-between text-[10px] text-slate-500">
+          <span>Listed value</span>
+          <span className="font-bold text-slate-700">${sideSummary.toLocaleString()}</span>
+        </div>
+        <div className="flex items-center justify-between text-[10px] text-slate-500">
+          <span>Cash after trade</span>
+          {afterTrade.valid ? (
+            <span className="font-bold text-slate-700">${afterTrade.amount.toLocaleString()}</span>
+          ) : (
+            <span className="font-bold text-red-600">Not enough cash</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Enhanced cash input ───────────────────────────────────────────────────────
+
+function CashInput({
+  value,
+  max,
+  onChange,
+  disabled,
+  playerCash,
+}: {
+  value: number;
+  max: number;
+  onChange: (v: number) => void;
+  disabled?: boolean;
+  playerCash: number;
+}) {
+  const invalid = value > max;
+  return (
+    <div className="space-y-1">
+      <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500">
+        Cash offered
+      </label>
+      <div
+        className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 transition-colors ${
+          invalid
+            ? "border-red-400 bg-red-50"
+            : disabled
+            ? "border-slate-200 bg-slate-100"
+            : "border-slate-200 bg-white focus-within:border-indigo-400"
+        }`}
+      >
+        <span className={`text-base font-black ${invalid ? "text-red-500" : "text-slate-400"}`}>$</span>
+        <input
+          type="number"
+          min={0}
+          max={max}
+          value={value || ""}
+          placeholder="0"
+          disabled={disabled}
+          onChange={(e) => onChange(Math.max(0, parseInt(e.target.value) || 0))}
+          className="min-w-0 flex-1 bg-transparent text-base font-black text-slate-900 outline-none placeholder:text-slate-300 disabled:text-slate-400"
+        />
+      </div>
+      <div className="flex items-center justify-between text-[10px]">
+        <span className="text-slate-400">Balance: ${playerCash.toLocaleString()}</span>
+        {invalid && <span className="font-bold text-red-600">Exceeds balance</span>}
+      </div>
+    </div>
   );
 }
 
@@ -82,32 +227,42 @@ function PropertyChip({
 function PlayerHeader({
   player,
   label,
-  side,
   locked,
 }: {
   player: Player;
   label: string;
-  side: "left" | "right";
   locked?: boolean;
 }) {
   return (
     <div
-      className={`flex items-center gap-2 px-3 py-2.5 ${side === "left" ? "flex-row" : "flex-row-reverse text-right"}`}
-      style={{ backgroundColor: player.color + "16", borderBottom: `2px solid ${player.color}` }}
+      className="flex items-center gap-2.5 px-4 py-3"
+      style={{ backgroundColor: player.color + "14", borderBottom: `2px solid ${player.color}` }}
     >
-      <TokenIcon token={player.token} color={player.color} size={28} label={player.tokenLabel} badge />
+      <TokenIcon token={player.token} color={player.color} size={30} label={player.tokenLabel} badge />
       <div className="min-w-0 flex-1">
         <p
           className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wide"
-          style={{ color: player.color, justifyContent: side === "right" ? "flex-end" : "flex-start" }}
+          style={{ color: player.color }}
         >
-          {side === "right" && locked ? <span title="Locked — recipient cannot edit">🔒</span> : null}
+          {locked && <span title="Locked — only the proposer edits this side">🔒</span>}
           {label}
-          {side === "left" && locked ? <span title="Locked — only the proposer edits this side">🔒</span> : null}
         </p>
         <p className="truncate text-sm font-black text-slate-950">{player.name}</p>
-        <p className="text-[10px] font-semibold text-slate-500">${player.cash.toLocaleString()} cash</p>
       </div>
+    </div>
+  );
+}
+
+// ── Center exchange column ────────────────────────────────────────────────────
+
+function ExchangeColumn() {
+  return (
+    <div className="hidden sm:flex flex-col items-center justify-center shrink-0 w-10 gap-2 py-4">
+      <div className="h-full w-px bg-slate-200" />
+      <span className="shrink-0 rounded-full bg-indigo-100 px-1.5 py-1 text-sm font-black text-indigo-600 shadow-sm">
+        ⇄
+      </span>
+      <div className="h-full w-px bg-slate-200" />
     </div>
   );
 }
@@ -124,34 +279,19 @@ const RESULT_BANNER_TEXT: Record<TradeResultKind, string> = {
   cancelled: "Trade cancelled.",
 };
 
-/** Brief, dismiss-on-timeout banner shown to everyone right after a trade resolves. */
 function TradeResultBanner({ kind, onDismiss }: { kind: TradeResultKind; onDismiss: () => void }) {
   useEffect(() => {
     const id = setTimeout(onDismiss, 4000);
     return () => clearTimeout(id);
   }, [onDismiss]);
-
   return (
-    <div
-      className={`mb-2 rounded-xl border px-3 py-2 text-xs font-bold shadow-sm ${RESULT_BANNER_STYLES[kind]}`}
-      role="status"
-    >
+    <div className={`mb-2 rounded-xl border px-3 py-2 text-xs font-bold shadow-sm ${RESULT_BANNER_STYLES[kind]}`} role="status">
       {RESULT_BANNER_TEXT[kind]}
     </div>
   );
 }
 
-function descOffer(offer: TradeOffer) {
-  const parts: string[] = [];
-  if (offer.cash > 0) parts.push(`$${offer.cash.toLocaleString()}`);
-  if (offer.propertySpaceIndices.length > 0) {
-    parts.push(...offer.propertySpaceIndices.map((i) => boardSpaces[i]?.name ?? `#${i}`));
-  }
-  if (offer.getOutOfJailFreeCards > 0) parts.push(`${offer.getOutOfJailFreeCards}× GOJF`);
-  return parts;
-}
-
-// ── Modal shell (matches AuctionPanel's premium modal design) ──────────────────
+// ── Modal shell ───────────────────────────────────────────────────────────────
 
 function TradeModalShell({
   statusLabel,
@@ -186,13 +326,11 @@ function TradeModalShell({
         role="dialog"
         aria-modal="true"
         aria-labelledby="trade-title"
-        className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-indigo-300 bg-white shadow-[0_32px_100px_rgba(15,23,42,0.35)] sm:rounded-2xl"
+        className="flex max-h-[94vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-indigo-300 bg-white shadow-[0_32px_100px_rgba(15,23,42,0.35)] sm:rounded-2xl"
       >
-        <div className="border-b border-indigo-200 bg-indigo-100 px-5 py-4 shrink-0">
+        <div className="border-b border-indigo-200 bg-gradient-to-r from-indigo-900 via-indigo-700 to-indigo-900 px-5 py-4 shrink-0">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-indigo-700">
-              {statusLabel}
-            </p>
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-indigo-200">{statusLabel}</p>
             <div className="flex items-center gap-2">
               {statusBadge ? (
                 <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${badgeClass}`}>
@@ -203,28 +341,151 @@ function TradeModalShell({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-lg border border-indigo-200 bg-white px-2 py-1 text-xs font-bold text-indigo-600 hover:bg-indigo-50"
+                  className="rounded-lg border border-indigo-500 bg-indigo-800/50 px-2 py-1 text-xs font-bold text-indigo-200 hover:bg-indigo-700"
                 >
                   ✕
                 </button>
               ) : null}
             </div>
           </div>
-          <h2 id="trade-title" className="mt-0.5 text-xl font-black text-slate-950">
-            {title}
-          </h2>
-          {subtitle ? <p className="text-xs font-semibold text-indigo-700">{subtitle}</p> : null}
+          <h2 id="trade-title" className="mt-1 text-xl font-black text-white">{title}</h2>
+          {subtitle ? <p className="text-xs font-semibold text-indigo-300">{subtitle}</p> : null}
         </div>
-
         <div className="flex-1 overflow-y-auto">{children}</div>
-
-        {footer ? <div className="shrink-0 border-t border-slate-100 px-5 py-3.5">{footer}</div> : null}
+        {footer ? <div className="shrink-0 border-t border-slate-100 bg-slate-50/60 px-5 py-3.5">{footer}</div> : null}
       </section>
     </div>
   );
 }
 
-// ── Local-mode: classic inline propose button + form (no live sync needed) ────
+// ── Trade side column ─────────────────────────────────────────────────────────
+
+function TradeSideColumn({
+  player,
+  offer,
+  cashReceived,
+  ownedIndices,
+  label,
+  editable,
+  ownerships,
+  onCashChange,
+  onToggleProp,
+  onGOJFChange,
+}: {
+  player: Player;
+  offer: TradeOffer;
+  cashReceived: number;
+  ownedIndices: number[];
+  label: string;
+  editable: boolean;
+  ownerships: PropertyOwnership[];
+  onCashChange: (v: number) => void;
+  onToggleProp: (idx: number) => void;
+  onGOJFChange: (v: number) => void;
+}) {
+  const selectedSet = new Set(offer.propertySpaceIndices);
+  const unselected = ownedIndices.filter((i) => !selectedSet.has(i));
+  const selected = ownedIndices.filter((i) => selectedSet.has(i));
+
+  return (
+    <div className="flex flex-col min-w-0">
+      <PlayerHeader player={player} label={label} locked={!editable} />
+
+      <div className="flex-1 p-4 space-y-4">
+        {/* Cash input */}
+        <CashInput
+          value={offer.cash}
+          max={player.cash}
+          onChange={onCashChange}
+          disabled={!editable}
+          playerCash={player.cash}
+        />
+
+        {/* GOJF */}
+        {(player.getOutOfJailFreeCards ?? 0) > 0 && (
+          <div className="space-y-1">
+            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500">
+              🎟 GOJF Cards ({player.getOutOfJailFreeCards} available)
+            </label>
+            <input
+              type="number"
+              min={0}
+              max={player.getOutOfJailFreeCards ?? 0}
+              value={offer.getOutOfJailFreeCards || ""}
+              placeholder="0"
+              disabled={!editable}
+              onChange={(e) => onGOJFChange(Math.max(0, parseInt(e.target.value) || 0))}
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 disabled:opacity-60"
+            />
+          </div>
+        )}
+
+        {/* Selected properties (deal tray) */}
+        <DealTray
+          offer={offer}
+          ownerships={ownerships}
+          playerCash={player.cash}
+          cashReceived={cashReceived}
+          label={`${player.name} offers`}
+          color={player.color}
+        />
+
+        {/* Available properties */}
+        {ownedIndices.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+              {editable ? "Tap to add / remove" : "Properties"}
+            </p>
+            {/* Available (not yet in tray) */}
+            {unselected.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {unselected.map((idx) => (
+                  <PropertyChip
+                    key={idx}
+                    spaceIndex={idx}
+                    selected={false}
+                    onToggle={() => onToggleProp(idx)}
+                    disabled={!editable}
+                    ownerships={ownerships}
+                  />
+                ))}
+              </div>
+            )}
+            {/* Selected (already in tray) — shown subtly */}
+            {selected.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {selected.map((idx) => (
+                  <PropertyChip
+                    key={idx}
+                    spaceIndex={idx}
+                    selected={true}
+                    onToggle={() => onToggleProp(idx)}
+                    disabled={!editable}
+                    ownerships={ownerships}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Pending trade description helper ──────────────────────────────────────────
+
+function descOffer(offer: TradeOffer) {
+  const parts: string[] = [];
+  if (offer.cash > 0) parts.push(`$${offer.cash.toLocaleString()}`);
+  if (offer.propertySpaceIndices.length > 0) {
+    parts.push(...offer.propertySpaceIndices.map((i) => boardSpaces[i]?.name ?? `#${i}`));
+  }
+  if (offer.getOutOfJailFreeCards > 0) parts.push(`${offer.getOutOfJailFreeCards}× GOJF`);
+  return parts;
+}
+
+// ── Local-mode trade form ────────────────────────────────────────────────────
 
 function LocalTradeForm({ state, dispatch, myPlayerId }: Props) {
   const [open, setOpen] = useState(false);
@@ -313,16 +574,12 @@ function LocalTradeForm({ state, dispatch, myPlayerId }: Props) {
     resetForm();
   }
 
-  const initiatorOwnedIndices = [
-    ...(initiatorPlayer?.ownedCityIds ?? []),
-    ...(initiatorPlayer?.ownedAirportIds ?? []),
-    ...(initiatorPlayer?.ownedUtilityIds ?? []),
-  ];
-  const recipientOwnedIndices = [
-    ...(recipientPlayer?.ownedCityIds ?? []),
-    ...(recipientPlayer?.ownedAirportIds ?? []),
-    ...(recipientPlayer?.ownedUtilityIds ?? []),
-  ];
+  const initiatorOwnedIndices = initiatorPlayer
+    ? [...initiatorPlayer.ownedCityIds, ...initiatorPlayer.ownedAirportIds, ...initiatorPlayer.ownedUtilityIds]
+    : [];
+  const recipientOwnedIndices = recipientPlayer
+    ? [...recipientPlayer.ownedCityIds, ...recipientPlayer.ownedAirportIds, ...recipientPlayer.ownedUtilityIds]
+    : [];
 
   return (
     <TradeModalShell
@@ -338,12 +595,12 @@ function LocalTradeForm({ state, dispatch, myPlayerId }: Props) {
             <button
               disabled={!validation.ok}
               onClick={handlePropose}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-black text-white shadow-sm transition-all duration-100 hover:bg-indigo-700 active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+              className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-black text-white shadow-sm transition-all duration-100 hover:bg-indigo-700 active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
             >
               Send Offer
             </button>
             <button
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 transition-all duration-100 hover:bg-slate-50 active:scale-[0.97]"
+              className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 transition-all duration-100 hover:bg-slate-50 active:scale-[0.97]"
               onClick={() => { setOpen(false); resetForm(); }}
             >
               Cancel
@@ -352,10 +609,11 @@ function LocalTradeForm({ state, dispatch, myPlayerId }: Props) {
         </>
       }
     >
-      <div className="border-b border-slate-100 px-4 py-2.5 flex items-center gap-3">
+      {/* Recipient selector */}
+      <div className="border-b border-slate-100 px-4 py-2.5 flex items-center gap-3 bg-slate-50">
         <span className="text-[10px] font-black uppercase tracking-wide text-slate-500 shrink-0">Trade with</span>
         <select
-          className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm font-semibold text-slate-800"
+          className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm font-semibold text-slate-800"
           value={effectiveRecipientId}
           onChange={(e) => {
             setRecipientId(e.target.value);
@@ -370,94 +628,45 @@ function LocalTradeForm({ state, dispatch, myPlayerId }: Props) {
         </select>
       </div>
 
-      <div className="grid grid-cols-1 divide-y divide-slate-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
-        <div className="flex flex-col">
-          {initiatorPlayer ? <PlayerHeader player={initiatorPlayer} label={`${initiatorPlayer.name} gives`} side="left" /> : null}
-          <div className="flex-1 p-3 space-y-3">
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1">Cash</label>
-              <div className="flex items-center gap-1">
-                <span className="text-xs font-bold text-slate-400">$</span>
-                <input
-                  type="number" min={0} max={initiatorPlayer?.cash ?? 0}
-                  value={initiatorCash}
-                  onChange={(e) => setInitiatorCash(Math.max(0, parseInt(e.target.value) || 0))}
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm font-semibold text-slate-800"
-                />
-              </div>
-            </div>
-            {(initiatorPlayer?.getOutOfJailFreeCards ?? 0) > 0 && (
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1">
-                  Get Out of Jail Free ({initiatorPlayer?.getOutOfJailFreeCards})
-                </label>
-                <input
-                  type="number" min={0} max={initiatorPlayer?.getOutOfJailFreeCards ?? 0}
-                  value={initiatorGOJF}
-                  onChange={(e) => setInitiatorGOJF(Math.max(0, parseInt(e.target.value) || 0))}
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm font-semibold text-slate-800"
-                />
-              </div>
-            )}
-            {initiatorOwnedIndices.length > 0 && (
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1.5">Properties</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {initiatorOwnedIndices.map((idx) => (
-                    <PropertyChip key={idx} spaceIndex={idx} selected={initiatorProps.includes(idx)} onToggle={() => toggleProp(idx, initiatorProps, setInitiatorProps)} />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+      {/* Two-sided layout with center exchange indicator */}
+      <div className="flex sm:divide-x divide-slate-100">
+        {initiatorPlayer ? (
+          <TradeSideColumn
+            player={initiatorPlayer}
+            offer={offerFromInitiator}
+            cashReceived={recipientCash}
+            ownedIndices={initiatorOwnedIndices}
+            label={`${initiatorPlayer.name} gives`}
+            editable={true}
+            ownerships={state.ownerships}
+            onCashChange={setInitiatorCash}
+            onToggleProp={(idx) => toggleProp(idx, initiatorProps, setInitiatorProps)}
+            onGOJFChange={setInitiatorGOJF}
+          />
+        ) : null}
 
-        <div className="flex flex-col">
-          {recipientPlayer ? <PlayerHeader player={recipientPlayer} label={`${recipientPlayer.name} gives`} side="right" /> : null}
-          <div className="flex-1 p-3 space-y-3">
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1">Cash</label>
-              <div className="flex items-center gap-1">
-                <span className="text-xs font-bold text-slate-400">$</span>
-                <input
-                  type="number" min={0} max={recipientPlayer?.cash ?? 0}
-                  value={recipientCash}
-                  onChange={(e) => setRecipientCash(Math.max(0, parseInt(e.target.value) || 0))}
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm font-semibold text-slate-800"
-                />
-              </div>
-            </div>
-            {(recipientPlayer?.getOutOfJailFreeCards ?? 0) > 0 && (
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1">
-                  Get Out of Jail Free ({recipientPlayer?.getOutOfJailFreeCards})
-                </label>
-                <input
-                  type="number" min={0} max={recipientPlayer?.getOutOfJailFreeCards ?? 0}
-                  value={recipientGOJF}
-                  onChange={(e) => setRecipientGOJF(Math.max(0, parseInt(e.target.value) || 0))}
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm font-semibold text-slate-800"
-                />
-              </div>
-            )}
-            {recipientOwnedIndices.length > 0 && (
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1.5">Properties</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {recipientOwnedIndices.map((idx) => (
-                    <PropertyChip key={idx} spaceIndex={idx} selected={recipientProps.includes(idx)} onToggle={() => toggleProp(idx, recipientProps, setRecipientProps)} />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        <ExchangeColumn />
+
+        {recipientPlayer ? (
+          <TradeSideColumn
+            player={recipientPlayer}
+            offer={offerFromRecipient}
+            cashReceived={initiatorCash}
+            ownedIndices={recipientOwnedIndices}
+            label={`${recipientPlayer.name} gives`}
+            editable={true}
+            ownerships={state.ownerships}
+            onCashChange={setRecipientCash}
+            onToggleProp={(idx) => toggleProp(idx, recipientProps, setRecipientProps)}
+            onGOJFChange={setRecipientGOJF}
+          />
+        ) : null}
       </div>
     </TradeModalShell>
   );
 }
 
-// ── Multiplayer: live draft modal (synced via socket) ───────────────────────────
+// ── Multiplayer: live draft modal ─────────────────────────────────────────────
 
 function LiveDraftModal({
   state,
@@ -522,12 +731,12 @@ function LiveDraftModal({
               <button
                 disabled={!validation.ok}
                 onClick={onDraftSubmit}
-                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-black text-white shadow-sm transition-all duration-100 hover:bg-indigo-700 active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+                className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-black text-white shadow-sm transition-all duration-100 hover:bg-indigo-700 active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
               >
                 Send Offer
               </button>
               <button
-                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 transition-all duration-100 hover:bg-slate-50 active:scale-[0.97]"
+                className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 transition-all duration-100 hover:bg-slate-50 active:scale-[0.97]"
                 onClick={onDraftCancel}
               >
                 Cancel
@@ -541,17 +750,15 @@ function LiveDraftModal({
         )
       }
     >
-      {isProposer ? (
-        <div className="border-b border-slate-100 px-4 py-2.5 flex items-center gap-3">
+      {/* Recipient selector — proposer only */}
+      {isProposer && (
+        <div className="border-b border-slate-100 px-4 py-2.5 flex items-center gap-3 bg-slate-50">
           <span className="text-[10px] font-black uppercase tracking-wide text-slate-500 shrink-0">Trade with</span>
           <select
-            className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm font-semibold text-slate-800"
+            className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm font-semibold text-slate-800"
             value={draft.recipientId}
             onChange={(e) =>
-              onDraftUpdate({
-                recipientId: e.target.value,
-                offerFromRecipient: { ...EMPTY_OFFER },
-              })
+              onDraftUpdate({ recipientId: e.target.value, offerFromRecipient: { ...EMPTY_OFFER } })
             }
           >
             {otherCandidates.map((p) => (
@@ -559,120 +766,47 @@ function LiveDraftModal({
             ))}
           </select>
         </div>
-      ) : null}
+      )}
 
-      <div className="grid grid-cols-1 divide-y divide-slate-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
-        <div className="flex flex-col">
-          {proposer ? <PlayerHeader player={proposer} label={`${proposer.name} gives`} side="left" /> : null}
-          <div className="flex-1 p-3 space-y-3">
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1">Cash</label>
-              <div className="flex items-center gap-1">
-                <span className="text-xs font-bold text-slate-400">$</span>
-                <input
-                  type="number" min={0} max={proposer?.cash ?? 0}
-                  disabled={!isProposer}
-                  value={draft.offerFromProposer.cash}
-                  onChange={(e) =>
-                    onDraftUpdate({ offerFromProposer: { ...draft.offerFromProposer, cash: Math.max(0, parseInt(e.target.value) || 0) } })
-                  }
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm font-semibold text-slate-800 disabled:opacity-60"
-                />
-              </div>
-            </div>
-            {(proposer?.getOutOfJailFreeCards ?? 0) > 0 && (
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1">
-                  Get Out of Jail Free ({proposer?.getOutOfJailFreeCards})
-                </label>
-                <input
-                  type="number" min={0} max={proposer?.getOutOfJailFreeCards ?? 0}
-                  disabled={!isProposer}
-                  value={draft.offerFromProposer.getOutOfJailFreeCards}
-                  onChange={(e) =>
-                    onDraftUpdate({ offerFromProposer: { ...draft.offerFromProposer, getOutOfJailFreeCards: Math.max(0, parseInt(e.target.value) || 0) } })
-                  }
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm font-semibold text-slate-800 disabled:opacity-60"
-                />
-              </div>
-            )}
-            {proposerOwnedIndices.length > 0 && (
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1.5">Properties</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {proposerOwnedIndices.map((idx) => (
-                    <PropertyChip
-                      key={idx}
-                      spaceIndex={idx}
-                      selected={draft.offerFromProposer.propertySpaceIndices.includes(idx)}
-                      onToggle={() => toggleProp(idx, "offerFromProposer")}
-                      disabled={!isProposer}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+      {/* Two-sided layout */}
+      <div className="flex sm:divide-x divide-slate-100">
+        {proposer ? (
+          <TradeSideColumn
+            player={proposer}
+            offer={draft.offerFromProposer}
+            cashReceived={draft.offerFromRecipient.cash}
+            ownedIndices={proposerOwnedIndices}
+            label={`${proposer.name} gives`}
+            editable={isProposer}
+            ownerships={state.ownerships}
+            onCashChange={(v) => onDraftUpdate({ offerFromProposer: { ...draft.offerFromProposer, cash: v } })}
+            onToggleProp={(idx) => toggleProp(idx, "offerFromProposer")}
+            onGOJFChange={(v) => onDraftUpdate({ offerFromProposer: { ...draft.offerFromProposer, getOutOfJailFreeCards: v } })}
+          />
+        ) : null}
 
-        <div className="flex flex-col">
-          {recipient ? <PlayerHeader player={recipient} label={`${recipient.name} gives`} side="right" locked /> : null}
-          <div className="flex-1 p-3 space-y-3">
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1">Cash</label>
-              <div className="flex items-center gap-1">
-                <span className="text-xs font-bold text-slate-400">$</span>
-                <input
-                  type="number" min={0} max={recipient?.cash ?? 0}
-                  disabled={!isProposer}
-                  value={draft.offerFromRecipient.cash}
-                  onChange={(e) =>
-                    onDraftUpdate({ offerFromRecipient: { ...draft.offerFromRecipient, cash: Math.max(0, parseInt(e.target.value) || 0) } })
-                  }
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm font-semibold text-slate-800 disabled:opacity-60"
-                />
-              </div>
-            </div>
-            {(recipient?.getOutOfJailFreeCards ?? 0) > 0 && (
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1">
-                  Get Out of Jail Free ({recipient?.getOutOfJailFreeCards})
-                </label>
-                <input
-                  type="number" min={0} max={recipient?.getOutOfJailFreeCards ?? 0}
-                  disabled={!isProposer}
-                  value={draft.offerFromRecipient.getOutOfJailFreeCards}
-                  onChange={(e) =>
-                    onDraftUpdate({ offerFromRecipient: { ...draft.offerFromRecipient, getOutOfJailFreeCards: Math.max(0, parseInt(e.target.value) || 0) } })
-                  }
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm font-semibold text-slate-800 disabled:opacity-60"
-                />
-              </div>
-            )}
-            {recipientOwnedIndices.length > 0 && (
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1.5">Properties</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {recipientOwnedIndices.map((idx) => (
-                    <PropertyChip
-                      key={idx}
-                      spaceIndex={idx}
-                      selected={draft.offerFromRecipient.propertySpaceIndices.includes(idx)}
-                      onToggle={() => toggleProp(idx, "offerFromRecipient")}
-                      disabled={!isProposer}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        <ExchangeColumn />
+
+        {recipient ? (
+          <TradeSideColumn
+            player={recipient}
+            offer={draft.offerFromRecipient}
+            cashReceived={draft.offerFromProposer.cash}
+            ownedIndices={recipientOwnedIndices}
+            label={`${recipient.name} gives`}
+            editable={isProposer}
+            ownerships={state.ownerships}
+            onCashChange={(v) => onDraftUpdate({ offerFromRecipient: { ...draft.offerFromRecipient, cash: v } })}
+            onToggleProp={(idx) => toggleProp(idx, "offerFromRecipient")}
+            onGOJFChange={(v) => onDraftUpdate({ offerFromRecipient: { ...draft.offerFromRecipient, getOutOfJailFreeCards: v } })}
+          />
+        ) : null}
       </div>
     </TradeModalShell>
   );
 }
 
-// ── Pending (already-proposed) trade view — shown to everyone ───────────────────
+// ── Pending trade view ────────────────────────────────────────────────────────
 
 function PendingTradeView({ state, dispatch, myPlayerId }: Props) {
   const { trade } = state;
@@ -687,6 +821,8 @@ function PendingTradeView({ state, dispatch, myPlayerId }: Props) {
 
   const initiatorItems = descOffer(trade.offerFromInitiator);
   const recipientItems = descOffer(trade.offerFromRecipient);
+  const initiatorValue = getTradeSideListedValue(trade.offerFromInitiator, state.ownerships);
+  const recipientValue = getTradeSideListedValue(trade.offerFromRecipient, state.ownerships);
 
   return (
     <TradeModalShell
@@ -711,13 +847,13 @@ function PendingTradeView({ state, dispatch, myPlayerId }: Props) {
             {isRecipient && !isInitiator && (
               <>
                 <button
-                  className="rounded-lg bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white shadow-sm transition-all duration-100 hover:bg-emerald-700 active:scale-[0.97]"
+                  className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-all duration-100 hover:bg-emerald-700 active:scale-[0.97]"
                   onClick={() => dispatch({ type: "ACCEPT_TRADE", actorPlayerId: trade.recipientPlayerId })}
                 >
                   Accept Trade
                 </button>
                 <button
-                  className="rounded-lg bg-red-500 px-4 py-1.5 text-xs font-bold text-white shadow-sm transition-all duration-100 hover:bg-red-600 active:scale-[0.97]"
+                  className="rounded-xl bg-red-500 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-all duration-100 hover:bg-red-600 active:scale-[0.97]"
                   onClick={() => dispatch({ type: "DECLINE_TRADE", actorPlayerId: trade.recipientPlayerId })}
                 >
                   Decline
@@ -732,7 +868,7 @@ function PendingTradeView({ state, dispatch, myPlayerId }: Props) {
                   </p>
                 )}
                 <button
-                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 transition-all duration-100 hover:bg-slate-50 active:scale-[0.97]"
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 transition-all duration-100 hover:bg-slate-50 active:scale-[0.97]"
                   onClick={() => dispatch({ type: "CANCEL_TRADE", actorPlayerId: trade.initiatorPlayerId })}
                 >
                   Cancel Offer
@@ -743,31 +879,35 @@ function PendingTradeView({ state, dispatch, myPlayerId }: Props) {
         )
       }
     >
-      <div className="grid grid-cols-2 divide-x divide-slate-100">
+      <div className="flex sm:divide-x divide-slate-100">
         {[
-          { player: initiator, items: initiatorItems, label: "Gives" },
-          { player: recipient, items: recipientItems, label: "Receives" },
-        ].map(({ player, items, label }, i) => (
-          <div key={i} className="p-3">
-            <div className="flex items-center gap-1.5 mb-2">
-              {player ? <TokenIcon token={player.token} color={player.color} size={20} label={player.tokenLabel} badge /> : null}
+          { player: initiator, items: initiatorItems, value: initiatorValue, label: "Gives" },
+          { player: recipient, items: recipientItems, value: recipientValue, label: "Receives" },
+        ].map(({ player, items, value, label }, i) => (
+          <div key={i} className="flex-1 min-w-0 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              {player ? <TokenIcon token={player.token} color={player.color} size={22} label={player.tokenLabel} badge /> : null}
               <div>
                 <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">{label}</p>
-                <p className="text-xs font-bold text-slate-800">{player?.name}</p>
+                <p className="text-sm font-black text-slate-800">{player?.name}</p>
               </div>
             </div>
             {items.length > 0 ? (
-              <ul className="space-y-1">
+              <ul className="space-y-1.5 mb-3">
                 {items.map((item, j) => (
-                  <li key={j} className="flex items-center gap-1 rounded-lg bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">
+                  <li key={j} className="flex items-center gap-2 rounded-lg bg-slate-50 border border-slate-100 px-2.5 py-1.5 text-xs font-semibold text-slate-700">
                     <span className="text-slate-400">•</span>
                     {item}
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-[10px] text-slate-400 italic">Nothing</p>
+              <p className="mb-3 text-[11px] text-slate-400 italic">Nothing</p>
             )}
+            <div className="rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-1.5 text-[10px]">
+              <span className="text-slate-400">Listed value: </span>
+              <span className="font-black text-slate-700">${value.toLocaleString()}</span>
+            </div>
           </div>
         ))}
       </div>
@@ -780,9 +920,6 @@ function PendingTradeView({ state, dispatch, myPlayerId }: Props) {
 export function TradePanel(props: Props) {
   const { state, dispatch, myPlayerId, tradeDraft, onDraftStart, onDraftUpdate, onDraftCancel, onDraftSubmit } = props;
 
-  // Detect a trade/draft that just resolved (was open, is now gone) so everyone
-  // in the room — including spectators — sees a brief accepted/declined/cancelled
-  // banner instead of the modal just silently vanishing.
   const wasOpenRef = useRef(false);
   const [resultBanner, setResultBanner] = useState<TradeResultKind | null>(null);
   const isOpenNow = Boolean(state.trade) || Boolean(tradeDraft);
@@ -801,7 +938,6 @@ export function TradePanel(props: Props) {
 
   if (state.phase === "gameOver") return banner;
 
-  // Already-proposed pending trade always takes priority — visible to everyone.
   if (state.trade) {
     return (
       <>
