@@ -8,6 +8,7 @@ export type GameRules = {
   noRentInJail: boolean;
   mortgages: boolean;
   evenBuild: boolean;
+  exactGoBonus: boolean;
 };
 
 export const DEFAULT_RULES: GameRules = {
@@ -17,6 +18,7 @@ export const DEFAULT_RULES: GameRules = {
   noRentInJail: true,
   mortgages: true,
   evenBuild: true,
+  exactGoBonus: false,
 };
 
 export type GamePhase =

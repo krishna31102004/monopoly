@@ -133,6 +133,7 @@ export function RoomLobby({ room, myPlayerId, onStartGame, onLeave, error }: Pro
                   noRentInJail: "No Rent While in Jail",
                   mortgages: "Mortgages",
                   evenBuild: "Even Build Rule",
+                  exactGoBonus: "Exact GO Bonus",
                 };
                 const isOn = rules[key];
                 return (

@@ -3,6 +3,7 @@ import { addLogEntry } from "@/lib/game/createInitialGameState";
 import { resolveLanding, type DebtPending } from "@/lib/game/landing";
 import { moveAroundBoard } from "@/lib/game/movement";
 import { checkBankruptcy } from "@/lib/game/bankruptcy";
+import { getGoAward, getGoAwardLogMessage } from "@/lib/game/goSalary";
 import { getBoardSpaceByIndex } from "@/data/board";
 import type { DrawnCard, GameState } from "@/types/game";
 import type { Player } from "@/types/player";
@@ -115,13 +116,16 @@ function applyCardEffect(
   switch (card.category) {
     case "advance-go": {
       const passedGo = currentPlayer.position !== 0;
+      // Landing exactly on GO via card counts as an exact GO landing for exactGoBonus purposes.
+      const goAward = getGoAward(passedGo, passedGo, state.rules);
       const nextPlayers = state.players.map((p, i) =>
         i === state.currentPlayerIndex
-          ? { ...p, position: 0, cash: p.cash + (passedGo ? 200 : 0) }
+          ? { ...p, position: 0, cash: p.cash + goAward }
           : p,
       );
       let log = addLogEntry(state.gameLog, `${currentPlayer.name} drew: "${card.text}"`);
-      if (passedGo) log = addLogEntry(log, `${currentPlayer.name} collected $200 from GO.`);
+      const goMsg = getGoAwardLogMessage(currentPlayer.name, passedGo, passedGo, state.rules);
+      if (goMsg) log = addLogEntry(log, goMsg);
       const msg = `${currentPlayer.name} advanced to GO.`;
       const nextState: GameState = {
         ...state,

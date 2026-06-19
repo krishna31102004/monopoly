@@ -27,6 +27,10 @@ const RULE_LABELS: Record<keyof GameRules, { label: string; description: string 
     label: "Even Build Rule",
     description: "Houses must be built evenly across all properties in a colour group.",
   },
+  exactGoBonus: {
+    label: "Exact GO Bonus",
+    description: "Collect $300 when landing exactly on GO. Passing GO still gives $200.",
+  },
 };
 
 type GameRulesPanelProps = {

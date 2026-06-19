@@ -124,6 +124,10 @@ export function deserializeGame(json: string): GameState | null {
     if (typeof state.freeParkingPot !== "number") {
       (state as GameState).freeParkingPot = 0;
     }
+    // exactGoBonus added later — default OFF to preserve original behavior for old saves
+    if (typeof state.rules.exactGoBonus !== "boolean") {
+      (state as GameState).rules = { ...state.rules, exactGoBonus: false };
+    }
     return state;
   } catch {
     return null;

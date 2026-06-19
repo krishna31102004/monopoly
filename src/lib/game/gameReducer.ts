@@ -17,6 +17,7 @@ import {
 } from "@/lib/game/propertyDevelopment";
 import { validateTrade } from "@/lib/game/trade";
 import { AUCTION_TURN_MS } from "@/lib/animation/timing";
+import { getGoAward, getGoAwardLogMessage } from "@/lib/game/goSalary";
 import type { AuctionState, BankruptcyCreditor, GameAction, GameState, LandingAction } from "@/types/game";
 
 const AUCTION_STARTING_BID = 10;
@@ -226,12 +227,14 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       const movement = moveAroundBoard(currentPlayer.position, action.dice.total);
       const landedSpace = getBoardSpaceByIndex(movement.to);
+      const landedOnGo = movement.to === 0;
+      const goAward = getGoAward(movement.passedGo, landedOnGo, state.rules);
       const movedPlayers = state.players.map((player, index) => {
         if (index !== state.currentPlayerIndex) return player;
         return {
           ...player,
           position: movement.to,
-          cash: player.cash + (movement.passedGo ? 200 : 0),
+          cash: player.cash + goAward,
         };
       });
 
@@ -239,8 +242,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         nextLog,
         `${currentPlayer.name} moved from ${getBoardSpaceByIndex(movement.from).name} to ${landedSpace.name}.`,
       );
-      if (movement.passedGo) {
-        nextLog = addLogEntry(nextLog, `${currentPlayer.name} collected $200 from GO.`);
+      const goMsg = getGoAwardLogMessage(currentPlayer.name, movement.passedGo, landedOnGo, state.rules);
+      if (goMsg) {
+        nextLog = addLogEntry(nextLog, goMsg);
       }
 
       const stateAfterMovement: GameState = {
@@ -325,6 +329,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         nextLog = addLogEntry(nextLog, `${currentPlayer.name} rolled doubles and was released from Jail.`);
         const movement = moveAroundBoard(currentPlayer.position, action.dice.total);
         const landedSpace = getBoardSpaceByIndex(movement.to);
+        const landedOnGoJailDoubles = movement.to === 0;
+        const goAwardJailDoubles = getGoAward(movement.passedGo, landedOnGoJailDoubles, state.rules);
         const releasedPlayers = state.players.map((p, i) =>
           i === state.currentPlayerIndex
             ? {
@@ -332,12 +338,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
                 position: movement.to,
                 isInJail: false,
                 jailTurns: 0,
-                cash: p.cash + (movement.passedGo ? 200 : 0),
+                cash: p.cash + goAwardJailDoubles,
               }
             : p,
         );
-        if (movement.passedGo) {
-          nextLog = addLogEntry(nextLog, `${currentPlayer.name} collected $200 from GO.`);
+        const goMsgJailDoubles = getGoAwardLogMessage(currentPlayer.name, movement.passedGo, landedOnGoJailDoubles, state.rules);
+        if (goMsgJailDoubles) {
+          nextLog = addLogEntry(nextLog, goMsgJailDoubles);
         }
 
         const stateAfterMove: GameState = {
@@ -370,7 +377,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         const landedSpace = getBoardSpaceByIndex(movement.to);
         // No-negative-cash rule: apply GO bonus first, then deduct $50.
         // If player still can't afford $50 after GO, they move but enter debt pending.
-        const goBonus = movement.passedGo ? 200 : 0;
+        const landedOnGoJailForced = movement.to === 0;
+        const goBonus = getGoAward(movement.passedGo, landedOnGoJailForced, state.rules);
         const cashAfterGo = currentPlayer.cash + goBonus;
         const canAffordJailFee = cashAfterGo >= 50;
         const releasedPlayers = state.players.map((p, i) =>
@@ -384,8 +392,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
               }
             : p,
         );
-        if (movement.passedGo) {
-          nextLog = addLogEntry(nextLog, `${currentPlayer.name} collected $200 from GO.`);
+        const goMsgJailForced = getGoAwardLogMessage(currentPlayer.name, movement.passedGo, landedOnGoJailForced, state.rules);
+        if (goMsgJailForced) {
+          nextLog = addLogEntry(nextLog, goMsgJailForced);
         }
 
         const stateAfterMove: GameState = {

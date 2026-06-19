@@ -140,6 +140,25 @@ describe("serializeGame / deserializeGame (pure functions)", () => {
     const json = JSON.stringify({ version: SAVE_VERSION, savedAt: new Date().toISOString() });
     expect(deserializeGame(json)).toBeNull();
   });
+
+  it("old save without exactGoBonus defaults to false (original behavior preserved)", () => {
+    const state = makeGameState(2);
+    // Simulate a save that predates exactGoBonus by removing it from rules
+    const { exactGoBonus: _removed, ...rulesWithout } = state.rules as typeof state.rules & { exactGoBonus: boolean };
+    const oldState = { ...state, rules: rulesWithout };
+    const json = JSON.stringify({ version: SAVE_VERSION, savedAt: new Date().toISOString(), state: oldState });
+    const loaded = deserializeGame(json);
+    expect(loaded).not.toBeNull();
+    expect(loaded!.rules.exactGoBonus).toBe(false);
+  });
+
+  it("save with exactGoBonus: true preserves it after roundtrip", () => {
+    const state = makeGameState(2);
+    const stateWithBonus = { ...state, rules: { ...state.rules, exactGoBonus: true } };
+    const loaded = deserializeGame(serializeGame(stateWithBonus));
+    expect(loaded).not.toBeNull();
+    expect(loaded!.rules.exactGoBonus).toBe(true);
+  });
 });
 
 // ── importGameJson ─────────────────────────────────────────────────────────────
