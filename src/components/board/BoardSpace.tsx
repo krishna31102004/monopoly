@@ -189,24 +189,46 @@ function OwnerNameBadge({ owner, spaceIndex }: { owner: Player; spaceIndex: numb
   );
 }
 
+/** Premium hotel building SVG — replaces the plain red "H" marker. */
+function HotelBuildingIcon({ size }: { size: number }) {
+  const w = size;
+  const h = Math.round(size * 0.72);
+  return (
+    <svg
+      width={w}
+      height={h}
+      viewBox="0 0 20 14"
+      fill="none"
+      aria-label="Hotel"
+      role="img"
+      style={{ display: "block", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.45))" }}
+    >
+      {/* Sign/name board on top */}
+      <rect x="7" y="0" width="6" height="2.5" rx="0.5" fill="#96281b" />
+      {/* Roof band */}
+      <rect x="1" y="2" width="18" height="2" rx="0.5" fill="#96281b" />
+      {/* Building body */}
+      <rect x="1" y="4" width="18" height="10" rx="1" fill="#c0392b" />
+      {/* Windows row 1 */}
+      <rect x="2.5" y="5.5" width="3.5" height="2.5" rx="0.4" fill="rgba(255,255,180,0.82)" />
+      <rect x="8.25" y="5.5" width="3.5" height="2.5" rx="0.4" fill="rgba(255,255,180,0.82)" />
+      <rect x="14" y="5.5" width="3.5" height="2.5" rx="0.4" fill="rgba(255,255,180,0.82)" />
+      {/* Door + windows row 2 */}
+      <rect x="2.5" y="9.5" width="3.5" height="2.5" rx="0.4" fill="rgba(255,255,180,0.65)" />
+      <rect x="8.25" y="9" width="3.5" height="5" rx="0.4" fill="rgba(0,0,0,0.3)" />
+      <rect x="14" y="9.5" width="3.5" height="2.5" rx="0.4" fill="rgba(255,255,180,0.65)" />
+      {/* Highlight gloss */}
+      <rect x="1" y="4" width="18" height="1.5" rx="0.5" fill="rgba(255,255,255,0.18)" />
+    </svg>
+  );
+}
+
 /** Houses and hotel indicator — bigger, cleaner shapes */
 function PropertyBuildings({ ownership }: { ownership: PropertyOwnership }) {
   if (ownership.hasHotel) {
     return (
-      <div className="flex justify-center py-px">
-        <span
-          className="flex items-center justify-center rounded font-black text-white shadow-sm"
-          style={{
-            backgroundColor: "#c0392b",
-            width: "clamp(13px,2.8vw,20px)",
-            height: "clamp(9px,1.9vw,14px)",
-            fontSize: "clamp(5px,1vw,9px)",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.25)",
-          }}
-          title="Hotel"
-        >
-          H
-        </span>
+      <div className="flex justify-center py-px" title="Hotel">
+        <HotelBuildingIcon size={Math.round(20)} />
       </div>
     );
   }

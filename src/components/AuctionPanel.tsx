@@ -204,56 +204,65 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
             {currentBidder ? `🔥 ${currentBidder.name}'s turn to bid` : "Resolving…"}
           </div>
 
-          {/* Active / passed player lists */}
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          {/* Active / passed player lists with cash visibility */}
+          <div className="mt-3 space-y-2">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Active</p>
-              <div className="mt-1 flex flex-wrap gap-1">
+              <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Active Players</p>
+              <div className="mt-1 flex flex-col gap-1">
                 {auction.activePlayerIds.map((id) => {
                   const player = state.players.find((p) => p.id === id);
                   if (!player) return null;
                   const isLeading = id === auction.highestBidderId;
                   const isBidding = id === currentBidderId;
                   return (
-                    <span
+                    <div
                       key={id}
-                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                      className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-[11px] font-bold ${
                         isBidding
                           ? "bg-amber-500 text-slate-950"
                           : isLeading
-                            ? "bg-emerald-900/60 text-emerald-300"
+                            ? "bg-emerald-900/60 text-emerald-200"
                             : "bg-slate-800 text-amber-200"
                       }`}
                     >
-                      {isBidding ? "▶ " : ""}
-                      {player.name}
-                      {isLeading && !isBidding ? " ★" : ""}
-                    </span>
+                      <span>
+                        {isBidding ? "▶ " : ""}
+                        {player.name}
+                        {isLeading && !isBidding ? " ★" : ""}
+                      </span>
+                      <span
+                        className={`ml-2 font-black tabular-nums ${
+                          isBidding ? "text-slate-900" : isLeading ? "text-emerald-300" : "text-slate-300"
+                        }`}
+                        aria-label={`${player.name} cash: $${player.cash}`}
+                      >
+                        ${player.cash.toLocaleString()}
+                      </span>
+                    </div>
                   );
                 })}
               </div>
             </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Passed</p>
-              <div className="mt-1 flex flex-wrap gap-1">
-                {auction.passedPlayerIds.length === 0 ? (
-                  <span className="text-[10px] font-semibold text-slate-500">—</span>
-                ) : (
-                  auction.passedPlayerIds.map((id) => {
+            {auction.passedPlayerIds.length > 0 ? (
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Passed</p>
+                <div className="mt-1 flex flex-col gap-1">
+                  {auction.passedPlayerIds.map((id) => {
                     const player = state.players.find((p) => p.id === id);
                     if (!player) return null;
                     return (
-                      <span
+                      <div
                         key={id}
-                        className="inline-flex items-center gap-1 rounded-full bg-slate-800/60 px-2 py-0.5 text-[10px] font-bold text-slate-500 line-through"
+                        className="flex items-center justify-between rounded-lg bg-slate-800/40 px-2.5 py-1.5 text-[11px] font-bold text-slate-500"
                       >
-                        {player.name}
-                      </span>
+                        <span className="line-through">{player.name}</span>
+                        <span className="ml-2 tabular-nums opacity-60">${player.cash.toLocaleString()}</span>
+                      </div>
                     );
-                  })
-                )}
+                  })}
+                </div>
               </div>
-            </div>
+            ) : null}
           </div>
 
           {/* Bid/pass controls — gated to the active bidder only; everyone else sees a
