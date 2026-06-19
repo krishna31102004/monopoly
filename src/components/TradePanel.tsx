@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { boardSpaces } from "@/data/board";
 import { canOpenTradeNow } from "@/lib/game/turnTimingRules";
 import {
   validateTradeDraft,
@@ -30,6 +29,61 @@ type Props = {
 };
 
 const EMPTY_OFFER: TradeOffer = { cash: 0, propertySpaceIndices: [], getOutOfJailFreeCards: 0 };
+
+// ── Stamp config ──────────────────────────────────────────────────────────────
+
+const STAMP_CONFIGS: Record<TradeResultKind, { label: string; sub: string; icon: string; bg: string; border: string; text: string }> = {
+  accepted: {
+    label: "DEAL ACCEPTED",
+    sub: "Assets have been exchanged.",
+    icon: "✅",
+    bg: "bg-emerald-950",
+    border: "border-emerald-500",
+    text: "text-emerald-400",
+  },
+  declined: {
+    label: "DEAL DECLINED",
+    sub: "The recipient declined the offer.",
+    icon: "🚫",
+    bg: "bg-red-950",
+    border: "border-red-500",
+    text: "text-red-400",
+  },
+  cancelled: {
+    label: "OFFER CANCELLED",
+    sub: "The proposer cancelled the offer.",
+    icon: "↩",
+    bg: "bg-slate-900",
+    border: "border-slate-600",
+    text: "text-slate-400",
+  },
+};
+
+// ── Result stamp modal — auto-dismisses after ~1.5 s ─────────────────────────
+
+function TradeResultStamp({ kind, onDismiss }: { kind: TradeResultKind; onDismiss: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 1600);
+    return () => clearTimeout(t);
+  }, [onDismiss]);
+
+  const cfg = STAMP_CONFIGS[kind];
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-[2px]"
+      role="status"
+      aria-live="assertive"
+    >
+      <div
+        className={`flex flex-col items-center gap-3 rounded-2xl border-2 ${cfg.border} ${cfg.bg} px-12 py-10 shadow-[0_24px_80px_rgba(0,0,0,0.6)]`}
+      >
+        <span className="text-4xl">{cfg.icon}</span>
+        <p className={`text-xl font-black tracking-[0.15em] uppercase ${cfg.text}`}>{cfg.label}</p>
+        <p className="text-sm text-slate-400">{cfg.sub}</p>
+      </div>
+    </div>
+  );
+}
 
 // ── Property chip ─────────────────────────────────────────────────────────────
 
@@ -82,7 +136,7 @@ function PropertyChip({
   );
 }
 
-// ── Money counter (cash input + before/after summary) ─────────────────────────
+// ── Money counter ─────────────────────────────────────────────────────────────
 
 function MoneyCounter({
   value,
@@ -104,7 +158,6 @@ function MoneyCounter({
 
   return (
     <div className="space-y-1.5">
-      {/* Cash input — text-based to avoid browser spinner */}
       <div
         className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 transition-colors ${
           invalid
@@ -128,7 +181,6 @@ function MoneyCounter({
           className="min-w-0 flex-1 bg-transparent text-sm font-black text-slate-900 outline-none placeholder:font-normal placeholder:text-slate-300 disabled:text-slate-400"
         />
       </div>
-      {/* Compact cash summary row */}
       <div className="flex items-center justify-between text-[10px] leading-tight">
         <span className="text-slate-400">Available ${playerCash.toLocaleString()}</span>
         {invalid ? (
@@ -192,7 +244,7 @@ function DealTray({
   );
 }
 
-// ── Trade side panel ──────────────────────────────────────────────────────────
+// ── Trade side panel (editable draft mode) ────────────────────────────────────
 
 function TradeSidePanel({
   player,
@@ -247,7 +299,7 @@ function TradeSidePanel({
         />
       </div>
 
-      {/* GOJF — only when player has cards */}
+      {/* GOJF */}
       {(player.getOutOfJailFreeCards ?? 0) > 0 && (
         <div>
           <p className="mb-1 text-[10px] font-black uppercase tracking-wider text-slate-400">
@@ -295,7 +347,7 @@ function TradeSidePanel({
         </div>
       )}
 
-      {/* Listed value — bottom summary */}
+      {/* Listed value */}
       <div className="mt-auto pt-1 border-t border-slate-100 text-[10px] text-slate-400 flex items-center justify-between">
         <span>Listed value</span>
         <span className="font-black text-slate-600">${listedValue.toLocaleString()}</span>
@@ -304,28 +356,74 @@ function TradeSidePanel({
   );
 }
 
-// ── Result banner ─────────────────────────────────────────────────────────────
+// ── Contract-mode side (read-only, shown after Send Offer) ────────────────────
 
-const RESULT_BANNER_STYLES: Record<TradeResultKind, string> = {
-  accepted: "border-emerald-300 bg-emerald-50 text-emerald-700",
-  declined: "border-red-300 bg-red-50 text-red-700",
-  cancelled: "border-slate-300 bg-slate-50 text-slate-600",
-};
+function ContractSide({
+  player,
+  offer,
+  ownerships,
+  label,
+}: {
+  player: Player;
+  offer: TradeOffer;
+  ownerships: PropertyOwnership[];
+  label: string;
+}) {
+  const listedValue = getTradeSideListedValue(offer, ownerships);
+  const isEmpty = offer.cash === 0 && offer.propertySpaceIndices.length === 0 && offer.getOutOfJailFreeCards === 0;
 
-const RESULT_BANNER_TEXT: Record<TradeResultKind, string> = {
-  accepted: "✅ Trade accepted — assets have been exchanged.",
-  declined: "Trade declined.",
-  cancelled: "Trade cancelled.",
-};
-
-function TradeResultBanner({ kind, onDismiss }: { kind: TradeResultKind; onDismiss: () => void }) {
-  useEffect(() => {
-    const id = setTimeout(onDismiss, 4000);
-    return () => clearTimeout(id);
-  }, [onDismiss]);
   return (
-    <div className={`mb-2 rounded-xl border px-3 py-2 text-xs font-bold shadow-sm ${RESULT_BANNER_STYLES[kind]}`} role="status">
-      {RESULT_BANNER_TEXT[kind]}
+    <div className="flex flex-col min-w-0 p-3 space-y-3">
+      {/* Player header */}
+      <div className="flex items-center gap-2">
+        <TokenIcon token={player.token} color={player.color} size={26} label={player.tokenLabel} badge />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-black text-slate-900">{player.name}</p>
+          <p className="text-[10px] font-semibold" style={{ color: player.color }}>{label}</p>
+        </div>
+      </div>
+
+      {/* Offer summary */}
+      <div>
+        <p className="mb-1 text-[10px] font-black uppercase tracking-wider text-slate-400">Offer</p>
+        {isEmpty ? (
+          <p className="text-[11px] italic text-slate-400">Nothing</p>
+        ) : (
+          <div className="space-y-1">
+            {offer.cash > 0 && (
+              <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-100 px-2.5 py-1.5">
+                <span className="text-sm font-black text-emerald-700">${offer.cash.toLocaleString()}</span>
+                <span className="text-[10px] text-slate-400">cash</span>
+              </div>
+            )}
+            {offer.propertySpaceIndices.map((idx) => {
+              const card = getTradePropertyCardPresentation(idx, ownerships);
+              if (!card) return null;
+              return (
+                <div
+                  key={idx}
+                  className="flex items-center gap-2 rounded-lg px-2.5 py-1.5"
+                  style={{ backgroundColor: (card.colorHex ?? "#94a3b8") + "18", borderLeft: `3px solid ${card.colorHex ?? "#94a3b8"}` }}
+                >
+                  <span className="text-[11px] font-semibold text-slate-700 truncate">{card.name}</span>
+                  <span className="ml-auto text-[10px] text-slate-400">${card.price}</span>
+                </div>
+              );
+            })}
+            {offer.getOutOfJailFreeCards > 0 && (
+              <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-100 px-2.5 py-1.5">
+                <span className="text-[11px] font-semibold text-slate-700">{offer.getOutOfJailFreeCards}× GOJF card</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Listed value */}
+      <div className="mt-auto pt-1 border-t border-slate-100 text-[10px] text-slate-400 flex items-center justify-between">
+        <span>Listed value</span>
+        <span className="font-black text-slate-600">${listedValue.toLocaleString()}</span>
+      </div>
     </div>
   );
 }
@@ -367,7 +465,6 @@ function TradeModalShell({
         aria-labelledby="trade-title"
         className="flex max-h-[94vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-indigo-400/30 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.4)] sm:rounded-2xl"
       >
-        {/* Header — compact */}
         <div className="bg-indigo-900 px-4 py-3 shrink-0">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0 flex-1">
@@ -393,9 +490,7 @@ function TradeModalShell({
             </div>
           </div>
         </div>
-
         <div className="flex-1 overflow-y-auto">{children}</div>
-
         {footer ? (
           <div className="shrink-0 border-t border-slate-100 bg-slate-50/80 px-4 py-3">{footer}</div>
         ) : null}
@@ -404,14 +499,12 @@ function TradeModalShell({
   );
 }
 
-// ── Two-sided trade layout ────────────────────────────────────────────────────
+// ── Two-sided grid layout ─────────────────────────────────────────────────────
 
 function TwoSideLayout({ left, right }: { left: React.ReactNode; right: React.ReactNode }) {
   return (
-    // Mobile: stacked. Desktop: two equal columns with a divider + small ⇄ badge.
     <div className="relative grid grid-cols-1 sm:grid-cols-2 divide-y divide-slate-100 sm:divide-y-0 sm:divide-x">
       <div className="min-w-0">{left}</div>
-      {/* ⇄ badge overlaid on the column divider (desktop only) */}
       <div className="absolute left-1/2 top-4 -translate-x-1/2 z-10 hidden sm:flex">
         <span className="rounded-full bg-white border border-slate-200 px-1.5 py-0.5 text-[11px] font-black text-indigo-500 shadow-sm">
           ⇄
@@ -422,19 +515,8 @@ function TwoSideLayout({ left, right }: { left: React.ReactNode; right: React.Re
   );
 }
 
-// ── Pending trade offer rows ──────────────────────────────────────────────────
 
-function descOffer(offer: TradeOffer) {
-  const parts: string[] = [];
-  if (offer.cash > 0) parts.push(`$${offer.cash.toLocaleString()}`);
-  if (offer.propertySpaceIndices.length > 0) {
-    parts.push(...offer.propertySpaceIndices.map((i) => boardSpaces[i]?.name ?? `#${i}`));
-  }
-  if (offer.getOutOfJailFreeCards > 0) parts.push(`${offer.getOutOfJailFreeCards}× GOJF`);
-  return parts;
-}
-
-// ── Local-mode trade form ─────────────────────────────────────────────────────
+// ── Local trade form ──────────────────────────────────────────────────────────
 
 function LocalTradeForm({ state, dispatch, myPlayerId }: Props) {
   const [open, setOpen] = useState(false);
@@ -530,7 +612,6 @@ function LocalTradeForm({ state, dispatch, myPlayerId }: Props) {
         </>
       }
     >
-      {/* Recipient selector */}
       <div className="flex items-center gap-2.5 border-b border-slate-100 bg-slate-50 px-4 py-2">
         <span className="text-[10px] font-black uppercase tracking-wide text-slate-400 shrink-0">Trade with</span>
         <select
@@ -541,34 +622,27 @@ function LocalTradeForm({ state, dispatch, myPlayerId }: Props) {
           {activePlayers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
       </div>
-
       <TwoSideLayout
         left={initiatorPlayer ? (
-          <TradeSidePanel
-            player={initiatorPlayer} offer={offerFromInitiator} cashReceived={recipientCash}
-            ownedIndices={initiatorOwnedIndices} label="gives" editable={true}
-            ownerships={state.ownerships}
+          <TradeSidePanel player={initiatorPlayer} offer={offerFromInitiator} cashReceived={recipientCash}
+            ownedIndices={initiatorOwnedIndices} label="gives" editable={true} ownerships={state.ownerships}
             onCashChange={setInitiatorCash}
             onToggleProp={(idx) => toggleProp(idx, initiatorProps, setInitiatorProps)}
-            onGOJFChange={setInitiatorGOJF}
-          />
+            onGOJFChange={setInitiatorGOJF} />
         ) : <div className="p-3 text-xs text-slate-400">No player</div>}
         right={recipientPlayer ? (
-          <TradeSidePanel
-            player={recipientPlayer} offer={offerFromRecipient} cashReceived={initiatorCash}
-            ownedIndices={recipientOwnedIndices} label="gives" editable={true}
-            ownerships={state.ownerships}
+          <TradeSidePanel player={recipientPlayer} offer={offerFromRecipient} cashReceived={initiatorCash}
+            ownedIndices={recipientOwnedIndices} label="gives" editable={true} ownerships={state.ownerships}
             onCashChange={setRecipientCash}
             onToggleProp={(idx) => toggleProp(idx, recipientProps, setRecipientProps)}
-            onGOJFChange={setRecipientGOJF}
-          />
+            onGOJFChange={setRecipientGOJF} />
         ) : <div className="p-3 text-xs text-slate-400">No recipient</div>}
       />
     </TradeModalShell>
   );
 }
 
-// ── Multiplayer: live draft modal ─────────────────────────────────────────────
+// ── Live draft modal (multiplayer) ────────────────────────────────────────────
 
 function LiveDraftModal({
   state, myPlayerId, draft, onDraftUpdate, onDraftCancel, onDraftSubmit,
@@ -582,6 +656,7 @@ function LiveDraftModal({
 }) {
   const role = getTradeModalRole(myPlayerId, draft);
   const isProposer = role === "proposer";
+  const isSpectator = role === "spectator" || role === "none";
   const proposer = state.players.find((p) => p.id === draft.proposerId);
   const recipient = state.players.find((p) => p.id === draft.recipientId);
   const otherCandidates = state.players.filter((p) => !p.isBankrupt && p.id !== draft.proposerId);
@@ -605,7 +680,13 @@ function LiveDraftModal({
       statusLabel="Trade Negotiation"
       statusBadge={{ text: getTradeStatusBadgeText({ hasDraft: true, hasPendingTrade: false, isProposer }), tone: "live" }}
       title={`${proposer?.name ?? "Proposer"} ↔ ${recipient?.name ?? "Recipient"}`}
-      subtitle={isProposer ? "Your edits update for everyone in real time" : "Watching the proposer build this offer"}
+      subtitle={
+        isSpectator
+          ? `Watching live draft · Only ${proposer?.name ?? "the proposer"} can edit`
+          : isProposer
+          ? "Your edits update for everyone in real time"
+          : `Watching ${proposer?.name ?? "the proposer"} build this offer`
+      }
       onClose={isProposer ? onDraftCancel : undefined}
       footer={
         isProposer ? (
@@ -624,7 +705,9 @@ function LiveDraftModal({
           </>
         ) : (
           <p className="text-xs font-semibold text-slate-500 italic">
-            Only {proposer?.name ?? "the proposer"} can edit or send this offer.
+            {isSpectator
+              ? `Read-only view · Only ${proposer?.name ?? "the proposer"} can edit or send this offer.`
+              : `Only ${proposer?.name ?? "the proposer"} can edit or send this offer.`}
           </p>
         )
       }
@@ -641,34 +724,27 @@ function LiveDraftModal({
           </select>
         </div>
       )}
-
       <TwoSideLayout
         left={proposer ? (
-          <TradeSidePanel
-            player={proposer} offer={draft.offerFromProposer} cashReceived={draft.offerFromRecipient.cash}
-            ownedIndices={proposerOwnedIndices} label="gives" editable={isProposer}
-            ownerships={state.ownerships}
+          <TradeSidePanel player={proposer} offer={draft.offerFromProposer} cashReceived={draft.offerFromRecipient.cash}
+            ownedIndices={proposerOwnedIndices} label="gives" editable={isProposer} ownerships={state.ownerships}
             onCashChange={(v) => onDraftUpdate({ offerFromProposer: { ...draft.offerFromProposer, cash: v } })}
             onToggleProp={(idx) => toggleProp(idx, "offerFromProposer")}
-            onGOJFChange={(v) => onDraftUpdate({ offerFromProposer: { ...draft.offerFromProposer, getOutOfJailFreeCards: v } })}
-          />
+            onGOJFChange={(v) => onDraftUpdate({ offerFromProposer: { ...draft.offerFromProposer, getOutOfJailFreeCards: v } })} />
         ) : null}
         right={recipient ? (
-          <TradeSidePanel
-            player={recipient} offer={draft.offerFromRecipient} cashReceived={draft.offerFromProposer.cash}
-            ownedIndices={recipientOwnedIndices} label="gives" editable={isProposer}
-            ownerships={state.ownerships}
+          <TradeSidePanel player={recipient} offer={draft.offerFromRecipient} cashReceived={draft.offerFromProposer.cash}
+            ownedIndices={recipientOwnedIndices} label="gives" editable={isProposer} ownerships={state.ownerships}
             onCashChange={(v) => onDraftUpdate({ offerFromRecipient: { ...draft.offerFromRecipient, cash: v } })}
             onToggleProp={(idx) => toggleProp(idx, "offerFromRecipient")}
-            onGOJFChange={(v) => onDraftUpdate({ offerFromRecipient: { ...draft.offerFromRecipient, getOutOfJailFreeCards: v } })}
-          />
+            onGOJFChange={(v) => onDraftUpdate({ offerFromRecipient: { ...draft.offerFromRecipient, getOutOfJailFreeCards: v } })} />
         ) : null}
       />
     </TradeModalShell>
   );
 }
 
-// ── Pending trade view ────────────────────────────────────────────────────────
+// ── Pending trade / contract mode ─────────────────────────────────────────────
 
 function PendingTradeView({ state, dispatch, myPlayerId }: Props) {
   const { trade } = state;
@@ -678,84 +754,76 @@ function PendingTradeView({ state, dispatch, myPlayerId }: Props) {
   const recipient = state.players.find((p) => p.id === trade.recipientPlayerId);
   const isInitiator = !myPlayerId || myPlayerId === trade.initiatorPlayerId;
   const isRecipient = myPlayerId === trade.recipientPlayerId;
-  const isSpectator = myPlayerId && !isInitiator && !isRecipient;
+  const isSpectator = Boolean(myPlayerId) && !isInitiator && !isRecipient;
 
-  const initiatorItems = descOffer(trade.offerFromInitiator);
-  const recipientItems = descOffer(trade.offerFromRecipient);
   const initiatorValue = getTradeSideListedValue(trade.offerFromInitiator, state.ownerships);
   const recipientValue = getTradeSideListedValue(trade.offerFromRecipient, state.ownerships);
-
-  function OfferSide({ player, items, value, label }: { player: Player | undefined; items: string[]; value: number; label: string }) {
-    return (
-      <div className="flex-1 min-w-0 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          {player ? <TokenIcon token={player.token} color={player.color} size={20} label={player.tokenLabel} badge /> : null}
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">{label}</p>
-            <p className="text-sm font-black text-slate-800">{player?.name}</p>
-          </div>
-        </div>
-        {items.length > 0 ? (
-          <ul className="space-y-1">
-            {items.map((item, j) => (
-              <li key={j} className="flex items-center gap-1.5 rounded-md bg-slate-50 border border-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
-                <span className="text-slate-300">•</span>{item}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-[11px] text-slate-400 italic">Nothing</p>
-        )}
-        <div className="text-[10px] text-slate-400">
-          Listed value <span className="font-black text-slate-600">${value.toLocaleString()}</span>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <TradeModalShell
-      statusLabel="Trade Negotiation"
+      statusLabel="Trade Offer"
       statusBadge={{
         text: getTradeStatusBadgeText({ hasDraft: false, hasPendingTrade: true, isProposer: isInitiator, recipientName: recipient?.name }),
         tone: "pending",
       }}
-      title={`${initiator?.name ?? "?"} → ${recipient?.name ?? "?"}`}
+      title={isRecipient && !isInitiator ? `Offer from ${initiator?.name ?? "?"}` : `${initiator?.name ?? "?"} → ${recipient?.name ?? "?"}`}
+      subtitle={
+        isSpectator
+          ? `Watching trade offer · Only ${recipient?.name ?? "the recipient"} can respond`
+          : isRecipient && !isInitiator
+          ? "Review the offer carefully before accepting or declining."
+          : isInitiator && !isRecipient
+          ? `Waiting for ${recipient?.name ?? "the recipient"} to respond…`
+          : undefined
+      }
       footer={
         isSpectator ? (
           <p className="text-xs text-slate-500 italic">
-            Watching trade negotiation. Only {recipient?.name ?? "the recipient"} can respond.
+            Spectator view — only {recipient?.name ?? "the recipient"} can accept or decline.
           </p>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {isRecipient && !isInitiator && (
               <>
-                <button className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 active:scale-[0.97]"
-                  onClick={() => dispatch({ type: "ACCEPT_TRADE", actorPlayerId: trade.recipientPlayerId })}>
+                <button
+                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 active:scale-[0.97]"
+                  onClick={() => dispatch({ type: "ACCEPT_TRADE", actorPlayerId: trade.recipientPlayerId })}
+                >
                   Accept Trade
                 </button>
-                <button className="rounded-lg bg-red-500 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-red-600 active:scale-[0.97]"
-                  onClick={() => dispatch({ type: "DECLINE_TRADE", actorPlayerId: trade.recipientPlayerId })}>
+                <button
+                  className="rounded-lg bg-red-500 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-red-600 active:scale-[0.97]"
+                  onClick={() => dispatch({ type: "DECLINE_TRADE", actorPlayerId: trade.recipientPlayerId })}
+                >
                   Decline
                 </button>
               </>
             )}
-            {isInitiator && (
-              <>
-                {!isRecipient && <p className="self-center text-xs text-slate-500 italic">Waiting for {recipient?.name} to respond…</p>}
-                <button className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 active:scale-[0.97]"
-                  onClick={() => dispatch({ type: "CANCEL_TRADE", actorPlayerId: trade.initiatorPlayerId })}>
-                  Cancel Offer
-                </button>
-              </>
+            {isInitiator && !isRecipient && (
+              <button
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 active:scale-[0.97]"
+                onClick={() => dispatch({ type: "CANCEL_TRADE", actorPlayerId: trade.initiatorPlayerId })}
+              >
+                Cancel Offer
+              </button>
             )}
           </div>
         )
       }
     >
-      <div className="flex divide-x divide-slate-100">
-        <OfferSide player={initiator} items={initiatorItems} value={initiatorValue} label="Gives" />
-        <OfferSide player={recipient} items={recipientItems} value={recipientValue} label="Receives" />
+      {/* Contract-mode two-column read-only view */}
+      <TwoSideLayout
+        left={initiator ? (
+          <ContractSide player={initiator} offer={trade.offerFromInitiator} ownerships={state.ownerships} label="gives" />
+        ) : null}
+        right={recipient ? (
+          <ContractSide player={recipient} offer={trade.offerFromRecipient} ownerships={state.ownerships} label="gives" />
+        ) : null}
+      />
+      {/* Value comparison strip */}
+      <div className="border-t border-slate-100 bg-slate-50 px-4 py-2 flex items-center justify-between text-[10px] text-slate-400">
+        <span>{initiator?.name}: <span className="font-black text-slate-600">${initiatorValue.toLocaleString()}</span></span>
+        <span className="text-slate-300">vs</span>
+        <span>{recipient?.name}: <span className="font-black text-slate-600">${recipientValue.toLocaleString()}</span></span>
       </div>
     </TradeModalShell>
   );
@@ -766,27 +834,39 @@ function PendingTradeView({ state, dispatch, myPlayerId }: Props) {
 export function TradePanel(props: Props) {
   const { state, dispatch, myPlayerId, tradeDraft, onDraftStart, onDraftUpdate, onDraftCancel, onDraftSubmit } = props;
 
+  // Track when a trade/draft was open and then closed — detect result from newest log entry.
+  // Logs are prepended (index 0 = newest), so always use [0].
   const wasOpenRef = useRef(false);
-  const [resultBanner, setResultBanner] = useState<TradeResultKind | null>(null);
+  const lastSeenLogIdRef = useRef<string | undefined>(undefined);
+  const [resultStamp, setResultStamp] = useState<TradeResultKind | null>(null);
+
   const isOpenNow = Boolean(state.trade) || Boolean(tradeDraft);
 
   useEffect(() => {
-    if (wasOpenRef.current && !isOpenNow) {
-      const lastMessage = state.gameLog[0]?.message;
-      const kind = classifyTradeResultFromLogMessage(lastMessage);
-      if (kind) setResultBanner(kind);
-    }
+    const wasOpen = wasOpenRef.current;
     wasOpenRef.current = isOpenNow;
+
+    if (wasOpen && !isOpenNow) {
+      const newest = state.gameLog[0];
+      // Only show stamp if this is a new log entry we haven't shown a stamp for
+      if (newest && newest.message !== lastSeenLogIdRef.current) {
+        const kind = classifyTradeResultFromLogMessage(newest.message);
+        if (kind) {
+          lastSeenLogIdRef.current = newest.message;
+          setResultStamp(kind);
+        }
+      }
+    }
   }, [isOpenNow, state.gameLog]);
 
-  const banner = resultBanner ? (
-    <TradeResultBanner kind={resultBanner} onDismiss={() => setResultBanner(null)} />
-  ) : null;
+  if (resultStamp) {
+    return <TradeResultStamp kind={resultStamp} onDismiss={() => setResultStamp(null)} />;
+  }
 
-  if (state.phase === "gameOver") return banner;
+  if (state.phase === "gameOver") return null;
 
   if (state.trade) {
-    return <>{banner}<PendingTradeView state={state} dispatch={dispatch} myPlayerId={myPlayerId} /></>;
+    return <PendingTradeView state={state} dispatch={dispatch} myPlayerId={myPlayerId} />;
   }
 
   const isMultiplayerDraftMode = onDraftStart !== undefined;
@@ -794,14 +874,12 @@ export function TradePanel(props: Props) {
   if (isMultiplayerDraftMode) {
     if (tradeDraft) {
       return (
-        <>{banner}
-          <LiveDraftModal
-            state={state} myPlayerId={myPlayerId} draft={tradeDraft}
-            onDraftUpdate={onDraftUpdate ?? (() => {})}
-            onDraftCancel={onDraftCancel ?? (() => {})}
-            onDraftSubmit={onDraftSubmit ?? (() => {})}
-          />
-        </>
+        <LiveDraftModal
+          state={state} myPlayerId={myPlayerId} draft={tradeDraft}
+          onDraftUpdate={onDraftUpdate ?? (() => {})}
+          onDraftCancel={onDraftCancel ?? (() => {})}
+          onDraftSubmit={onDraftSubmit ?? (() => {})}
+        />
       );
     }
 
@@ -813,7 +891,6 @@ export function TradePanel(props: Props) {
 
     return (
       <div>
-        {banner}
         <button
           disabled={!canPropose || candidates.length === 0}
           className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-40"
@@ -827,5 +904,5 @@ export function TradePanel(props: Props) {
     );
   }
 
-  return <>{banner}<LocalTradeForm {...props} /></>;
+  return <LocalTradeForm {...props} />;
 }

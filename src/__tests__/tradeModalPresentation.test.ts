@@ -103,7 +103,8 @@ describe("TradePanel — layout source assertions", () => {
   });
 
   it("spectator sees read-only message", () => {
-    expect(src).toMatch(/Watching trade negotiation/);
+    // Draft: "Watching live draft", Pending: "Watching trade offer"
+    expect(src).toMatch(/Watching.*draft|Watching trade offer/);
   });
 
   it("Deal tray label exists per side", () => {
