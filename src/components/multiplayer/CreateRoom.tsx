@@ -25,6 +25,7 @@ export function CreateRoom() {
     rollForOrder,
     beginRollOffGame,
     leaveRoom,
+    forfeitGame,
     clearError,
     sendAction,
     requestGameSync,
@@ -75,6 +76,7 @@ export function CreateRoom() {
         error={error}
         connectionStatus={status}
         onLeave={leaveRoom}
+        onForfeit={forfeitGame}
         onRequestSync={requestGameSync}
         tradeDraft={tradeDraft}
         startTradeDraft={startTradeDraft}

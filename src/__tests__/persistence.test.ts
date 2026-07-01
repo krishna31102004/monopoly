@@ -141,7 +141,7 @@ describe("serializeGame / deserializeGame (pure functions)", () => {
     expect(deserializeGame(json)).toBeNull();
   });
 
-  it("old save without exactGoBonus defaults to false (original behavior preserved)", () => {
+  it("old save without exactGoBonus defaults to true (new default)", () => {
     const state = makeGameState(2);
     // Simulate a save that predates exactGoBonus by removing it from rules
     const { exactGoBonus: _removed, ...rulesWithout } = state.rules as typeof state.rules & { exactGoBonus: boolean };
@@ -149,7 +149,7 @@ describe("serializeGame / deserializeGame (pure functions)", () => {
     const json = JSON.stringify({ version: SAVE_VERSION, savedAt: new Date().toISOString(), state: oldState });
     const loaded = deserializeGame(json);
     expect(loaded).not.toBeNull();
-    expect(loaded!.rules.exactGoBonus).toBe(false);
+    expect(loaded!.rules.exactGoBonus).toBe(true);
   });
 
   it("save with exactGoBonus: true preserves it after roundtrip", () => {

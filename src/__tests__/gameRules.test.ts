@@ -23,7 +23,7 @@ describe("DEFAULT_RULES", () => {
       noRentInJail: true,
       mortgages: true,
       evenBuild: true,
-      exactGoBonus: false,
+      exactGoBonus: true,
     });
   });
 

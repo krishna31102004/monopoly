@@ -30,13 +30,13 @@ describe("ROLL_DICE: movement and GO salary", () => {
     expect(currentPlayer(next).cash).toBe(before + 200);
   });
 
-  it("landing exactly on GO awards $200", () => {
+  it("landing exactly on GO awards $300 (exactGoBonus default ON)", () => {
     const state = withPosition(makeGameState(), 38);
     const before = currentPlayer(state).cash;
     const next = gameReducer(state, { type: "ROLL_DICE", dice: dice(1, 1) });
-    // 38+2=40 → position 0 (GO)
+    // 38+2=40 → position 0 (GO), exactGoBonus=true → $300
     expect(currentPlayer(next).position).toBe(0);
-    expect(currentPlayer(next).cash).toBe(before + 200);
+    expect(currentPlayer(next).cash).toBe(before + 300);
   });
 
   it("does not award $200 when not passing GO", () => {

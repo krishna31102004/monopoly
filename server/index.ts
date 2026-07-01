@@ -68,6 +68,44 @@ function clearAuctionTimer(roomCode: string): void {
   }
 }
 
+// ── Global turn timers (3-minute limit, auto-end on turnComplete) ────────────
+const turnTimers = new Map<string, NodeJS.Timeout>();
+
+function clearTurnTimer(roomCode: string): void {
+  const existing = turnTimers.get(roomCode);
+  if (existing) {
+    clearTimeout(existing);
+    turnTimers.delete(roomCode);
+  }
+}
+
+function scheduleTurnTimer(roomCode: string, gameState: GameState): void {
+  clearTurnTimer(roomCode);
+  if (!gameState.turnDeadlineAt) return;
+  if (gameState.phase === "gameOver" || gameState.phase === "setup") return;
+
+  const deadlineAt = gameState.turnDeadlineAt;
+  const delay = Math.max(0, deadlineAt - Date.now());
+
+  const timer = setTimeout(() => {
+    const latest = rooms.getGameState(roomCode);
+    if (!latest || latest.turnDeadlineAt !== deadlineAt) return;
+    // Only auto-end when it's safe — player has already rolled and can end turn
+    if (latest.phase !== "turnComplete") return;
+    const currentPlayer = latest.players[latest.currentPlayerIndex];
+    if (!currentPlayer) return;
+    const result = rooms.applyGameAction(roomCode, currentPlayer.id, { type: "END_TURN" }, null);
+    if (result.ok) {
+      io.to(roomCode).emit("game:state", { gameState: result.value });
+      scheduleAuctionTimer(roomCode, result.value);
+      scheduleTurnTimer(roomCode, result.value);
+      console.log(`[turn] auto-ended turn for ${currentPlayer.id} in ${roomCode} (timeout)`);
+    }
+  }, delay);
+
+  turnTimers.set(roomCode, timer);
+}
+
 function scheduleAuctionTimer(roomCode: string, gameState: GameState): void {
   clearAuctionTimer(roomCode);
   if (gameState.phase !== "auction" || !gameState.auction) return;
@@ -96,7 +134,7 @@ function scheduleAuctionTimer(roomCode: string, gameState: GameState): void {
 // ── Inactivity cleanup every 5 minutes ───────────────────────────────────────
 setInterval(() => {
   const removedCodes = rooms.cleanupInactive();
-  for (const code of removedCodes) clearAuctionTimer(code);
+  for (const code of removedCodes) { clearAuctionTimer(code); clearTurnTimer(code); }
   if (removedCodes.length > 0) console.log(`[cleanup] Removed ${removedCodes.length} inactive room(s).`);
 }, 5 * 60 * 1000);
 
@@ -262,6 +300,7 @@ io.on("connection", (socket) => {
       io.to(roomCode).emit("room:update", { room: result.value.room });
       io.to(roomCode).emit("game:state", { gameState: result.value.gameState });
       scheduleAuctionTimer(roomCode, result.value.gameState);
+      scheduleTurnTimer(roomCode, result.value.gameState);
       console.log(`[room] roll-off game begun in ${roomCode}`);
     } catch (err) {
       console.error("[rolloff:beginGame] error:", err);
@@ -297,10 +336,40 @@ io.on("connection", (socket) => {
       // Broadcast updated state to all players in the room
       io.to(roomCode).emit("game:state", { gameState: result.value });
       scheduleAuctionTimer(roomCode, result.value);
+      scheduleTurnTimer(roomCode, result.value);
       console.log(`[game] ${action.type} by ${playerId} in ${roomCode}`);
     } catch (err) {
       console.error("[game:action] error:", err);
       socket.emit("game:error", { message: "Failed to apply game action." });
+    }
+  });
+
+  // ── game:forfeit ─────────────────────────────────────────────────────────
+  socket.on("game:forfeit", () => {
+    try {
+      const roomCode = rooms.getRoomCodeBySocketId(socket.id);
+      const playerId = rooms.getPlayerIdBySocketId(socket.id);
+      if (!roomCode || !playerId) {
+        socket.emit("game:error", { message: "Not in a room." });
+        return;
+      }
+      const result = rooms.applyGameAction(roomCode, playerId, { type: "VOLUNTARY_BANKRUPTCY" }, null);
+      if (!result.ok) {
+        socket.emit("game:error", { message: result.error });
+        return;
+      }
+      io.to(roomCode).emit("game:state", { gameState: result.value });
+      scheduleAuctionTimer(roomCode, result.value);
+      scheduleTurnTimer(roomCode, result.value);
+      // Remove the player from the room after forfeit
+      rooms.playerLeft(roomCode, playerId);
+      const room = rooms.getRoom(roomCode);
+      if (room) io.to(roomCode).emit("room:update", { room });
+      socket.leave(roomCode);
+      console.log(`[game] VOLUNTARY_BANKRUPTCY (forfeit) by ${playerId} in ${roomCode}`);
+    } catch (err) {
+      console.error("[game:forfeit] error:", err);
+      socket.emit("game:error", { message: "Failed to process forfeit." });
     }
   });
 

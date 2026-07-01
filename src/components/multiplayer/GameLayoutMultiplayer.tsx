@@ -36,6 +36,7 @@ type Props = {
   error: string | null;
   connectionStatus: ConnectionStatus;
   onLeave: () => void;
+  onForfeit?: () => void;
   onRequestSync: () => void;
   tradeDraft: TradeDraftState | null;
   startTradeDraft: (payload: TradeDraftStartPayload) => void;
@@ -59,6 +60,7 @@ export function GameLayoutMultiplayer({
   error,
   connectionStatus,
   onLeave,
+  onForfeit,
   onRequestSync,
   tradeDraft,
   startTradeDraft,
@@ -169,6 +171,7 @@ export function GameLayoutMultiplayer({
           connectionStatus={connectionStatus === "connected" || connectionStatus === "reconnecting" || connectionStatus === "disconnected" ? connectionStatus : null}
           onSync={onRequestSync}
           onLeave={onLeave}
+          onForfeit={onForfeit}
         />
         {!isMyTurn ? (
           <p className="mt-1 px-1 text-xs font-semibold text-slate-500">

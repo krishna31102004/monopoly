@@ -124,9 +124,16 @@ export function deserializeGame(json: string): GameState | null {
     if (typeof state.freeParkingPot !== "number") {
       (state as GameState).freeParkingPot = 0;
     }
-    // exactGoBonus added later — default OFF to preserve original behavior for old saves
+    // exactGoBonus added later — default ON for new games
     if (typeof state.rules.exactGoBonus !== "boolean") {
-      (state as GameState).rules = { ...state.rules, exactGoBonus: false };
+      (state as GameState).rules = { ...state.rules, exactGoBonus: true };
+    }
+    // forfeitAuctionQueue and turnDeadlineAt added later
+    if (!Array.isArray((state as GameState).forfeitAuctionQueue)) {
+      (state as GameState).forfeitAuctionQueue = [];
+    }
+    if (!("turnDeadlineAt" in (state as GameState))) {
+      (state as GameState).turnDeadlineAt = null;
     }
     return state;
   } catch {

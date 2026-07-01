@@ -102,11 +102,12 @@ describe("Advance to GO card", () => {
     expect(currentPlayer(next).position).toBe(0);
   });
 
-  it("gives $200 if player was not at GO", () => {
+  it("gives $300 if player was not at GO (exactGoBonus default ON)", () => {
+    // advance-to-GO lands on GO exactly → exactGoBonus applies → $300
     const state = withChanceDeck(withPosition(makeGameState(), 15), ["chance-1"]);
     const cashBefore = currentPlayer(state).cash;
     const next = drawAndApplyCard(state, "chance", false);
-    expect(currentPlayer(next).cash).toBe(cashBefore + 200);
+    expect(currentPlayer(next).cash).toBe(cashBefore + 300);
   });
 
   it("does not give $200 if player was already at GO", () => {

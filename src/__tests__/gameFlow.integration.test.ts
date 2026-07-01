@@ -307,7 +307,7 @@ describe("Flow 3: Tax deduction and bankruptcy-lite", () => {
 describe("Flow 4: Chance card movement (advance-go)", () => {
   it("draws advance-to-GO card, moves player, grants GO salary, sets drawnCard", () => {
     // From position 5 (JFK), dice(1,1)=2 doubles → 7 (Chance)
-    // Draws chance-1 (advance to GO) → passes GO → +$200
+    // Draws chance-1 (advance to GO) → lands on GO → +$300 (exactGoBonus default ON)
     let s = makeGameState(2);
     s = withPlayer(s, 0, { position: 5 });
     s = withChanceDeck(s, ["chance-1"]);
@@ -320,7 +320,7 @@ describe("Flow 4: Chance card movement (advance-go)", () => {
     });
 
     expect(currentPlayer(s1).position).toBe(0);         // moved to GO
-    expect(currentPlayer(s1).cash).toBe(cashBefore + 200); // GO salary from card
+    expect(currentPlayer(s1).cash).toBe(cashBefore + 300); // GO salary from card (exactGoBonus ON)
     expect(s1.drawnCard).not.toBeNull();
     expect(s1.drawnCard!.card.id).toBe("chance-1");
     // Rolled doubles → extra roll available

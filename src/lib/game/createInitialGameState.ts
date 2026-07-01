@@ -42,6 +42,8 @@ export function createSetupGameState(): GameState {
     bankruptcy: null,
     rules: DEFAULT_RULES,
     freeParkingPot: 0,
+    forfeitAuctionQueue: [],
+    turnDeadlineAt: null,
   };
 }
 
@@ -87,6 +89,8 @@ export function createInitialGameState(players: StartGamePlayer[], rules?: GameR
     bankruptcy: null,
     rules: rules ?? DEFAULT_RULES,
     freeParkingPot: 0,
+    forfeitAuctionQueue: [],
+    turnDeadlineAt: null,
   };
 }
 

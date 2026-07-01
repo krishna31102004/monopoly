@@ -176,8 +176,8 @@ describe("advance-go card", () => {
 // ─── Rule defaults / persistence ─────────────────────────────────────────────
 
 describe("rule defaults", () => {
-  it("DEFAULT_RULES has exactGoBonus = false", () => {
-    expect(DEFAULT_RULES.exactGoBonus).toBe(false);
+  it("DEFAULT_RULES has exactGoBonus = true", () => {
+    expect(DEFAULT_RULES.exactGoBonus).toBe(true);
   });
 
   it("createInitialGameState uses provided rules including exactGoBonus", () => {

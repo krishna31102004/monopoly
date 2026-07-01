@@ -266,11 +266,23 @@ export function useRoom() {
     getSocket().emit("trade:draftSubmit");
   }, []);
 
+  const forfeitGame = useCallback(() => {
+    getSocket().emit("game:forfeit");
+    setState((s) => ({ ...s, room: null, gameState: null }));
+    sessionStorage.removeItem(SESSION_PLAYER_ID);
+    sessionStorage.removeItem(SESSION_ROOM_CODE);
+    sessionStorage.removeItem(SESSION_PLAYER_NAME);
+    sessionStorage.removeItem(SESSION_PLAYER_TOKEN);
+    sessionStorage.removeItem(SESSION_PLAYER_LABEL);
+    sessionStorage.removeItem(SESSION_PLAYER_COLOR);
+  }, []);
+
   return {
     ...state,
     createRoom,
     joinRoom,
     leaveRoom,
+    forfeitGame,
     startGame,
     rollForOrder,
     beginRollOffGame,

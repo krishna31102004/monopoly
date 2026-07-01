@@ -18,7 +18,7 @@ export const DEFAULT_RULES: GameRules = {
   noRentInJail: true,
   mortgages: true,
   evenBuild: true,
-  exactGoBonus: false,
+  exactGoBonus: true,
 };
 
 export type GamePhase =
@@ -138,6 +138,10 @@ export type GameState = {
   bankruptcy: BankruptcyState | null;
   rules: GameRules;
   freeParkingPot: number;
+  /** Property space indices queued for auction after a voluntary forfeit. */
+  forfeitAuctionQueue: number[];
+  /** Unix ms when the current turn expires (set on each new turn). */
+  turnDeadlineAt: number | null;
 };
 
 export type StartGamePlayer = {
@@ -220,6 +224,7 @@ export type GameAction =
   | { type: "DECLINE_TRADE"; actorPlayerId: string }
   | { type: "CANCEL_TRADE"; actorPlayerId: string }
   | { type: "DECLARE_BANKRUPTCY" }
+  | { type: "VOLUNTARY_BANKRUPTCY" }
   | { type: "RESOLVE_BANKRUPTCY_IF_SOLVENT" }
   | { type: "RESET_GAME" }
   | { type: "LOAD_GAME"; state: GameState };

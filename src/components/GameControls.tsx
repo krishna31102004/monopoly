@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { rollDice } from "@/lib/game/dice";
 import { TokenIcon } from "@/components/board/TokenIcon";
 import { DiceFace } from "@/components/DiceFace";
@@ -62,11 +62,19 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
   const [diceRolling, setDiceRolling] = useState(false);
   const [rollingDie1, setRollingDie1] = useState(3);
   const [rollingDie2, setRollingDie2] = useState(5);
+  const [endTurnReminder, setEndTurnReminder] = useState(false);
   const currentPlayer = state.players[state.currentPlayerIndex];
   const canRoll = state.phase === "readyToRoll" && isMyTurn && !isAnimating;
   const canEndTurn = state.phase === "turnComplete" && state.currentPlayerHasRolled && isMyTurn && !isAnimating;
   const isGameOver = state.phase === "gameOver";
   const status = getTurnStatus(state);
+
+  // Show non-annoying reminder after 30s in turnComplete
+  useEffect(() => {
+    if (!canEndTurn) { setEndTurnReminder(false); return; }
+    const t = setTimeout(() => setEndTurnReminder(true), 30_000);
+    return () => clearTimeout(t);
+  }, [canEndTurn]);
 
   function handleRoll() {
     setDiceRolling(true);
@@ -169,10 +177,14 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
             <button
               type="button"
               disabled={!canEndTurn || isGameOver || !!presentationStatus}
-              onClick={() => dispatch({ type: "END_TURN" })}
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-700 transition-all duration-100 hover:bg-white hover:border-slate-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30"
+              onClick={() => { setEndTurnReminder(false); dispatch({ type: "END_TURN" }); }}
+              className={`w-full rounded-lg border px-4 py-2.5 text-sm font-bold transition-all duration-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30 ${
+                endTurnReminder
+                  ? "animate-pulse border-amber-400 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                  : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white hover:border-slate-300"
+              }`}
             >
-              End Turn
+              End Turn{endTurnReminder ? " ↩" : ""}
             </button>
           </div>
         ) : null}

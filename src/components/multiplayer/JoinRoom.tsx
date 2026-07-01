@@ -29,6 +29,7 @@ export function JoinRoom({ initialCode = "" }: Props) {
     rollForOrder,
     beginRollOffGame,
     leaveRoom,
+    forfeitGame,
     clearError,
     sendAction,
     requestGameSync,
@@ -105,6 +106,7 @@ export function JoinRoom({ initialCode = "" }: Props) {
         error={error}
         connectionStatus={status}
         onLeave={leaveRoom}
+        onForfeit={forfeitGame}
         onRequestSync={requestGameSync}
         tradeDraft={tradeDraft}
         startTradeDraft={startTradeDraft}
