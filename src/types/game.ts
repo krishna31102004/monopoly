@@ -142,6 +142,10 @@ export type GameState = {
   forfeitAuctionQueue: number[];
   /** Unix ms when the current turn expires (set on each new turn). */
   turnDeadlineAt: number | null;
+  /** Remaining houses in the bank supply (max 32). */
+  bankHouses: number;
+  /** Remaining hotels in the bank supply (max 12). */
+  bankHotels: number;
 };
 
 export type StartGamePlayer = {

@@ -50,7 +50,7 @@ export type PreconditionResult =
   | { ok: false; reason: string };
 
 export function canBuyHouse(
-  state: { ownerships: PropertyOwnership[]; rules?: { evenBuild: boolean } },
+  state: { ownerships: PropertyOwnership[]; rules?: { evenBuild: boolean }; bankHouses?: number },
   spaceIndex: number,
   player: Player,
 ): PreconditionResult {
@@ -68,6 +68,8 @@ export function canBuyHouse(
 
   if (ownership.hasHotel) return { ok: false, reason: "Property already has a hotel" };
   if (ownership.houses >= 4) return { ok: false, reason: "Property already has 4 houses" };
+
+  if ((state.bankHouses ?? 32) <= 0) return { ok: false, reason: "No houses available in the bank" };
 
   // Even-building rule: cannot have more than 1 more house than any other in group
   const evenBuild = state.rules?.evenBuild ?? true;
@@ -122,7 +124,7 @@ export function canSellHouse(
 }
 
 export function canBuyHotel(
-  state: { ownerships: PropertyOwnership[] },
+  state: { ownerships: PropertyOwnership[]; bankHotels?: number },
   spaceIndex: number,
   player: Player,
 ): PreconditionResult {
@@ -139,7 +141,17 @@ export function canBuyHotel(
     return { ok: false, reason: "A property in this group is mortgaged" };
 
   if (ownership.hasHotel) return { ok: false, reason: "Property already has a hotel" };
-  if (ownership.houses !== 4) return { ok: false, reason: "Must have exactly 4 houses to buy a hotel" };
+
+  // All properties in the group must have exactly 4 houses (equal building rule for hotels)
+  const groupSpaces = getColorGroupSpaces(space);
+  const allHaveFour = groupSpaces.every((s) => {
+    const o = getOwnership(state.ownerships, s.index);
+    return o?.houses === 4 || o?.hasHotel === true;
+  });
+  if (!allHaveFour)
+    return { ok: false, reason: "All properties in the group must have 4 houses before buying a hotel" };
+
+  if ((state.bankHotels ?? 12) <= 0) return { ok: false, reason: "No hotels available in the bank" };
 
   if (player.cash < space.houseCost) return { ok: false, reason: "Insufficient funds" };
 
@@ -147,7 +159,7 @@ export function canBuyHotel(
 }
 
 export function canSellHotel(
-  state: { ownerships: PropertyOwnership[] },
+  state: { ownerships: PropertyOwnership[]; bankHouses?: number },
   spaceIndex: number,
   player: Player,
 ): PreconditionResult {
@@ -157,6 +169,10 @@ export function canSellHotel(
   const ownership = getOwnership(state.ownerships, spaceIndex);
   if (!ownership || ownership.ownerId !== player.id) return { ok: false, reason: "You don't own this property" };
   if (!ownership.hasHotel) return { ok: false, reason: "No hotel to sell" };
+
+  // Downgrading a hotel returns 4 houses to the property; bank must have capacity
+  if ((state.bankHouses ?? 32) < 4)
+    return { ok: false, reason: "Bank doesn't have enough houses to downgrade hotel (need 4 available)" };
 
   return { ok: true };
 }

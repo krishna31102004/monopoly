@@ -141,6 +141,14 @@ export function deserializeGame(json: string): GameState | null {
         (p as Record<string, unknown>).consecutiveTurnTimeouts = 0;
       }
     }
+    // bankHouses / bankHotels added in Phase 4H — infer from existing buildings
+    if (typeof (state as GameState).bankHouses !== "number" || typeof (state as GameState).bankHotels !== "number") {
+      const ownerships = (state as GameState).ownerships;
+      const totalHouses = ownerships.reduce((sum, o) => sum + (o.houses ?? 0), 0);
+      const totalHotels = ownerships.reduce((sum, o) => (o.hasHotel ? sum + 1 : sum), 0);
+      (state as GameState).bankHouses = Math.max(0, 32 - totalHouses);
+      (state as GameState).bankHotels = Math.max(0, 12 - totalHotels);
+    }
     return state;
   } catch {
     return null;

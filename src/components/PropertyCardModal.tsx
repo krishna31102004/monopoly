@@ -93,7 +93,11 @@ export function PropertyCardModal({
     currentPlayer != null &&
     owner?.id === currentPlayer.id &&
     (space.kind === "city" || space.kind === "airport" || space.kind === "utility");
-  const stateForChecks = { ownerships };
+  const stateForChecks = {
+    ownerships,
+    bankHouses: state?.bankHouses ?? 32,
+    bankHotels: state?.bankHotels ?? 12,
+  };
   const timingGate = state && currentPlayer ? canMortgageNow(state, currentPlayer.id) : null;
   const timingBlocked = timingGate !== null && !timingGate.ok;
   const timingReason = timingGate && !timingGate.ok ? timingGate.reason : undefined;
@@ -256,9 +260,16 @@ export function PropertyCardModal({
               {/* Management buttons (only if current player owns this property) */}
               {isCityOwner && dispatch ? (
                 <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <h3 className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-                    Manage Property
-                  </h3>
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+                      Manage Property
+                    </h3>
+                    {state && (
+                      <span className="text-[10px] text-slate-400">
+                        Bank: {state.bankHouses} houses · {state.bankHotels} hotels
+                      </span>
+                    )}
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     <ManageButton
                       label="Buy House"

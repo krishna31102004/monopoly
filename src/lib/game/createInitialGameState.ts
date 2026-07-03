@@ -44,6 +44,8 @@ export function createSetupGameState(): GameState {
     freeParkingPot: 0,
     forfeitAuctionQueue: [],
     turnDeadlineAt: null,
+    bankHouses: 32,
+    bankHotels: 12,
   };
 }
 
@@ -92,6 +94,8 @@ export function createInitialGameState(players: StartGamePlayer[], rules?: GameR
     freeParkingPot: 0,
     forfeitAuctionQueue: [],
     turnDeadlineAt: null,
+    bankHouses: 32,
+    bankHotels: 12,
   };
 }
 

@@ -43,6 +43,17 @@ function applyVoluntaryBankruptcy(state: GameState, forfeiter: import("@/types/p
     ...forfeiter.ownedUtilityIds,
   ];
 
+  // Count improvements on forfeiter's properties to restore bank supply
+  let housesReturned = 0;
+  let hotelsReturned = 0;
+  for (const spaceIndex of allProps) {
+    const o = state.ownerships.find((o) => o.spaceIndex === spaceIndex);
+    if (o) {
+      housesReturned += o.houses;
+      if (o.hasHotel) hotelsReturned += 1;
+    }
+  }
+
   let nextChanceDeck = state.chanceDeck;
   for (let i = 0; i < forfeiter.getOutOfJailFreeCards; i++) {
     nextChanceDeck = [...nextChanceDeck, "chance-8"];
@@ -68,6 +79,8 @@ function applyVoluntaryBankruptcy(state: GameState, forfeiter: import("@/types/p
     chanceDeck: nextChanceDeck,
     trade: null,
     bankruptcy: null,
+    bankHouses: Math.min(32, state.bankHouses + housesReturned),
+    bankHotels: Math.min(12, state.bankHotels + hotelsReturned),
     gameLog: addLogEntry(state.gameLog, msg),
   };
 
@@ -768,6 +781,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         players: nextPlayers,
         ownerships: nextOwnerships,
+        bankHouses: state.bankHouses - 1,
         gameLog: addLogEntry(state.gameLog, msg),
       };
     }
@@ -799,6 +813,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         players: nextPlayers,
         ownerships: nextOwnerships,
+        bankHouses: Math.min(32, state.bankHouses + 1),
         gameLog: addLogEntry(state.gameLog, msg),
       };
     }
@@ -829,6 +844,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         players: nextPlayers,
         ownerships: nextOwnerships,
+        // Hotel purchase: consume 1 hotel, return 4 houses (the property's 4 houses go back to bank)
+        bankHouses: Math.min(32, state.bankHouses + 4),
+        bankHotels: state.bankHotels - 1,
         gameLog: addLogEntry(state.gameLog, msg),
       };
     }
@@ -859,6 +877,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         players: nextPlayers,
         ownerships: nextOwnerships,
+        // Hotel downgrade: return 1 hotel to bank, consume 4 houses from bank
+        bankHotels: Math.min(12, state.bankHotels + 1),
+        bankHouses: state.bankHouses - 4,
         gameLog: addLogEntry(state.gameLog, msg),
       };
     }
@@ -1021,11 +1042,33 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         };
       }
 
+      // Mortgage transfer fee: receiver pays 10% of mortgage value per mortgaged property received
+      function calcMortgageFee(spaceIndices: number[]): number {
+        return spaceIndices.reduce((total, idx) => {
+          const o = state.ownerships.find((o) => o.spaceIndex === idx);
+          if (!o?.isMortgaged) return total;
+          const space = boardSpaces[idx] as OwnableSpace | undefined;
+          return space ? total + Math.ceil(space.mortgageValue / 10) : total;
+        }, 0);
+      }
+      // Initiator receives offerFromRecipient.propertySpaceIndices
+      const initiatorMortgageFee = calcMortgageFee(offerFromRecipient.propertySpaceIndices);
+      // Recipient receives offerFromInitiator.propertySpaceIndices
+      const recipientMortgageFee = calcMortgageFee(offerFromInitiator.propertySpaceIndices);
+
+      // Block trade acceptance if either party can't afford their mortgage transfer fee
+      const initiatorPostCash = initiator.cash - offerFromInitiator.cash + offerFromRecipient.cash - initiatorMortgageFee;
+      const recipientPostCash = recipient.cash - offerFromRecipient.cash + offerFromInitiator.cash - recipientMortgageFee;
+      if (initiatorPostCash < 0 || recipientPostCash < 0) {
+        // Can't afford mortgage transfer fees — cancel trade
+        return { ...state, trade: null, gameLog: addLogEntry(state.gameLog, "Trade cancelled: a party cannot afford mortgage transfer fees.") };
+      }
+
       const nextPlayers = state.players.map((p) => {
         if (p.id === initiatorPlayerId) {
           return {
             ...p,
-            cash: p.cash - offerFromInitiator.cash + offerFromRecipient.cash,
+            cash: p.cash - offerFromInitiator.cash + offerFromRecipient.cash - initiatorMortgageFee,
             getOutOfJailFreeCards:
               p.getOutOfJailFreeCards -
               offerFromInitiator.getOutOfJailFreeCards +
@@ -1040,7 +1083,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         if (p.id === recipientPlayerId) {
           return {
             ...p,
-            cash: p.cash - offerFromRecipient.cash + offerFromInitiator.cash,
+            cash: p.cash - offerFromRecipient.cash + offerFromInitiator.cash - recipientMortgageFee,
             getOutOfJailFreeCards:
               p.getOutOfJailFreeCards -
               offerFromRecipient.getOutOfJailFreeCards +
@@ -1079,7 +1122,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       ]
         .filter(Boolean)
         .join(", ") || "nothing";
-      const msg = `Trade accepted: ${initiator.name} gave ${initiatorOfferDesc} to ${recipient.name} in exchange for ${recipientOfferDesc}.`;
+      const mortgageFeeNotes = [
+        recipientMortgageFee > 0 ? `${recipient.name} paid $${recipientMortgageFee} mortgage transfer fee` : "",
+        initiatorMortgageFee > 0 ? `${initiator.name} paid $${initiatorMortgageFee} mortgage transfer fee` : "",
+      ].filter(Boolean).join("; ");
+      const msg = `Trade accepted: ${initiator.name} gave ${initiatorOfferDesc} to ${recipient.name} in exchange for ${recipientOfferDesc}.${mortgageFeeNotes ? ` ${mortgageFeeNotes}.` : ""}`;
 
       return {
         ...state,
@@ -1159,11 +1206,24 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       let nextOwnerships = state.ownerships;
       let nextPlayers = state.players;
       let nextChanceDeck = state.chanceDeck;
+      let nextBankHouses = state.bankHouses;
+      let nextBankHotels = state.bankHotels;
       let msg = "";
 
       if (creditor.type === "player") {
         const creditorPlayer = state.players.find((p) => p.id === creditor.playerId);
         if (!creditorPlayer) return state;
+
+        // Calculate 10% mortgage transfer fee for mortgaged properties received by creditor
+        // Properties with houses/hotels cannot be mortgaged per game rules, so supply is unaffected here
+        const mortgagedDebtorProps = debtorAllProps.filter((spaceIndex) => {
+          const o = state.ownerships.find((o) => o.spaceIndex === spaceIndex);
+          return o?.isMortgaged === true;
+        });
+        const mortgageFee = mortgagedDebtorProps.reduce((total, spaceIndex) => {
+          const space = boardSpaces[spaceIndex] as OwnableSpace | undefined;
+          return space ? total + Math.ceil(space.mortgageValue / 10) : total;
+        }, 0);
 
         nextOwnerships = state.ownerships.map((o) =>
           o.ownerId === debtorPlayerId ? { ...o, ownerId: creditor.playerId } : o,
@@ -1182,9 +1242,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
             };
           }
           if (p.id === creditor.playerId) {
+            // Creditor receives debtor's remaining cash, minus mortgage transfer fees
+            const cashReceived = Math.max(0, debtor.cash);
             return {
               ...p,
-              cash: p.cash + Math.max(0, debtor.cash),
+              cash: Math.max(0, p.cash + cashReceived - mortgageFee),
               getOutOfJailFreeCards: p.getOutOfJailFreeCards + debtor.getOutOfJailFreeCards,
               ownedCityIds: [...p.ownedCityIds, ...debtorCities],
               ownedAirportIds: [...p.ownedAirportIds, ...debtorAirports],
@@ -1194,9 +1256,22 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           return p;
         });
 
-        msg = `${debtor.name} declared bankruptcy to ${creditorPlayer.name}. All assets transferred.`;
+        const feeNote = mortgageFee > 0 ? ` (${creditorPlayer.name} paid $${mortgageFee} mortgage transfer fee)` : "";
+        msg = `${debtor.name} declared bankruptcy to ${creditorPlayer.name}. All assets transferred.${feeNote}`;
       } else {
-        // Creditor is bank: return properties to unowned, clear improvements
+        // Creditor is bank: return properties to unowned, clear improvements, restore bank supply
+        let housesRestored = 0;
+        let hotelsRestored = 0;
+        for (const spaceIndex of debtorAllProps) {
+          const o = state.ownerships.find((o) => o.spaceIndex === spaceIndex);
+          if (o) {
+            housesRestored += o.houses;
+            if (o.hasHotel) hotelsRestored += 1;
+          }
+        }
+        nextBankHouses = Math.min(32, state.bankHouses + housesRestored);
+        nextBankHotels = Math.min(12, state.bankHotels + hotelsRestored);
+
         nextOwnerships = state.ownerships.map((o) =>
           debtorAllProps.includes(o.spaceIndex)
             ? { ...o, ownerId: null, isMortgaged: false, houses: 0, hasHotel: false }
@@ -1234,6 +1309,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         chanceDeck: nextChanceDeck,
         bankruptcy: null,
         trade: null,
+        bankHouses: nextBankHouses,
+        bankHotels: nextBankHotels,
         gameLog: nextLog,
       };
 
