@@ -148,7 +148,7 @@ describe("Rule 2: Full color group required", () => {
     const s = withOwnership(state, 1, p1id);
     const result = canBuyHouse({ ownerships: s.ownerships }, 1, s.players[0]);
     expect(result.ok).toBe(false);
-    expect(result.reason).toMatch(/full color group/i);
+    expect(!result.ok && result.reason).toMatch(/full color group/i);
   });
 
   it("canBuyHouse succeeds when player owns full brown group", () => {
@@ -167,7 +167,7 @@ describe("Rule 3: No building with mortgaged group property", () => {
     state = withMortgage(state, 3); // mortgage Cancún
     const result = canBuyHouse({ ownerships: state.ownerships }, 1, state.players[0]);
     expect(result.ok).toBe(false);
-    expect(result.reason).toMatch(/mortgaged/i);
+    expect(!result.ok && result.reason).toMatch(/mortgaged/i);
   });
 });
 
@@ -181,7 +181,7 @@ describe("Rule 4: Even-build rule", () => {
     // Property 1 has 1 house, property 3 has 0 — can't add to 1 yet
     const result = canBuyHouse({ ownerships: state.ownerships }, 1, state.players[0]);
     expect(result.ok).toBe(false);
-    expect(result.reason).toMatch(/evenly/i);
+    expect(!result.ok && result.reason).toMatch(/evenly/i);
   });
 
   it("canBuyHouse succeeds when properties are level", () => {
@@ -204,7 +204,7 @@ describe("Rule 5: Hotel purchase requires all group at 4 houses", () => {
     state = withHouses(state, 3, 3); // only 3
     const result = canBuyHotel({ ownerships: state.ownerships }, 1, state.players[0]);
     expect(result.ok).toBe(false);
-    expect(result.reason).toMatch(/4 houses/i);
+    expect(!result.ok && result.reason).toMatch(/4 houses/i);
   });
 
   it("canBuyHotel succeeds when all group properties have 4 houses", () => {
@@ -237,7 +237,7 @@ describe("Rule 5: Hotel purchase requires all group at 4 houses", () => {
     state = withHouses(state, 3, 4);
     const result = canBuyHotel({ ownerships: state.ownerships, bankHotels: 0 }, 1, state.players[0]);
     expect(result.ok).toBe(false);
-    expect(result.reason).toMatch(/no hotels available/i);
+    expect(!result.ok && result.reason).toMatch(/no hotels available/i);
   });
 });
 
@@ -271,7 +271,7 @@ describe("Rule 7: Hotel downgrade bank supply check", () => {
     };
     const result = canSellHotel({ ownerships: state.ownerships, bankHouses: 3 }, 1, state.players[0]);
     expect(result.ok).toBe(false);
-    expect(result.reason).toMatch(/4 available/i);
+    expect(!result.ok && result.reason).toMatch(/4 available/i);
   });
 
   it("canSellHotel succeeds when bank has exactly 4 houses", () => {
@@ -304,7 +304,7 @@ describe("Rule 8: Mortgaging property", () => {
     state = withHouses(state, 1, 1);
     const result = canMortgageProperty({ ownerships: state.ownerships }, 1, state.players[0]);
     expect(result.ok).toBe(false);
-    expect(result.reason).toMatch(/improvements/i);
+    expect(!result.ok && result.reason).toMatch(/improvements/i);
   });
 
   it("canMortgageProperty fails when sibling has improvements", () => {
@@ -319,7 +319,7 @@ describe("Rule 8: Mortgaging property", () => {
     state = withMortgage(state, 1);
     const result = canMortgageProperty({ ownerships: state.ownerships }, 1, state.players[0]);
     expect(result.ok).toBe(false);
-    expect(result.reason).toMatch(/already mortgaged/i);
+    expect(!result.ok && result.reason).toMatch(/already mortgaged/i);
   });
 });
 
@@ -344,7 +344,7 @@ describe("Rule 9: Unmortgaging with 10% fee", () => {
     state = withCash(state, 10); // not enough
     const result = canUnmortgageProperty({ ownerships: state.ownerships }, 1, state.players[0]);
     expect(result.ok).toBe(false);
-    expect(result.reason).toMatch(/insufficient/i);
+    expect(!result.ok && result.reason).toMatch(/insufficient/i);
   });
 });
 

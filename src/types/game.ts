@@ -1,6 +1,8 @@
 import type { CardDefinition } from "@/data/cards";
 import type { Player } from "@/types/player";
 
+export type GameMode = "normal" | "auction";
+
 export type GameRules = {
   doubleRentOnFullSet: boolean;
   freeParkingCash: boolean;
@@ -9,6 +11,7 @@ export type GameRules = {
   mortgages: boolean;
   evenBuild: boolean;
   exactGoBonus: boolean;
+  gameMode: GameMode;
 };
 
 export const DEFAULT_RULES: GameRules = {
@@ -19,6 +22,7 @@ export const DEFAULT_RULES: GameRules = {
   mortgages: true,
   evenBuild: true,
   exactGoBonus: true,
+  gameMode: "normal",
 };
 
 export type GamePhase =

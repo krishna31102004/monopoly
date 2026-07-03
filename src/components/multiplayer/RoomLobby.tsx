@@ -114,19 +114,86 @@ export function RoomLobby({ room, myPlayerId, onStartGame, onLeave, error }: Pro
           </div>
         </div>
 
-        {/* House Rules */}
+        {/* Game Mode + House Rules */}
         <div className="mb-4">
-          {/* Adapt GameRulesPanel dark style for lobby */}
           <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-900">
+            {/* Game Mode */}
             <div className="border-b border-slate-800 px-5 py-4">
+              <h2 className="text-base font-black text-white">Game Mode</h2>
+              <p className="text-xs font-semibold text-slate-500">
+                {isHost ? "Choose how property landings work." : "Mode set by the host."}
+              </p>
+            </div>
+            <div className="divide-y divide-slate-800">
+              {(
+                [
+                  { value: "normal" as const, label: "Normal Game", description: "Classic purchase rules." },
+                  { value: "auction" as const, label: "Auction Game", description: "Every unowned property goes directly to auction. Free Parking capped at $500." },
+                ] as const
+              ).map((mode) => {
+                const isSelected = rules.gameMode === mode.value;
+                return (
+                  <div
+                    key={mode.value}
+                    className={[
+                      "flex items-center gap-4 px-5 py-3",
+                      isHost ? "cursor-pointer hover:bg-slate-800/50" : "",
+                      isSelected ? "bg-slate-800/30" : "",
+                    ].join(" ")}
+                    onClick={() => {
+                      if (!isHost) return;
+                      setRules((r) => ({ ...r, gameMode: mode.value }));
+                    }}
+                    role={isHost ? "radio" : undefined}
+                    aria-checked={isSelected}
+                    tabIndex={isHost ? 0 : undefined}
+                    onKeyDown={
+                      isHost
+                        ? (e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setRules((r) => ({ ...r, gameMode: mode.value }));
+                            }
+                          }
+                        : undefined
+                    }
+                  >
+                    <span
+                      className={[
+                        "relative inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                        isSelected ? "border-emerald-500 bg-emerald-500" : "border-slate-600 bg-transparent",
+                        !isHost ? "opacity-70" : "",
+                      ].join(" ")}
+                      aria-hidden="true"
+                    >
+                      {isSelected && <span className="inline-block h-2 w-2 rounded-full bg-white" />}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-slate-300">{mode.label}</p>
+                      <p className="text-xs text-slate-500">{mode.description}</p>
+                    </div>
+                    {isSelected && (
+                      <span className="shrink-0 rounded-full bg-emerald-900 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-emerald-400">
+                        Selected
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* House Rules */}
+            <div className="border-t border-slate-800 px-5 py-4">
               <h2 className="text-base font-black text-white">House Rules</h2>
               <p className="text-xs font-semibold text-slate-500">
                 {isHost ? "Toggle rules before starting." : "Rules set by the host."}
               </p>
             </div>
             <div className="divide-y divide-slate-800">
-              {(Object.keys(rules) as (keyof GameRules)[]).map((key) => {
-                const labelMap: Record<keyof GameRules, string> = {
+              {(Object.keys(rules) as (keyof GameRules)[])
+                .filter((key) => key !== "gameMode")
+                .map((key) => {
+                const labelMap: Partial<Record<keyof GameRules, string>> = {
                   doubleRentOnFullSet: "Double Rent on Full Set",
                   freeParkingCash: "Free Parking Jackpot",
                   auctions: "Auctions",
@@ -135,7 +202,7 @@ export function RoomLobby({ room, myPlayerId, onStartGame, onLeave, error }: Pro
                   evenBuild: "Even Build Rule",
                   exactGoBonus: "Exact GO Bonus",
                 };
-                const isOn = rules[key];
+                const isOn = rules[key] as boolean;
                 return (
                   <div
                     key={key}
@@ -177,7 +244,7 @@ export function RoomLobby({ room, myPlayerId, onStartGame, onLeave, error }: Pro
                       />
                     </span>
                     <span className="flex-1 text-sm font-semibold text-slate-300">
-                      {labelMap[key]}
+                      {labelMap[key] ?? key}
                     </span>
                     <span
                       className={[

@@ -24,6 +24,7 @@ describe("DEFAULT_RULES", () => {
       mortgages: true,
       evenBuild: true,
       exactGoBonus: true,
+      gameMode: "normal",
     });
   });
 

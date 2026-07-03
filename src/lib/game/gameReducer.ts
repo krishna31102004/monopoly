@@ -18,6 +18,7 @@ import {
 import { validateTrade } from "@/lib/game/trade";
 import { AUCTION_TURN_MS } from "@/lib/animation/timing";
 import { getGoAward, getGoAwardLogMessage } from "@/lib/game/goSalary";
+import { startPropertyAuction, applyAuctionGameIntercept } from "@/lib/game/auctionHelpers";
 import type { AuctionState, BankruptcyCreditor, GameAction, GamePhase, GameState, LandingAction } from "@/types/game";
 
 const AUCTION_STARTING_BID = 10;
@@ -221,6 +222,18 @@ function phaseAfterPurchaseDecision(state: GameState) {
   return state.diceRoll?.isDouble ? "readyToRoll" : "turnComplete";
 }
 
+/** Cap-aware helper for updating the Free Parking pot. Negative deltas (collections) apply directly; positive additions are capped at $500 in Auction Game. */
+function addToFreeParkingPot(state: GameState, delta: number): number {
+  if (delta === 0) return state.freeParkingPot;
+  // Negative delta = player is collecting the pot — always apply directly
+  if (delta < 0) return state.freeParkingPot + delta;
+  // Positive delta = money being added to pot
+  if (state.rules.gameMode === "auction") {
+    return Math.min(500, state.freeParkingPot + delta);
+  }
+  return state.freeParkingPot + delta;
+}
+
 function applyLandingResolution(
   base: GameState,
   resolution: ReturnType<typeof resolveLanding>,
@@ -236,8 +249,19 @@ function applyLandingResolution(
     landingMessage: resolution.landingMessage,
     landingAction: resolution.landingAction,
     gameLog: resolution.gameLog,
-    freeParkingPot: base.freeParkingPot + potDelta,
+    freeParkingPot: addToFreeParkingPot(base, potDelta),
   };
+
+  // Auction Game: immediately start auction when landing on unowned ownable property
+  const spaceIndex = resolution.landingAction?.kind === "purchaseDecision"
+    ? resolution.landingAction.spaceIndex
+    : undefined;
+  const auctionIntercepted = applyAuctionGameIntercept(
+    { ...base, players: resolution.players, gameLog: resolution.gameLog, doublesCount: resolution.doublesCount },
+    resolution.phase,
+    spaceIndex,
+  );
+  if (auctionIntercepted) return auctionIntercepted;
 
   if (landedSpaceKind === "chance") {
     finalState = drawAndApplyCard(finalState, "chance", rolledDouble);
@@ -545,6 +569,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case "BUY_PROPERTY": {
       if (state.phase !== "awaitingPurchaseDecision" || !state.landingAction) return state;
+      // Auction Game: purchase decision never enters this phase; reject as a safety guard
+      if (state.rules.gameMode === "auction") return state;
 
       const space = getBoardSpaceByIndex(state.landingAction.spaceIndex);
       if (!isOwnableSpace(space)) return state;
@@ -608,28 +634,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       }
 
       const declineMessage = `${currentPlayer.name} declined to buy ${space.name}. Auction started.`;
-      const activePlayerIds = state.players.filter((p) => !p.isBankrupt).map((p) => p.id);
-      const now = Date.now();
-      const auction: AuctionState = {
-        propertySpaceIndex: space.index,
-        activePlayerIds,
-        passedPlayerIds: [],
-        currentBid: 0,
-        highestBidderId: null,
-        currentBidderIndex: 0,
-        turnStartedAt: now,
-        turnDeadlineAt: now + AUCTION_TURN_MS,
-        status: "active",
-      };
-
-      return {
-        ...state,
-        phase: "auction",
-        auction,
-        landingAction: { kind: "message", spaceIndex: space.index, message: declineMessage },
-        landingMessage: declineMessage,
-        gameLog: addLogEntry(state.gameLog, declineMessage),
-      };
+      return startPropertyAuction(state, space.index, declineMessage);
     }
 
     case "PLACE_BID": {

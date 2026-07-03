@@ -128,6 +128,10 @@ export function deserializeGame(json: string): GameState | null {
     if (typeof state.rules.exactGoBonus !== "boolean") {
       (state as GameState).rules = { ...state.rules, exactGoBonus: true };
     }
+    // gameMode added in Phase 4I — default "normal" for old saves
+    if (typeof state.rules.gameMode !== "string") {
+      (state as GameState).rules = { ...state.rules, gameMode: "normal" };
+    }
     // forfeitAuctionQueue and turnDeadlineAt added later
     if (!Array.isArray((state as GameState).forfeitAuctionQueue)) {
       (state as GameState).forfeitAuctionQueue = [];

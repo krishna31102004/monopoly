@@ -5,8 +5,51 @@ import { moveAroundBoard } from "@/lib/game/movement";
 import { checkBankruptcy } from "@/lib/game/bankruptcy";
 import { getGoAward, getGoAwardLogMessage } from "@/lib/game/goSalary";
 import { getBoardSpaceByIndex } from "@/data/board";
+import { applyAuctionGameIntercept } from "@/lib/game/auctionHelpers";
 import type { DrawnCard, GameState } from "@/types/game";
 import type { Player } from "@/types/player";
+
+/**
+ * Apply a landing resolution from a card movement to the state.
+ * Checks for Auction Game intercept (unowned ownable → immediate auction).
+ */
+function applyCardLandingResolution(
+  stateAfterMove: GameState,
+  resolution: ReturnType<typeof resolveLanding>,
+): GameState {
+  if (resolution.debtPending) {
+    return enterDebtPendingFromCard(
+      {
+        ...stateAfterMove,
+        players: resolution.players,
+        phase: resolution.phase,
+        doublesCount: resolution.doublesCount,
+        landingMessage: resolution.landingMessage,
+        landingAction: resolution.landingAction,
+        gameLog: resolution.gameLog,
+      },
+      resolution.debtPending,
+    );
+  }
+  const spaceIndex = resolution.landingAction?.kind === "purchaseDecision"
+    ? resolution.landingAction.spaceIndex
+    : undefined;
+  const intercepted = applyAuctionGameIntercept(
+    { ...stateAfterMove, players: resolution.players, gameLog: resolution.gameLog, doublesCount: resolution.doublesCount },
+    resolution.phase,
+    spaceIndex,
+  );
+  if (intercepted) return intercepted;
+  return {
+    ...stateAfterMove,
+    players: resolution.players,
+    phase: resolution.phase,
+    doublesCount: resolution.doublesCount,
+    landingMessage: resolution.landingMessage,
+    landingAction: resolution.landingAction,
+    gameLog: resolution.gameLog,
+  };
+}
 
 /** Mirrors gameReducer's debt-pending entry so card-driven payments also defer bankruptcy without going negative. */
 function enterDebtPendingFromCard(state: GameState, debt: DebtPending): GameState {
@@ -172,19 +215,7 @@ function applyCardEffect(
         return { state: finalState, resolvedMessage: noChainMsg };
       }
       const resolution = resolveLanding(stateAfterMove, targetSpace, rolledDouble);
-      const finalState: GameState = {
-        ...stateAfterMove,
-        players: resolution.players,
-        phase: resolution.phase,
-        doublesCount: resolution.doublesCount,
-        landingMessage: resolution.landingMessage,
-        landingAction: resolution.landingAction,
-        gameLog: resolution.gameLog,
-      };
-      return {
-        state: resolution.debtPending ? enterDebtPendingFromCard(finalState, resolution.debtPending) : finalState,
-        resolvedMessage: msg,
-      };
+      return { state: applyCardLandingResolution(stateAfterMove, resolution), resolvedMessage: msg };
     }
 
     case "advance-nearest-airport": {
@@ -207,19 +238,7 @@ function applyCardEffect(
       };
       const targetSpace = getBoardSpaceByIndex(target);
       const resolution = resolveLanding(stateAfterMove, targetSpace, rolledDouble, { kind: "double" });
-      const finalState: GameState = {
-        ...stateAfterMove,
-        players: resolution.players,
-        phase: resolution.phase,
-        doublesCount: resolution.doublesCount,
-        landingMessage: resolution.landingMessage,
-        landingAction: resolution.landingAction,
-        gameLog: resolution.gameLog,
-      };
-      return {
-        state: resolution.debtPending ? enterDebtPendingFromCard(finalState, resolution.debtPending) : finalState,
-        resolvedMessage: msg,
-      };
+      return { state: applyCardLandingResolution(stateAfterMove, resolution), resolvedMessage: msg };
     }
 
     case "advance-nearest-utility": {
@@ -245,19 +264,7 @@ function applyCardEffect(
         kind: "fixedUtilityMultiplier",
         multiplier: 10,
       });
-      const finalState: GameState = {
-        ...stateAfterMove,
-        players: resolution.players,
-        phase: resolution.phase,
-        doublesCount: resolution.doublesCount,
-        landingMessage: resolution.landingMessage,
-        landingAction: resolution.landingAction,
-        gameLog: resolution.gameLog,
-      };
-      return {
-        state: resolution.debtPending ? enterDebtPendingFromCard(finalState, resolution.debtPending) : finalState,
-        resolvedMessage: msg,
-      };
+      return { state: applyCardLandingResolution(stateAfterMove, resolution), resolvedMessage: msg };
     }
 
     case "go-back-3": {
@@ -295,19 +302,7 @@ function applyCardEffect(
         return { state: chainedState, resolvedMessage: chainMsg };
       }
       const resolution = resolveLanding(stateAfterMove, targetSpace, rolledDouble);
-      const finalState: GameState = {
-        ...stateAfterMove,
-        players: resolution.players,
-        phase: resolution.phase,
-        doublesCount: resolution.doublesCount,
-        landingMessage: resolution.landingMessage,
-        landingAction: resolution.landingAction,
-        gameLog: resolution.gameLog,
-      };
-      return {
-        state: resolution.debtPending ? enterDebtPendingFromCard(finalState, resolution.debtPending) : finalState,
-        resolvedMessage: msg,
-      };
+      return { state: applyCardLandingResolution(stateAfterMove, resolution), resolvedMessage: msg };
     }
 
     case "go-to-jail": {
@@ -381,8 +376,12 @@ function applyCardEffect(
         return { state: debtState, resolvedMessage: msg };
       }
       log = addLogEntry(log, msg);
-      // freeParkingCash rule: bank payments from cards go into the pot
-      const newPot = state.rules.freeParkingCash ? state.freeParkingPot + amount : state.freeParkingPot;
+      // freeParkingCash rule: bank payments from cards go into the pot (Auction Game caps at $500)
+      const newPot = state.rules.freeParkingCash
+        ? state.rules.gameMode === "auction"
+          ? Math.min(500, state.freeParkingPot + amount)
+          : state.freeParkingPot + amount
+        : state.freeParkingPot;
       const nextPlayers = state.players.map((p, i) =>
         i === state.currentPlayerIndex ? { ...p, cash: p.cash - amount } : p,
       );

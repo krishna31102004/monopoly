@@ -1,8 +1,10 @@
 "use client";
 
-import type { GameRules } from "@/types/game";
+import type { GameMode, GameRules } from "@/types/game";
 
-const RULE_LABELS: Record<keyof GameRules, { label: string; description: string }> = {
+type BooleanRuleKey = Exclude<keyof GameRules, "gameMode">;
+
+const RULE_LABELS: Record<BooleanRuleKey, { label: string; description: string }> = {
   doubleRentOnFullSet: {
     label: "Double Rent on Full Set",
     description: "Owner collects 2× base rent when they own all properties in a colour group.",
@@ -33,6 +35,19 @@ const RULE_LABELS: Record<keyof GameRules, { label: string; description: string 
   },
 };
 
+const GAME_MODES: { value: GameMode; label: string; description: string }[] = [
+  {
+    value: "normal",
+    label: "Normal Game",
+    description: "Classic purchase rules. Land on unowned property to buy or decline.",
+  },
+  {
+    value: "auction",
+    label: "Auction Game",
+    description: "Every unowned property goes directly to auction. Free Parking is capped at $500.",
+  },
+];
+
 type GameRulesPanelProps = {
   rules: GameRules;
   onChange: (rules: GameRules) => void;
@@ -40,14 +55,83 @@ type GameRulesPanelProps = {
 };
 
 export function GameRulesPanel({ rules, onChange, readOnly = false }: GameRulesPanelProps) {
-  function toggle(key: keyof GameRules) {
+  function toggle(key: BooleanRuleKey) {
     if (readOnly) return;
     onChange({ ...rules, [key]: !rules[key] });
   }
 
+  function setGameMode(mode: GameMode) {
+    if (readOnly) return;
+    onChange({ ...rules, gameMode: mode });
+  }
+
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
+      {/* Game Mode selector */}
       <div className="border-b border-slate-100 px-5 py-4">
+        <h2 className="text-lg font-black text-slate-950">Game Mode</h2>
+        <p className="text-sm font-semibold text-slate-500">
+          {readOnly ? "Mode set by the host." : "Choose how property landings work."}
+        </p>
+      </div>
+      <div className="divide-y divide-slate-100">
+        {GAME_MODES.map((mode) => {
+          const isSelected = rules.gameMode === mode.value;
+          return (
+            <div
+              key={mode.value}
+              className={[
+                "flex items-start gap-4 px-5 py-4",
+                readOnly ? "" : "cursor-pointer hover:bg-slate-50",
+                isSelected ? "bg-slate-50" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              onClick={() => setGameMode(mode.value)}
+              role={readOnly ? undefined : "radio"}
+              aria-checked={isSelected}
+              tabIndex={readOnly ? undefined : 0}
+              onKeyDown={
+                readOnly
+                  ? undefined
+                  : (e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setGameMode(mode.value);
+                      }
+                    }
+              }
+            >
+              {/* Radio indicator */}
+              <span
+                className={[
+                  "relative mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                  isSelected
+                    ? "border-emerald-500 bg-emerald-500"
+                    : "border-slate-300 bg-white",
+                ].join(" ")}
+                aria-hidden="true"
+              >
+                {isSelected && (
+                  <span className="inline-block h-2 w-2 rounded-full bg-white" />
+                )}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-slate-950">{mode.label}</p>
+                <p className="text-xs font-semibold text-slate-500">{mode.description}</p>
+              </div>
+              {isSelected && (
+                <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-emerald-700">
+                  Selected
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* House Rules toggles */}
+      <div className="border-t border-slate-100 px-5 py-4">
         <h2 className="text-lg font-black text-slate-950">House Rules</h2>
         <p className="text-sm font-semibold text-slate-500">
           {readOnly ? "Rules set by the host." : "Toggle optional rules before starting."}
@@ -55,9 +139,9 @@ export function GameRulesPanel({ rules, onChange, readOnly = false }: GameRulesP
       </div>
 
       <div className="divide-y divide-slate-100">
-        {(Object.keys(RULE_LABELS) as (keyof GameRules)[]).map((key) => {
+        {(Object.keys(RULE_LABELS) as BooleanRuleKey[]).map((key) => {
           const { label, description } = RULE_LABELS[key];
-          const isOn = rules[key];
+          const isOn = rules[key] as boolean;
           return (
             <div
               key={key}
