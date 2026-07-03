@@ -275,7 +275,8 @@ function applyCardEffect(
         landingAction: null,
       };
       const targetSpace = getBoardSpaceByIndex(target);
-      if (targetSpace.kind === "chance" || targetSpace.kind === "community-chest") {
+      if (targetSpace.kind === "chance") {
+        // Don't draw from the same deck — would risk recursive Chance draws.
         const noChainMsg = `${currentPlayer.name} landed on ${targetSpace.name} via card. No further draw.`;
         const finalLog = addLogEntry(stateAfterMove.gameLog, noChainMsg);
         const finalState: GameState = {
@@ -286,6 +287,12 @@ function applyCardEffect(
           landingAction: { kind: "message", spaceIndex: target, message: noChainMsg },
         };
         return { state: finalState, resolvedMessage: noChainMsg };
+      }
+      if (targetSpace.kind === "community-chest") {
+        // Safe cross-deck draw: go-back-3 is a Chance card landing on Community Chest.
+        const chainedState = drawAndApplyCard(stateAfterMove, "community-chest", rolledDouble);
+        const chainMsg = `${currentPlayer.name} moved back 3 spaces to ${targetSpace.name} and drew a Community Chest card.`;
+        return { state: chainedState, resolvedMessage: chainMsg };
       }
       const resolution = resolveLanding(stateAfterMove, targetSpace, rolledDouble);
       const finalState: GameState = {

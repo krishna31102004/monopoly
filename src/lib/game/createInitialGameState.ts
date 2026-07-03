@@ -63,6 +63,7 @@ export function createInitialGameState(players: StartGamePlayer[], rules?: GameR
     jailTurns: 0,
     getOutOfJailFreeCards: 0,
     isBankrupt: false,
+    consecutiveTurnTimeouts: 0,
   }));
 
   return {

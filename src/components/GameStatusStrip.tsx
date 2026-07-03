@@ -73,6 +73,12 @@ export function GameStatusStrip({ onSync, onLeave, onForfeit, ...params }: GameS
         {countdown !== null && params.state.phase !== "gameOver" && params.state.phase !== "setup" ? (
           <span className={`font-mono text-xs font-bold tabular-nums ${countdownWarning ? "text-red-600" : "text-slate-400"}`}>
             {countdown}
+            {(() => {
+              const cp = params.state.players[params.state.currentPlayerIndex];
+              return cp && cp.consecutiveTurnTimeouts > 0
+                ? <span className="ml-1 text-red-500">({cp.consecutiveTurnTimeouts}/3)</span>
+                : null;
+            })()}
           </span>
         ) : null}
 

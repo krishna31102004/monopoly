@@ -14,6 +14,7 @@ export const samplePlayers: Player[] = [
     ownedUtilityIds: [],
     isInJail: false, jailTurns: 0, getOutOfJailFreeCards: 0,
     isBankrupt: false,
+    consecutiveTurnTimeouts: 0,
   },
   {
     id: "player-2",
@@ -28,6 +29,7 @@ export const samplePlayers: Player[] = [
     ownedUtilityIds: [12],
     isInJail: false, jailTurns: 0, getOutOfJailFreeCards: 1,
     isBankrupt: false,
+    consecutiveTurnTimeouts: 0,
   },
   {
     id: "player-3",
@@ -44,6 +46,7 @@ export const samplePlayers: Player[] = [
     jailTurns: 0,
     getOutOfJailFreeCards: 0,
     isBankrupt: false,
+    consecutiveTurnTimeouts: 0,
   },
   {
     id: "player-4",
@@ -58,6 +61,7 @@ export const samplePlayers: Player[] = [
     ownedUtilityIds: [28],
     isInJail: false, jailTurns: 0, getOutOfJailFreeCards: 0,
     isBankrupt: false,
+    consecutiveTurnTimeouts: 0,
   },
   {
     id: "player-5",
@@ -72,6 +76,7 @@ export const samplePlayers: Player[] = [
     ownedUtilityIds: [],
     isInJail: false, jailTurns: 0, getOutOfJailFreeCards: 0,
     isBankrupt: false,
+    consecutiveTurnTimeouts: 0,
   },
   {
     id: "player-6",
@@ -86,5 +91,6 @@ export const samplePlayers: Player[] = [
     ownedUtilityIds: [],
     isInJail: false, jailTurns: 0, getOutOfJailFreeCards: 0,
     isBankrupt: false,
+    consecutiveTurnTimeouts: 0,
   },
 ];

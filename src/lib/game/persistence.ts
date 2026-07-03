@@ -135,6 +135,12 @@ export function deserializeGame(json: string): GameState | null {
     if (!("turnDeadlineAt" in (state as GameState))) {
       (state as GameState).turnDeadlineAt = null;
     }
+    // consecutiveTurnTimeouts added later — default 0 per player
+    for (const p of (state as GameState).players) {
+      if (typeof (p as Record<string, unknown>).consecutiveTurnTimeouts !== "number") {
+        (p as Record<string, unknown>).consecutiveTurnTimeouts = 0;
+      }
+    }
     return state;
   } catch {
     return null;

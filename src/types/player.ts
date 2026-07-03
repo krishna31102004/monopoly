@@ -15,4 +15,5 @@ export type Player = {
   jailTurns: number;
   getOutOfJailFreeCards: number;
   isBankrupt: boolean;
+  consecutiveTurnTimeouts: number;
 };

@@ -90,16 +90,18 @@ function scheduleTurnTimer(roomCode: string, gameState: GameState): void {
   const timer = setTimeout(() => {
     const latest = rooms.getGameState(roomCode);
     if (!latest || latest.turnDeadlineAt !== deadlineAt) return;
-    // Only auto-end when it's safe — player has already rolled and can end turn
-    if (latest.phase !== "turnComplete") return;
     const currentPlayer = latest.players[latest.currentPlayerIndex];
     if (!currentPlayer) return;
-    const result = rooms.applyGameAction(roomCode, currentPlayer.id, { type: "END_TURN" }, null);
+    const result = rooms.applyGameAction(roomCode, currentPlayer.id, {
+      type: "TURN_TIMER_EXPIRED",
+      playerId: currentPlayer.id,
+      deadlineAt,
+    }, null);
     if (result.ok) {
       io.to(roomCode).emit("game:state", { gameState: result.value });
       scheduleAuctionTimer(roomCode, result.value);
       scheduleTurnTimer(roomCode, result.value);
-      console.log(`[turn] auto-ended turn for ${currentPlayer.id} in ${roomCode} (timeout)`);
+      console.log(`[turn] timer expired for ${currentPlayer.id} in ${roomCode}`);
     }
   }, delay);
 
@@ -353,7 +355,7 @@ io.on("connection", (socket) => {
         socket.emit("game:error", { message: "Not in a room." });
         return;
       }
-      const result = rooms.applyGameAction(roomCode, playerId, { type: "VOLUNTARY_BANKRUPTCY" }, null);
+      const result = rooms.applyGameAction(roomCode, playerId, { type: "VOLUNTARY_BANKRUPTCY", actorPlayerId: playerId }, null);
       if (!result.ok) {
         socket.emit("game:error", { message: result.error });
         return;

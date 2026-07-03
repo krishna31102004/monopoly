@@ -36,6 +36,59 @@ function creditorFromLandingAction(action: LandingAction | null): BankruptcyCred
   return { type: "bank" };
 }
 
+function applyVoluntaryBankruptcy(state: GameState, forfeiter: import("@/types/player").Player): GameState {
+  const allProps = [
+    ...forfeiter.ownedCityIds,
+    ...forfeiter.ownedAirportIds,
+    ...forfeiter.ownedUtilityIds,
+  ];
+
+  let nextChanceDeck = state.chanceDeck;
+  for (let i = 0; i < forfeiter.getOutOfJailFreeCards; i++) {
+    nextChanceDeck = [...nextChanceDeck, "chance-8"];
+  }
+
+  const nextPlayers = state.players.map((p) =>
+    p.id !== forfeiter.id
+      ? p
+      : { ...p, cash: 0, isBankrupt: true, getOutOfJailFreeCards: 0, ownedCityIds: [], ownedAirportIds: [], ownedUtilityIds: [] },
+  );
+
+  const nextOwnerships = state.ownerships.map((o) =>
+    allProps.includes(o.spaceIndex)
+      ? { ...o, ownerId: null, isMortgaged: false, houses: 0, hasHotel: false }
+      : o,
+  );
+
+  const msg = `${forfeiter.name} declared bankruptcy. Their properties will be auctioned.`;
+  const stateAfterForfeit: GameState = {
+    ...state,
+    players: nextPlayers,
+    ownerships: nextOwnerships,
+    chanceDeck: nextChanceDeck,
+    trade: null,
+    bankruptcy: null,
+    gameLog: addLogEntry(state.gameLog, msg),
+  };
+
+  const activePlayers = stateAfterForfeit.players.filter((p) => !p.isBankrupt);
+  if (activePlayers.length === 1) {
+    const winner = activePlayers[0];
+    return {
+      ...stateAfterForfeit,
+      phase: "gameOver",
+      winnerId: winner.id,
+      forfeitAuctionQueue: [],
+      gameLog: addLogEntry(stateAfterForfeit.gameLog, `${winner.name} wins the game!`),
+    };
+  }
+
+  if (allProps.length > 0) {
+    return startForfeitAuction(stateAfterForfeit, allProps);
+  }
+  return withNextTurn(stateAfterForfeit);
+}
+
 function startForfeitAuction(state: GameState, queue: number[]): GameState {
   const [spaceIndex, ...remaining] = queue;
   const activePlayers = state.players.filter((p) => !p.isBankrupt);
@@ -678,7 +731,14 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case "END_TURN": {
       if (state.phase !== "turnComplete" || !state.currentPlayerHasRolled) return state;
       const currentPlayer = state.players[state.currentPlayerIndex];
-      return withNextTurn(state, `${currentPlayer.name}'s turn ended.`);
+      // Reset consecutive timeout count on a successful (player-initiated) turn completion.
+      const stateResetTimeout = {
+        ...state,
+        players: state.players.map((p, i) =>
+          i === state.currentPlayerIndex ? { ...p, consecutiveTurnTimeouts: 0 } : p,
+        ),
+      };
+      return withNextTurn(stateResetTimeout, `${currentPlayer.name}'s turn ended.`);
     }
 
     case "BUY_HOUSE": {
@@ -1193,75 +1253,78 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return withNextTurn(stateAfterBankruptcy);
     }
 
-    case "VOLUNTARY_BANKRUPTCY": {
-      // Any active player may forfeit on their own accord (not during another player's bankruptcyPending)
-      const phases: GamePhase[] = ["readyToRoll", "awaitingJailDecision", "awaitingPurchaseDecision", "turnComplete"];
-      if (!phases.includes(state.phase as GamePhase)) return state;
+    case "TURN_TIMER_EXPIRED": {
+      // Ignore if game is in a phase that manages its own timing
+      const blockedPhases: GamePhase[] = ["gameOver", "setup", "auction", "bankruptcyPending"];
+      if (blockedPhases.includes(state.phase as GamePhase)) return state;
 
-      const forfeiter = state.players[state.currentPlayerIndex];
-      if (!forfeiter || forfeiter.isBankrupt) return state;
+      const currentPlayer = state.players[state.currentPlayerIndex];
+      if (!currentPlayer || currentPlayer.id !== action.playerId) return state;
+      if (state.turnDeadlineAt !== action.deadlineAt) return state;
 
-      const allProps = [
-        ...forfeiter.ownedCityIds,
-        ...forfeiter.ownedAirportIds,
-        ...forfeiter.ownedUtilityIds,
-      ];
-
-      // Return GOJF cards to chance deck
-      let nextChanceDeck = state.chanceDeck;
-      for (let i = 0; i < forfeiter.getOutOfJailFreeCards; i++) {
-        nextChanceDeck = [...nextChanceDeck, "chance-8"];
-      }
-
-      const nextPlayers = state.players.map((p) => {
-        if (p.id !== forfeiter.id) return p;
-        return {
-          ...p,
-          cash: 0,
-          isBankrupt: true,
-          getOutOfJailFreeCards: 0,
-          ownedCityIds: [],
-          ownedAirportIds: [],
-          ownedUtilityIds: [],
-        };
-      });
-
-      const nextOwnerships = state.ownerships.map((o) =>
-        allProps.includes(o.spaceIndex)
-          ? { ...o, ownerId: null, isMortgaged: false, houses: 0, hasHotel: false }
-          : o,
-      );
-
-      const msg = `${forfeiter.name} declared bankruptcy. Their properties will be auctioned.`;
-      const stateAfterForfeit: GameState = {
+      const newTimeouts = currentPlayer.consecutiveTurnTimeouts + 1;
+      const timeoutLog = `${currentPlayer.name}'s turn timed out (${newTimeouts}/3 consecutive timeouts).`;
+      const stateWithTimeout: GameState = {
         ...state,
-        players: nextPlayers,
-        ownerships: nextOwnerships,
-        chanceDeck: nextChanceDeck,
-        trade: null,
-        bankruptcy: null,
-        gameLog: addLogEntry(state.gameLog, msg),
+        players: state.players.map((p, i) =>
+          i === state.currentPlayerIndex ? { ...p, consecutiveTurnTimeouts: newTimeouts } : p,
+        ),
+        gameLog: addLogEntry(state.gameLog, timeoutLog),
       };
 
-      // Check for winner
-      const activePlayers = stateAfterForfeit.players.filter((p) => !p.isBankrupt);
-      if (activePlayers.length === 1) {
-        const winner = activePlayers[0];
-        const winMsg = `${winner.name} wins the game!`;
-        return {
-          ...stateAfterForfeit,
-          phase: "gameOver",
-          winnerId: winner.id,
-          forfeitAuctionQueue: [],
-          gameLog: addLogEntry(stateAfterForfeit.gameLog, winMsg),
-        };
+      if (newTimeouts >= 3) {
+        const autoBankruptLog = `${currentPlayer.name} auto-bankrupted after 3 consecutive turn timeouts.`;
+        return applyVoluntaryBankruptcy(
+          { ...stateWithTimeout, gameLog: addLogEntry(stateWithTimeout.gameLog, autoBankruptLog) },
+          stateWithTimeout.players[state.currentPlayerIndex],
+        );
       }
 
-      // Start forfeit auctions if player had properties; otherwise advance turn
-      if (allProps.length > 0) {
-        return startForfeitAuction(stateAfterForfeit, allProps);
+      // Auto-decline a pending purchase decision so the property returns to the pool
+      if (state.phase === "awaitingPurchaseDecision" && state.landingAction) {
+        const space = getBoardSpaceByIndex(state.landingAction.spaceIndex);
+        if (isOwnableSpace(space)) {
+          if (!stateWithTimeout.rules.auctions) {
+            const phaseAfter = phaseAfterPurchaseDecision(stateWithTimeout);
+            return {
+              ...stateWithTimeout,
+              phase: phaseAfter,
+              landingAction: { kind: "message", spaceIndex: space.index, message: timeoutLog },
+              landingMessage: timeoutLog,
+            };
+          }
+          const activePlayerIds = stateWithTimeout.players.filter((p) => !p.isBankrupt).map((p) => p.id);
+          const now = Date.now();
+          return {
+            ...stateWithTimeout,
+            phase: "auction",
+            auction: {
+              propertySpaceIndex: space.index,
+              activePlayerIds,
+              passedPlayerIds: [],
+              currentBid: 0,
+              highestBidderId: null,
+              currentBidderIndex: 0,
+              turnStartedAt: now,
+              turnDeadlineAt: now + AUCTION_TURN_MS,
+              status: "active",
+            },
+          };
+        }
       }
-      return withNextTurn(stateAfterForfeit);
+
+      return withNextTurn(stateWithTimeout);
+    }
+
+    case "VOLUNTARY_BANKRUPTCY": {
+      // Any active player may forfeit on their own accord (not during auction/bankruptcy/gameOver)
+      const allowedPhases: GamePhase[] = ["readyToRoll", "awaitingJailDecision", "awaitingPurchaseDecision", "turnComplete"];
+      if (!allowedPhases.includes(state.phase as GamePhase)) return state;
+
+      const forfeiter = state.players.find((p) => p.id === action.actorPlayerId);
+      if (!forfeiter || forfeiter.isBankrupt) return state;
+
+      return applyVoluntaryBankruptcy(state, forfeiter);
     }
 
     case "RESET_GAME":

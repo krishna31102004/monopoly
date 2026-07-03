@@ -224,7 +224,8 @@ export type GameAction =
   | { type: "DECLINE_TRADE"; actorPlayerId: string }
   | { type: "CANCEL_TRADE"; actorPlayerId: string }
   | { type: "DECLARE_BANKRUPTCY" }
-  | { type: "VOLUNTARY_BANKRUPTCY" }
+  | { type: "VOLUNTARY_BANKRUPTCY"; actorPlayerId: string }
+  | { type: "TURN_TIMER_EXPIRED"; playerId: string; deadlineAt: number }
   | { type: "RESOLVE_BANKRUPTCY_IF_SOLVENT" }
   | { type: "RESET_GAME" }
   | { type: "LOAD_GAME"; state: GameState };

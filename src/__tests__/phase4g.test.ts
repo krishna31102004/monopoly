@@ -155,7 +155,7 @@ describe("VOLUNTARY_BANKRUPTCY", () => {
   it("marks current player as bankrupt (2-player ends game)", () => {
     let state = makeGameState(2);
     state = { ...state, phase: "readyToRoll" };
-    const next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY" });
+    const next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY", actorPlayerId: state.players[0].id });
     // In 2-player: forfeiting = immediate game over, but player still marked bankrupt
     expect(next.players[0].isBankrupt).toBe(true);
   });
@@ -165,7 +165,7 @@ describe("VOLUNTARY_BANKRUPTCY", () => {
     const p1 = state.players[0].id;
     state = withOwnership(state, 6, p1);
     state = { ...state, phase: "readyToRoll" };
-    const next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY" });
+    const next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY", actorPlayerId: state.players[0].id });
     expect(next.players[0].ownedCityIds).toEqual([]);
   });
 
@@ -173,7 +173,7 @@ describe("VOLUNTARY_BANKRUPTCY", () => {
     let state = makeGameState(3);
     state = withOwnership(state, 6, state.players[0].id);
     state = { ...state, phase: "readyToRoll" };
-    const next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY" });
+    const next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY", actorPlayerId: state.players[0].id });
     const o = next.ownerships.find((o) => o.spaceIndex === 6)!;
     expect(o.ownerId).toBeNull();
     expect(o.houses).toBe(0);
@@ -185,7 +185,7 @@ describe("VOLUNTARY_BANKRUPTCY", () => {
     let state = makeGameState(3);
     state = withOwnership(state, 6, state.players[0].id);
     state = { ...state, phase: "readyToRoll" };
-    const next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY" });
+    const next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY", actorPlayerId: state.players[0].id });
     expect(next.phase).toBe("auction");
     expect(next.auction?.propertySpaceIndex).toBe(6);
   });
@@ -195,7 +195,7 @@ describe("VOLUNTARY_BANKRUPTCY", () => {
     state = withOwnership(state, 6, state.players[0].id);
     state = withOwnership(state, 9, state.players[0].id);
     state = { ...state, phase: "readyToRoll" };
-    const next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY" });
+    const next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY", actorPlayerId: state.players[0].id });
     expect(next.phase).toBe("auction");
     // One in auction, one queued
     expect(next.forfeitAuctionQueue).toHaveLength(1);
@@ -204,7 +204,7 @@ describe("VOLUNTARY_BANKRUPTCY", () => {
   it("proceeds to next turn if forfeiting player has no properties (3-player)", () => {
     let state = makeGameState(3);
     state = { ...state, phase: "readyToRoll" };
-    const next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY" });
+    const next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY", actorPlayerId: state.players[0].id });
     // No properties → next turn (not game over since 2 remain)
     expect(["readyToRoll", "awaitingJailDecision"]).toContain(next.phase);
     expect(next.players[next.currentPlayerIndex].isBankrupt).toBe(false);
@@ -215,7 +215,7 @@ describe("VOLUNTARY_BANKRUPTCY", () => {
     let state = makeGameState(2);
     state = { ...state, phase: "readyToRoll" };
     const p2 = state.players[1].id;
-    const next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY" });
+    const next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY", actorPlayerId: state.players[0].id });
     expect(next.phase).toBe("gameOver");
     expect(next.winnerId).toBe(p2);
   });
@@ -223,14 +223,14 @@ describe("VOLUNTARY_BANKRUPTCY", () => {
   it("is rejected during bankruptcyPending phase", () => {
     let state = makeGameState(2);
     state = { ...state, phase: "bankruptcyPending" };
-    const next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY" });
+    const next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY", actorPlayerId: state.players[0].id });
     expect(next).toBe(state); // unchanged
   });
 
   it("is rejected during auction phase", () => {
     let state = makeGameState(2);
     state = { ...state, phase: "auction" };
-    const next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY" });
+    const next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY", actorPlayerId: state.players[0].id });
     expect(next).toBe(state);
   });
 
@@ -246,7 +246,7 @@ describe("VOLUNTARY_BANKRUPTCY", () => {
         offerFromRecipient: { cash: 0, propertySpaceIndices: [], getOutOfJailFreeCards: 0 },
       },
     };
-    const next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY" });
+    const next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY", actorPlayerId: state.players[0].id });
     expect(next.trade).toBeNull();
   });
 
@@ -261,7 +261,7 @@ describe("VOLUNTARY_BANKRUPTCY", () => {
       phase: "readyToRoll",
       players: state.players.map((p, i) => (i === 3 ? { ...p, isBankrupt: true } : p)),
     };
-    const next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY" });
+    const next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY", actorPlayerId: state.players[0].id });
     expect(next.phase).toBe("auction");
     // Forfeiter (p1, now bankrupt) and pre-bankrupt (p4) excluded from bidders
     expect(next.auction?.activePlayerIds).not.toContain(p1);
@@ -281,7 +281,7 @@ describe("Forfeit auction queue draining", () => {
     state = { ...state, phase: "readyToRoll" };
 
     // Forfeit → first auction starts
-    let next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY" });
+    let next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY", actorPlayerId: state.players[0].id });
     expect(next.phase).toBe("auction");
     const firstProp = next.auction!.propertySpaceIndex;
 
@@ -305,7 +305,7 @@ describe("Forfeit auction queue draining", () => {
     state = withOwnership(state, 6, state.players[0].id);
     state = { ...state, phase: "readyToRoll" };
 
-    let next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY" });
+    let next = gameReducer(state, { type: "VOLUNTARY_BANKRUPTCY", actorPlayerId: state.players[0].id });
     expect(next.phase).toBe("auction");
 
     // Both remaining players pass → no bids → property stays unowned, no queue left
