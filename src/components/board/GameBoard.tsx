@@ -1,13 +1,15 @@
 "use client";
 
 // trigger redeploy
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BoardSpace } from "@/components/board/BoardSpace";
 import { getBoardGridPlacement } from "@/lib/board-grid";
-import { scrollBoardToSpace, MOBILE_BOARD_SIZE_PX } from "@/lib/animation/boardScroll";
+import { scrollBoardToSpace, MOBILE_BOARD_SIZE_PX, MIN_ZOOM, MAX_ZOOM } from "@/lib/animation/boardScroll";
 import type { BoardSpace as BoardSpaceType, OwnableSpace } from "@/types/board";
 import type { PropertyOwnership } from "@/types/game";
 import type { Player } from "@/types/player";
+
+const ZOOM_STEP = 0.2;
 
 type GameBoardProps = {
   spaces: BoardSpaceType[];
@@ -20,6 +22,11 @@ type GameBoardProps = {
   onOpenProperty: (space: OwnableSpace) => void;
   /** Index of the player whose turn it is — used by "Find me" on mobile */
   currentPlayerIndex?: number;
+  /**
+   * Opaque key that changes on meaningful game events (dice roll, turn change).
+   * When it changes, auto-follow scrolls to the current player's position.
+   */
+  autoFollowKey?: string | null;
 };
 
 export function GameBoard({
@@ -30,8 +37,14 @@ export function GameBoard({
   landingPlayerIds,
   onOpenProperty,
   currentPlayerIndex = 0,
+  autoFollowKey,
 }: GameBoardProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState(1.0);
+  const [fitMode, setFitMode] = useState(false);
+  // True when the user manually scrolled/dragged — pauses auto-follow until reset.
+  const userPausedRef = useRef(false);
+  const isProgrammaticScrollRef = useRef(false);
 
   const playersByPosition = players.reduce<Record<number, Player[]>>((groups, player) => {
     if (player.isBankrupt) return groups;
@@ -40,33 +53,114 @@ export function GameBoard({
     return groups;
   }, {});
 
-  function handleFindMe() {
+  // ── Scroll helper ──────────────────────────────────────────────────────────
+
+  function scrollToSpace(spaceIndex: number) {
     if (!scrollRef.current) return;
+    isProgrammaticScrollRef.current = true;
+    // In fit mode, the whole board is visible — no scrolling needed.
+    if (!fitMode) {
+      const boardPx = zoom !== 1.0 ? Math.round(MOBILE_BOARD_SIZE_PX * zoom) : MOBILE_BOARD_SIZE_PX;
+      scrollBoardToSpace(scrollRef.current, spaceIndex, boardPx);
+    }
+    setTimeout(() => { isProgrammaticScrollRef.current = false; }, 600);
+  }
+
+  // ── Auto-follow ───────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    // Do not fight the user if they manually panned.
+    if (userPausedRef.current) return;
+    // No scrolling needed in fit mode — whole board is already visible.
+    if (fitMode) return;
     const currentPlayer = players[currentPlayerIndex];
     if (!currentPlayer) return;
     const pos = displayPositions?.[currentPlayer.id] ?? currentPlayer.position;
-    scrollBoardToSpace(scrollRef.current, pos, MOBILE_BOARD_SIZE_PX);
+    // Small delay lets the DOM settle after a state update.
+    const id = setTimeout(() => scrollToSpace(pos), 100);
+    return () => clearTimeout(id);
+  }, [currentPlayerIndex, autoFollowKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Scroll event — detect user-initiated panning ──────────────────────────
+
+  function handleScroll() {
+    if (!isProgrammaticScrollRef.current) {
+      userPausedRef.current = true;
+    }
   }
+
+  // ── Controls ──────────────────────────────────────────────────────────────
+
+  function handleFindMe() {
+    setFitMode(false);
+    userPausedRef.current = false;
+    const currentPlayer = players[currentPlayerIndex];
+    if (!currentPlayer) return;
+    const pos = displayPositions?.[currentPlayer.id] ?? currentPlayer.position;
+    setTimeout(() => scrollToSpace(pos), 50);
+  }
+
+  function handleFitBoard() {
+    setFitMode(true);
+    userPausedRef.current = false;
+  }
+
+  function handleZoomIn() {
+    setFitMode(false);
+    userPausedRef.current = false;
+    setZoom((z) => Math.min(MAX_ZOOM, parseFloat((z + ZOOM_STEP).toFixed(1))));
+  }
+
+  function handleZoomOut() {
+    setFitMode(false);
+    userPausedRef.current = false;
+    setZoom((z) => Math.max(MIN_ZOOM, parseFloat((z - ZOOM_STEP).toFixed(1))));
+  }
+
+  // ── Board sizing ───────────────────────────────────────────────────────────
+
+  // In fit mode: board fills the container width (responsive, uses aspect-square).
+  // In zoom mode: board is physically wider/narrower (scroll handles overflow).
+  // In default: board is 840px (existing mobile scroll behavior).
+  const innerBoardClass = [
+    fitMode
+      ? "w-full"
+      : zoom !== 1.0
+        ? "" // width set via inline style
+        : "w-[840px]",
+    "sm:w-full sm:mx-auto",
+    "sm:max-w-[min(94vw,calc(100vh-2rem),980px)]",
+    "xl:max-w-[min(76vw,calc(100vh-2rem),1100px)]",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const innerBoardStyle: React.CSSProperties =
+    !fitMode && zoom !== 1.0
+      ? { width: `${Math.round(MOBILE_BOARD_SIZE_PX * zoom)}px` }
+      : {};
+
+  const containerClass = [
+    "w-full",
+    fitMode ? "overflow-hidden" : "overflow-auto",
+    "sm:overflow-visible board-scroll-container",
+  ].join(" ");
 
   return (
     <div className="relative w-full">
       {/*
         Mobile: overflow:auto + fixed 840 px board = 2-D pannable viewport.
+        Fit mode: overflow:hidden + w-full = entire board visible, scaled down.
         Desktop (sm+): overflow:visible, board self-sizes via max-w clamp.
       */}
       <div
         ref={scrollRef}
-        className="w-full overflow-auto sm:overflow-visible board-scroll-container"
+        className={containerClass}
+        onScroll={handleScroll}
       >
         <div
-          className={[
-            // Mobile: fixed readable width — the scroll container handles overflow
-            "w-[840px]",
-            // sm+: responsive, fits viewport
-            "sm:w-full sm:mx-auto",
-            "sm:max-w-[min(94vw,calc(100vh-2rem),980px)]",
-            "xl:max-w-[min(76vw,calc(100vh-2rem),1100px)]",
-          ].join(" ")}
+          className={innerBoardClass}
+          style={innerBoardStyle}
         >
           <div className="board-hero-frame relative">
             <div
@@ -109,18 +203,55 @@ export function GameBoard({
         </div>
       </div>
 
-      {/* Mobile-only: scroll hint + Find Me button */}
-      <div className="mt-1 flex items-center justify-between sm:hidden">
-        <p className="board-scroll-hint text-[10px] font-semibold text-slate-400">
-          ← Drag board to scroll →
+      {/* Mobile-only controls: Fit Board · Find Me button · Zoom Out · Zoom In */}
+      <div className="mt-1 flex items-center justify-between sm:hidden" data-testid="mobile-board-controls">
+        <p className={`text-[10px] font-semibold ${fitMode ? "text-amber-600" : "text-slate-400"} board-scroll-hint`}>
+          {fitMode ? "Fit view — tap Drag to scroll" : "← Drag board to scroll →"}
         </p>
-        <button
-          type="button"
-          onClick={handleFindMe}
-          className="mobile-action-btn rounded-full border border-slate-300 bg-white px-3 py-1 text-[10px] font-black text-slate-600 shadow-sm active:bg-slate-100"
-        >
-          📍 Find me
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={handleFitBoard}
+            aria-label="Fit board to screen"
+            title="Fit Board"
+            className={`mobile-action-btn rounded-full border px-2.5 py-1 text-[11px] font-black shadow-sm active:scale-95 ${
+              fitMode
+                ? "border-amber-400 bg-amber-50 text-amber-700"
+                : "border-slate-300 bg-white text-slate-600"
+            }`}
+          >
+            🗺️
+          </button>
+          <button
+            type="button"
+            onClick={handleFindMe}
+            aria-label="Find current player"
+            title="Find Me"
+            className="mobile-action-btn rounded-full border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-black text-slate-600 shadow-sm active:scale-95"
+          >
+            📍
+          </button>
+          <button
+            type="button"
+            onClick={handleZoomOut}
+            aria-label="Zoom out"
+            title="Zoom Out"
+            disabled={zoom <= MIN_ZOOM && !fitMode}
+            className="mobile-action-btn rounded-full border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-black text-slate-600 shadow-sm active:scale-95 disabled:opacity-40"
+          >
+            −
+          </button>
+          <button
+            type="button"
+            onClick={handleZoomIn}
+            aria-label="Zoom in"
+            title="Zoom In"
+            disabled={zoom >= MAX_ZOOM}
+            className="mobile-action-btn rounded-full border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-black text-slate-600 shadow-sm active:scale-95 disabled:opacity-40"
+          >
+            +
+          </button>
+        </div>
       </div>
     </div>
   );

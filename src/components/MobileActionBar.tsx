@@ -37,6 +37,9 @@ export function MobileActionBar({
   const [localRolling, setLocalRolling] = useState(false);
 
   if (state.phase === "gameOver") return null;
+  // AuctionPanel renders its own full-screen overlay with sticky bid controls —
+  // hiding the bottom bar prevents it from overlapping auction content on mobile.
+  if (state.phase === "auction") return null;
 
   const currentPlayer = state.players[state.currentPlayerIndex];
   const canRoll =
