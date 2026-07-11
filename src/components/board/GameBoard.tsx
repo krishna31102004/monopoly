@@ -79,7 +79,7 @@ export function GameBoard({
     // Small delay lets the DOM settle after a state update.
     const id = setTimeout(() => scrollToSpace(pos), 100);
     return () => clearTimeout(id);
-  }, [currentPlayerIndex, autoFollowKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentPlayerIndex, autoFollowKey]); // intentionally limited — scrollToSpace/players/displayPositions are stable refs
 
   // ── Scroll event — detect user-initiated panning ──────────────────────────
 

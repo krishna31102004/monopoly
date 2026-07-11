@@ -342,7 +342,7 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
     if (currentBidderId) {
       setExpandedPlayers(new Set([currentBidderId]));
     }
-  }, [auction?.currentBidderIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [auction?.currentBidderIndex]); // intentionally limited — setExpandedPlayers is stable
 
   // Local-mode fallback: client drives the auto-pass on timeout.
   useEffect(() => {
