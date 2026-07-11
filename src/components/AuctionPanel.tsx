@@ -588,3 +588,4 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
     </div>
   );
 }
+// updated
