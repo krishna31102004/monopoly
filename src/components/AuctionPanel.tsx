@@ -18,6 +18,41 @@ type AuctionPanelProps = {
   serverAuthoritative?: boolean;
 };
 
+// ── Status badge ────────────────────────────────────────────────────────────
+
+type ParticipantStatus = "TURN" | "HIGHEST" | "ACTIVE" | "PASSED";
+
+function getParticipantStatus(
+  playerId: string,
+  auction: NonNullable<GameState["auction"]>,
+): ParticipantStatus {
+  if (auction.passedPlayerIds.includes(playerId)) return "PASSED";
+  const currentBidderId = auction.activePlayerIds[auction.currentBidderIndex];
+  if (playerId === currentBidderId) return "TURN";
+  if (auction.highestBidderId === playerId) return "HIGHEST";
+  return "ACTIVE";
+}
+
+const STATUS_BADGE_STYLE: Record<ParticipantStatus, string> = {
+  TURN:    "bg-amber-500 text-slate-950 font-black",
+  HIGHEST: "bg-emerald-600 text-white font-black",
+  ACTIVE:  "bg-slate-600 text-slate-200 font-semibold",
+  PASSED:  "bg-slate-800 text-slate-500 font-semibold",
+};
+
+function StatusBadge({ status }: { status: ParticipantStatus }) {
+  return (
+    <span
+      className={`shrink-0 rounded px-1 py-0.5 text-[9px] uppercase tracking-wide ${STATUS_BADGE_STYLE[status]}`}
+      aria-label={`Auction status: ${status}`}
+    >
+      {status}
+    </span>
+  );
+}
+
+// ── Color group dots ─────────────────────────────────────────────────────────
+
 function getSpaceTypeLabel(kind: string) {
   if (kind === "city") return "City";
   if (kind === "airport") return "Airport";
@@ -35,6 +70,8 @@ const COLOR_GROUP_HEX: Record<CityColorGroup, string> = {
   green: "#4ade80",
   "dark-blue": "#60a5fa",
 };
+
+// ── Property chip ─────────────────────────────────────────────────────────────
 
 /** Compact chip for a single owned property during the auction overview. */
 function PropertyChip({ spaceIndex, state }: { spaceIndex: number; state: GameState }) {
@@ -76,17 +113,25 @@ function PropertyChip({ spaceIndex, state }: { spaceIndex: number; state: GameSt
   );
 }
 
+// ── Per-player portfolio card ─────────────────────────────────────────────────
+
 /** Per-player ownership summary card shown in the overview panel. */
 function PlayerOwnershipCard({
   playerId,
   state,
   isBidding,
   isLeading,
+  status,
+  isExpanded,
+  onToggle,
 }: {
   playerId: string;
   state: GameState;
   isBidding: boolean;
   isLeading: boolean;
+  status: ParticipantStatus;
+  isExpanded: boolean;
+  onToggle: () => void;
 }) {
   const player = state.players.find((p) => p.id === playerId);
   if (!player) return null;
@@ -97,63 +142,89 @@ function PlayerOwnershipCard({
   const utilities = ownedSpaceIndices.filter((i) => getBoardSpaceByIndex(i).kind === "utility");
   const isEmpty = ownedSpaceIndices.length === 0;
 
+  const isPassed = status === "PASSED";
+
   const borderClass = isBidding
     ? "border-amber-400"
     : isLeading
       ? "border-emerald-500/60"
-      : "border-slate-700";
+      : isPassed
+        ? "border-slate-800"
+        : "border-slate-700";
 
-  const headerClass = isBidding
+  const headerBg = isBidding
     ? "bg-amber-500 text-slate-950"
     : isLeading
       ? "bg-emerald-900/60 text-emerald-200"
-      : "bg-slate-800 text-slate-300";
+      : isPassed
+        ? "bg-slate-900 text-slate-500"
+        : "bg-slate-800 text-slate-300";
 
   return (
-    <div className={`rounded-lg border ${borderClass} overflow-hidden`} data-testid="player-ownership-card">
-      <div className={`flex items-center justify-between px-2.5 py-1.5 text-[11px] font-bold ${headerClass}`}>
-        <span className="min-w-0 truncate">
+    <div
+      className={`rounded-lg border ${borderClass} overflow-hidden ${isPassed ? "opacity-60" : ""}`}
+      data-testid="player-ownership-card"
+    >
+      {/* Clickable header: name · cash · status badge · expand toggle */}
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={isExpanded}
+        className={`flex w-full items-center justify-between gap-1.5 px-2.5 py-1.5 text-left text-[11px] font-bold ${headerBg} active:opacity-80`}
+      >
+        <span className="min-w-0 flex items-center gap-1.5">
           {isBidding ? "▶ " : ""}
-          {player.name}
+          <span className="truncate">{player.name}</span>
           {isLeading && !isBidding ? " ★" : ""}
+          <StatusBadge status={status} />
         </span>
-        <span className="ml-2 shrink-0 tabular-nums font-black" aria-label={`${player.name} cash: $${player.cash}`}>
-          ${player.cash.toLocaleString()}
+        <span className="flex items-center gap-1 shrink-0">
+          <span className="tabular-nums font-black" aria-label={`${player.name} cash: $${player.cash}`}>
+            ${player.cash.toLocaleString()}
+          </span>
+          <span className="text-[10px] opacity-60" aria-hidden="true">
+            {isExpanded ? "▲" : "▼"}
+          </span>
         </span>
-      </div>
+      </button>
 
-      <div className="px-2 py-1.5 bg-slate-800/60">
-        {isEmpty ? (
-          <p className="text-[10px] text-slate-500 italic">No properties yet</p>
-        ) : (
-          <div className="space-y-1">
-            {cities.length > 0 && (
-              <div className="flex flex-wrap gap-1" data-testid="city-properties">
-                {cities.map((i) => (
-                  <PropertyChip key={i} spaceIndex={i} state={state} />
-                ))}
-              </div>
-            )}
-            {airports.length > 0 && (
-              <div className="flex flex-wrap gap-1" data-testid="airport-properties">
-                {airports.map((i) => (
-                  <PropertyChip key={i} spaceIndex={i} state={state} />
-                ))}
-              </div>
-            )}
-            {utilities.length > 0 && (
-              <div className="flex flex-wrap gap-1" data-testid="utility-properties">
-                {utilities.map((i) => (
-                  <PropertyChip key={i} spaceIndex={i} state={state} />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      {/* Expanded body: property chips */}
+      {isExpanded && (
+        <div className="px-2 py-1.5 bg-slate-800/60" data-testid="portfolio-body">
+          {isEmpty ? (
+            <p className="text-[10px] text-slate-500 italic">No properties yet</p>
+          ) : (
+            <div className="space-y-1">
+              {cities.length > 0 && (
+                <div className="flex flex-wrap gap-1" data-testid="city-properties">
+                  {cities.map((i) => (
+                    <PropertyChip key={i} spaceIndex={i} state={state} />
+                  ))}
+                </div>
+              )}
+              {airports.length > 0 && (
+                <div className="flex flex-wrap gap-1" data-testid="airport-properties">
+                  {airports.map((i) => (
+                    <PropertyChip key={i} spaceIndex={i} state={state} />
+                  ))}
+                </div>
+              )}
+              {utilities.length > 0 && (
+                <div className="flex flex-wrap gap-1" data-testid="utility-properties">
+                  {utilities.map((i) => (
+                    <PropertyChip key={i} spaceIndex={i} state={state} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
+
+// ── Timer ring ────────────────────────────────────────────────────────────────
 
 /** Circular countdown ring — premium alternative to a plain numeric badge. Goes urgent
  *  (orange → red) in the final 5 seconds, per the dramatic-auction spec. */
@@ -193,10 +264,68 @@ function TimerRing({ secondsLeft }: { secondsLeft: number }) {
   );
 }
 
+// ── Bid controls ──────────────────────────────────────────────────────────────
+
+function BidControls({
+  currentBidder,
+  isActiveBidder,
+  bidOptions,
+  onBid,
+  onPass,
+}: {
+  currentBidder: { name: string; cash: number } | undefined;
+  isActiveBidder: boolean;
+  bidOptions: { label: string; amount: number }[];
+  onBid: (amount: number) => void;
+  onPass: () => void;
+}) {
+  if (!currentBidder) return null;
+
+  if (!isActiveBidder) {
+    return (
+      <div className="p-3 text-center text-sm font-semibold text-slate-400" data-testid="waiting-state">
+        Waiting for {currentBidder.name}…
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-3" data-testid="bid-controls">
+      <p className="text-xs font-semibold text-slate-400">
+        Cash: ${currentBidder.cash.toLocaleString()}
+      </p>
+      <div className="mt-2 grid grid-cols-3 gap-2">
+        {bidOptions.map((opt) => (
+          <button
+            key={opt.label}
+            type="button"
+            disabled={opt.amount > currentBidder.cash}
+            onClick={() => onBid(opt.amount)}
+            className="rounded-lg bg-amber-500 px-2 py-3 text-sm font-black text-slate-950 shadow-[0_4px_0_rgba(0,0,0,0.25)] transition-all duration-100 hover:bg-amber-400 active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={onPass}
+        className="mt-2 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-3 text-base font-bold text-slate-300 transition-all duration-100 hover:bg-slate-800 hover:border-slate-500 active:scale-[0.98]"
+      >
+        Pass
+      </button>
+    </div>
+  );
+}
+
+// ── Main AuctionPanel ─────────────────────────────────────────────────────────
+
 export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthoritative = false }: AuctionPanelProps) {
   const [now, setNow] = useState(() => Date.now());
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const prevAuctionRef = useRef(state.phase === "auction" ? state.auction : null);
+  // Set of player IDs whose portfolio cards are expanded.
+  const [expandedPlayers, setExpandedPlayers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (state.phase !== "auction" || !state.auction) return;
@@ -205,6 +334,15 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
   }, [state.phase, state.auction]);
 
   const auction = state.phase === "auction" ? state.auction : null;
+
+  // Auto-expand the current bidder's card; collapse others on bidder change.
+  useEffect(() => {
+    if (!auction) return;
+    const currentBidderId = auction.activePlayerIds[auction.currentBidderIndex];
+    if (currentBidderId) {
+      setExpandedPlayers(new Set([currentBidderId]));
+    }
+  }, [auction?.currentBidderIndex]); // intentionally limited — setExpandedPlayers is stable
 
   // Local-mode fallback: client drives the auto-pass on timeout.
   useEffect(() => {
@@ -261,6 +399,8 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
 
   // All non-bankrupt players — active bidders + passed — for the ownership overview
   const allAuctionPlayers = state.players.filter((p) => !p.isBankrupt);
+  const activeCount = auction.activePlayerIds.length;
+  const passedCount = auction.passedPlayerIds.length;
 
   const bidOptions: { label: string; amount: number }[] =
     auction.currentBid === 0
@@ -276,26 +416,43 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
     dispatch({ type: "PLACE_BID", amount });
   }
 
+  function toggleExpanded(playerId: string) {
+    setExpandedPlayers((prev) => {
+      const next = new Set(prev);
+      if (next.has(playerId)) next.delete(playerId);
+      else next.add(playerId);
+      return next;
+    });
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/85 p-0 backdrop-blur-sm sm:items-center sm:p-3"
       role="presentation"
     >
+      {/*
+        Mobile: full-height sheet from bottom with flex layout.
+          - Sticky header (property, timer, bid status)
+          - Scrollable body (participant summary + portfolio cards)
+          - Sticky footer (bid controls)
+        Desktop (sm+): compact modal, two-column grid inside scroll area.
+      */}
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby="auction-title"
-        className={`max-h-[95vh] w-full max-w-3xl overflow-y-auto rounded-t-2xl border border-amber-400/40 bg-slate-900 shadow-[0_32px_100px_rgba(0,0,0,0.6)] sm:rounded-2xl ${
+        aria-live="polite"
+        className={`flex w-full max-w-3xl flex-col rounded-t-2xl border border-amber-400/40 bg-slate-900 shadow-[0_32px_100px_rgba(0,0,0,0.6)] sm:rounded-2xl sm:max-h-[92vh] max-h-[95vh] ${
           isUrgent ? "auction-modal-urgent" : ""
         }`}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between gap-3 border-b border-amber-400/30 bg-gradient-to-r from-amber-700 via-amber-600 to-amber-700 px-5 py-4">
-          <div className="min-w-0">
+        {/* ── Sticky header ─────────────────────────────────────────────── */}
+        <div className="shrink-0 flex items-center justify-between gap-3 border-b border-amber-400/30 bg-gradient-to-r from-amber-700 via-amber-600 to-amber-700 px-4 py-3 rounded-t-2xl">
+          <div className="min-w-0 flex-1">
             <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-100">
               Live Auction
             </p>
-            <h2 id="auction-title" className="mt-0.5 truncate text-xl font-black text-white">
+            <h2 id="auction-title" className="mt-0.5 truncate text-lg font-black text-white sm:text-xl">
               {space.name}
             </h2>
             {isOwnableSpace(space) ? (
@@ -307,119 +464,128 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
           <TimerRing secondsLeft={secondsLeft} />
         </div>
 
-        {/* Two-column body on md+; single-column stack on mobile */}
-        <div className="grid grid-cols-1 gap-0 md:grid-cols-[1fr_1fr]">
-          {/* Left: bid status + controls */}
-          <div className="border-b border-slate-700 p-5 md:border-b-0 md:border-r">
-            {/* Bid status */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-lg border border-amber-400/30 bg-slate-800 p-3 text-center">
-                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">
-                  Current Bid
-                </p>
-                <p className="mt-0.5 text-2xl font-black text-amber-300">
-                  {auction.currentBid > 0 ? `$${auction.currentBid}` : "—"}
-                </p>
-              </div>
-              <div className="rounded-lg border border-amber-400/30 bg-slate-800 p-3 text-center">
-                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">
-                  Highest Bidder
-                </p>
-                <p className="mt-0.5 text-base font-black leading-tight text-white truncate">
-                  {highBidder?.name ?? "None"}
-                </p>
-              </div>
-            </div>
-
-            {/* Active bidder spotlight */}
-            <div
-              className={`mt-3 rounded-lg border px-3 py-2 text-center text-sm font-black ${
-                isUrgent
-                  ? "border-red-400 bg-red-950/60 text-red-200"
-                  : "border-amber-400/40 bg-amber-900/40 text-amber-200"
-              }`}
-            >
-              {currentBidder ? `🔥 ${currentBidder.name}'s turn to bid` : "Resolving…"}
-            </div>
-
-            {/* Passed players list */}
-            {auction.passedPlayerIds.length > 0 ? (
-              <div className="mt-3">
-                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Passed</p>
-                <div className="mt-1 flex flex-col gap-1">
-                  {auction.passedPlayerIds.map((id) => {
-                    const player = state.players.find((p) => p.id === id);
-                    if (!player) return null;
-                    return (
-                      <div
-                        key={id}
-                        className="flex items-center justify-between rounded-lg bg-slate-800/40 px-2.5 py-1.5 text-[11px] font-bold text-slate-500"
-                      >
-                        <span className="line-through">{player.name}</span>
-                        <span className="ml-2 tabular-nums opacity-60">${player.cash.toLocaleString()}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : null}
-
-            {/* Bid/pass controls — gated to the active bidder only; everyone else sees a
-                read-only waiting state. No custom bid input is ever rendered. */}
-            {currentBidder ? (
-              isActiveBidder ? (
-                <div className="mt-4 rounded-xl border border-amber-400/40 bg-slate-800 p-3">
-                  <p className="text-xs font-semibold text-slate-400">
-                    Cash: ${currentBidder.cash.toLocaleString()}
-                  </p>
-                  <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    {bidOptions.map((opt) => (
-                      <button
-                        key={opt.label}
-                        type="button"
-                        disabled={opt.amount > currentBidder.cash}
-                        onClick={() => handleBid(opt.amount)}
-                        className="rounded-lg bg-amber-500 px-3 py-3 text-base font-black text-slate-950 shadow-[0_4px_0_rgba(0,0,0,0.25)] transition-all duration-100 hover:bg-amber-400 active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => dispatch({ type: "PASS_AUCTION" })}
-                    className="mt-2 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-3 text-base font-bold text-slate-300 transition-all duration-100 hover:bg-slate-800 hover:border-slate-500 active:scale-[0.98]"
-                  >
-                    Pass
-                  </button>
-                </div>
-              ) : (
-                <div className="mt-4 rounded-xl border border-slate-700 bg-slate-800/60 p-3 text-center text-sm font-semibold text-slate-400">
-                  Waiting for {currentBidder.name}…
-                </div>
-              )
-            ) : null}
-          </div>
-
-          {/* Right: player ownership overview */}
-          <div className="p-5">
-            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400 mb-2">
-              Active Players · Properties
+        {/* ── Bid status strip (always visible) ────────────────────────── */}
+        <div className="shrink-0 grid grid-cols-2 gap-2 px-4 py-2 border-b border-slate-800">
+          <div className="rounded-lg border border-amber-400/30 bg-slate-800 p-2 text-center">
+            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+              Current Bid
             </p>
-            <div className="flex flex-col gap-2" data-testid="ownership-overview">
-              {allAuctionPlayers.map((player) => (
-                <PlayerOwnershipCard
-                  key={player.id}
-                  playerId={player.id}
-                  state={state}
-                  isBidding={player.id === currentBidderId}
-                  isLeading={player.id === auction.highestBidderId}
+            <p className="mt-0.5 text-xl font-black text-amber-300">
+              {auction.currentBid > 0 ? `$${auction.currentBid}` : "—"}
+            </p>
+          </div>
+          <div className="rounded-lg border border-amber-400/30 bg-slate-800 p-2 text-center">
+            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+              Highest Bidder
+            </p>
+            <p className="mt-0.5 text-sm font-black leading-tight text-white truncate">
+              {highBidder?.name ?? "None"}
+            </p>
+          </div>
+        </div>
+
+        {/* ── Active bidder spotlight (always visible) ──────────────────── */}
+        <div
+          className={`shrink-0 px-4 py-2 text-center text-sm font-black border-b ${
+            isUrgent
+              ? "border-red-800 bg-red-950/60 text-red-200"
+              : "border-slate-800 bg-amber-900/30 text-amber-200"
+          }`}
+        >
+          {currentBidder ? `🔥 ${currentBidder.name}'s turn to bid` : "Resolving…"}
+        </div>
+
+        {/* ── Scrollable body ───────────────────────────────────────────── */}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {/* Two-column on desktop, single column on mobile */}
+          <div className="grid grid-cols-1 gap-0 md:grid-cols-[1fr_1fr]">
+
+            {/* Left col: passed players + desktop bid controls */}
+            <div className="border-b border-slate-700 p-4 md:border-b-0 md:border-r">
+              {/* Passed players */}
+              {auction.passedPlayerIds.length > 0 ? (
+                <div className="mb-3">
+                  <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Passed</p>
+                  <div className="mt-1 flex flex-col gap-1">
+                    {auction.passedPlayerIds.map((id) => {
+                      const player = state.players.find((p) => p.id === id);
+                      if (!player) return null;
+                      return (
+                        <div
+                          key={id}
+                          className="flex items-center justify-between rounded-lg bg-slate-800/40 px-2.5 py-1.5 text-[11px] font-bold text-slate-500"
+                        >
+                          <span className="flex items-center gap-1.5 line-through">{player.name}<StatusBadge status="PASSED" /></span>
+                          <span className="ml-2 tabular-nums opacity-60">${player.cash.toLocaleString()}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Desktop-only bid controls — hidden on mobile (sticky footer used instead) */}
+              <div className="hidden md:block">
+                <BidControls
+                  currentBidder={currentBidder}
+                  isActiveBidder={isActiveBidder}
+                  bidOptions={bidOptions}
+                  onBid={handleBid}
+                  onPass={() => dispatch({ type: "PASS_AUCTION" })}
                 />
-              ))}
+              </div>
+            </div>
+
+            {/* Right col: player ownership overview */}
+            <div className="p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+                  Active Players · Properties
+                </p>
+                {/* Participant summary count */}
+                <p className="text-[10px] font-semibold text-slate-500" data-testid="participant-summary">
+                  {activeCount} active · {passedCount} passed
+                </p>
+              </div>
+              <div className="flex flex-col gap-2" data-testid="ownership-overview">
+                {allAuctionPlayers.map((player) => {
+                  const playerStatus = getParticipantStatus(player.id, auction);
+                  return (
+                    <PlayerOwnershipCard
+                      key={player.id}
+                      playerId={player.id}
+                      state={state}
+                      isBidding={player.id === currentBidderId}
+                      isLeading={player.id === auction.highestBidderId}
+                      status={playerStatus}
+                      isExpanded={expandedPlayers.has(player.id)}
+                      onToggle={() => toggleExpanded(player.id)}
+                    />
+                  );
+                })}
+              </div>
             </div>
           </div>
+          {/* Bottom padding so content is not obscured by the mobile sticky footer */}
+          <div className="h-4 md:h-0" aria-hidden="true" />
+        </div>
+
+        {/* ── Sticky bid controls footer — mobile only ──────────────────── */}
+        <div
+          className="shrink-0 border-t border-slate-700 bg-slate-900 md:hidden"
+          style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+          data-testid="auction-controls"
+        >
+          <BidControls
+            currentBidder={currentBidder}
+            isActiveBidder={isActiveBidder}
+            bidOptions={bidOptions}
+            onBid={handleBid}
+            onPass={() => dispatch({ type: "PASS_AUCTION" })}
+          />
         </div>
       </section>
     </div>
   );
 }
+// updated

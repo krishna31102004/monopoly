@@ -120,6 +120,7 @@ export function GameLayout() {
             landingPlayerIds={landingPlayerIds}
             onOpenProperty={setSelectedSpace}
             currentPlayerIndex={state.currentPlayerIndex}
+            autoFollowKey={`${state.currentPlayerIndex}:${diceKey ?? ""}`}
           />
         </section>
 

@@ -4,6 +4,23 @@
  */
 export const MOBILE_BOARD_SIZE_PX = 840;
 
+/** Zoom limits for the mobile board view. */
+export const MIN_ZOOM = 0.4;
+export const MAX_ZOOM = 1.8;
+
+/**
+ * Compute the CSS scale factor to fit the full board within container dimensions.
+ * Returns at most 1.0 so the board is never upscaled beyond its natural size.
+ */
+export function getBoardFitScale(containerWidth: number, containerHeight: number): number {
+  if (containerWidth <= 0 || containerHeight <= 0) return 1;
+  return Math.min(
+    containerWidth / MOBILE_BOARD_SIZE_PX,
+    containerHeight / MOBILE_BOARD_SIZE_PX,
+    1.0,
+  );
+}
+
 export function getBoardSpaceScrollOffset(
   spaceIndex: number,
   boardSizePx = MOBILE_BOARD_SIZE_PX,

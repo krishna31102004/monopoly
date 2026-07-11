@@ -198,6 +198,7 @@ export function GameLayoutMultiplayer({
             landingPlayerIds={landingPlayerIds}
             onOpenProperty={setSelectedSpace}
             currentPlayerIndex={gameState.currentPlayerIndex}
+            autoFollowKey={`${gameState.currentPlayerIndex}:${diceKey ?? ""}`}
           />
         </section>
 
