@@ -4,6 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { getBoardSpaceByIndex } from "@/data/board";
 import { isOwnableSpace } from "@/lib/game/ownership";
 import { AUCTION_TURN_MS } from "@/lib/animation/timing";
+import {
+  getAuctionPropertyContext,
+  type AuctionPropertyContext,
+} from "@/lib/ui/auctionPropertyContext";
 import type { GameAction, GameState } from "@/types/game";
 import type { CityColorGroup } from "@/types/board";
 
@@ -318,6 +322,82 @@ function BidControls({
   );
 }
 
+type AuctionMobileSection = "set" | "players" | "details";
+
+function AuctionSetOverview({ context }: { context: AuctionPropertyContext }) {
+  return (
+    <section aria-label={`${context.groupName} ownership`} data-testid="auction-set-overview">
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 className="text-[11px] font-black uppercase tracking-wide text-amber-300">{context.groupName}</h3>
+        <span className="text-[10px] font-semibold text-slate-400">{context.groupMembers.length} properties</span>
+      </div>
+      <div className={`mt-2 flex gap-2 ${context.groupType === "airport" ? "overflow-x-auto pb-1" : ""}`}>
+        {context.groupMembers.map((member) => (
+          <article
+            key={member.spaceIndex}
+            className={`min-w-0 flex-1 rounded-lg border p-2 text-[11px] ${
+              member.isBeingAuctioned
+                ? "border-amber-300 bg-amber-500/15 ring-1 ring-amber-300/40"
+                : "border-slate-700 bg-slate-800/70"
+            } ${context.groupType === "airport" ? "min-w-[145px]" : ""}`}
+          >
+            <p className="font-black leading-tight text-white">{member.name}</p>
+            {member.isBeingAuctioned ? (
+              <p className="mt-1 text-[9px] font-black uppercase tracking-wide text-amber-300">Being auctioned</p>
+            ) : member.isUnowned ? (
+              <p className="mt-1 font-semibold text-slate-400">Unowned</p>
+            ) : (
+              <p className="mt-1 font-semibold text-slate-200">Owned by {member.ownerName ?? "Unknown"}</p>
+            )}
+            <div className="mt-1 flex flex-wrap gap-1 text-[9px] font-bold">
+              {member.isMortgaged && <span className="rounded bg-slate-700 px-1 text-slate-300">Mortgaged</span>}
+              {context.groupType === "color" && member.houseCount > 0 && (
+                <span className="rounded bg-emerald-950 px-1 text-emerald-300">{member.houseCount} house{member.houseCount === 1 ? "" : "s"}</span>
+              )}
+              {context.groupType === "color" && member.hasHotel && (
+                <span className="rounded bg-emerald-950 px-1 text-emerald-300">Hotel</span>
+              )}
+            </div>
+          </article>
+        ))}
+      </div>
+      <div className="mt-2 space-y-1" data-testid="auction-completion-facts">
+        {context.completionByPlayer
+          .filter((completion) => completion.ownedBeforeAuction > 0 || completion.wouldCompleteGroup)
+          .map((completion) => (
+            <p key={completion.playerId} className="text-[10px] text-slate-300">
+              <span className="font-bold">{completion.playerName}</span> owns {completion.ownedBeforeAuction} of {completion.groupSize} {context.groupType === "color" ? context.groupName.replace(" Color Group", " properties") : context.groupName.toLowerCase()}.
+              {completion.wouldCompleteGroup && (
+                <span className="ml-1 font-bold text-amber-300">Winning {context.auctionedProperty.name} would complete this set.</span>
+              )}
+            </p>
+          ))}
+      </div>
+    </section>
+  );
+}
+
+function AuctionPropertyDetails({ context }: { context: AuctionPropertyContext }) {
+  const property = context.auctionedProperty;
+  const label = context.groupType === "airport" ? "airport" : context.groupType === "utility" ? "utility" : "group";
+  return (
+    <section aria-label="Property details" data-testid="auction-property-details" className="text-[11px]">
+      <h3 className="text-[11px] font-black uppercase tracking-wide text-amber-300">Property details</h3>
+      <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg border border-slate-700 bg-slate-800/70 p-2 text-slate-300">
+        <dt>List price</dt><dd className="text-right font-bold text-white">${property.listPrice}</dd>
+        <dt>Mortgage value</dt><dd className="text-right font-bold text-white">${property.mortgageValue}</dd>
+        {property.baseRent !== undefined && <><dt>Base rent</dt><dd className="text-right font-bold text-white">${property.baseRent}</dd><dt>Full undeveloped group</dt><dd className="text-right font-bold text-white">${property.fullGroupRent}</dd><dt>House cost</dt><dd className="text-right font-bold text-white">${property.houseCost}</dd></>}
+        {property.rentLevels?.map((rent, index) => (
+          <span key={index} className="contents"><dt>{context.groupType === "color" ? index === 5 ? "Hotel rent" : `Rent with ${index} house${index === 1 ? "" : "s"}` : `Rent with ${index + 1} ${label}${index === 0 ? "" : "s"}`}</dt><dd className="text-right font-bold text-white">${rent}</dd></span>
+        ))}
+        {property.utilityMultipliers?.map((multiplier, index) => (
+          <span key={multiplier} className="contents"><dt>Rent with {index + 1} utilit{index === 0 ? "y" : "ies"}</dt><dd className="text-right font-bold text-white">{multiplier}× dice roll</dd></span>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
 // ── Main AuctionPanel ─────────────────────────────────────────────────────────
 
 export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthoritative = false }: AuctionPanelProps) {
@@ -326,6 +406,7 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
   const prevAuctionRef = useRef(state.phase === "auction" ? state.auction : null);
   // Set of player IDs whose portfolio cards are expanded.
   const [expandedPlayers, setExpandedPlayers] = useState<Set<string>>(new Set());
+  const [mobileSection, setMobileSection] = useState<AuctionMobileSection>("set");
 
   useEffect(() => {
     if (state.phase !== "auction" || !state.auction) return;
@@ -392,6 +473,7 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
     ? state.players.find((p) => p.id === auction.highestBidderId)
     : null;
   const listPrice = isOwnableSpace(space) ? space.price : 0;
+  const propertyContext = getAuctionPropertyContext(state, auction.propertySpaceIndex);
 
   const isActiveBidder = isMyTurn && !!currentBidder;
   const secondsLeft = Math.max(0, Math.ceil((auction.turnDeadlineAt - now) / 1000));
@@ -442,7 +524,7 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
         aria-modal="true"
         aria-labelledby="auction-title"
         aria-live="polite"
-        className={`flex w-full max-w-3xl flex-col rounded-t-2xl border border-amber-400/40 bg-slate-900 shadow-[0_32px_100px_rgba(0,0,0,0.6)] sm:rounded-2xl sm:max-h-[92vh] max-h-[95vh] ${
+        className={`flex w-full max-w-3xl flex-col rounded-t-2xl border border-amber-400/40 bg-slate-900 shadow-[0_32px_100px_rgba(0,0,0,0.6)] sm:rounded-2xl sm:max-h-[92vh] max-h-[95vh] lg:max-w-5xl ${
           isUrgent ? "auction-modal-urgent" : ""
         }`}
       >
@@ -495,10 +577,36 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
           {currentBidder ? `🔥 ${currentBidder.name}'s turn to bid` : "Resolving…"}
         </div>
 
+        {propertyContext && (
+          <div className="hidden shrink-0 border-b border-slate-800 px-4 py-3 md:block">
+            <AuctionSetOverview context={propertyContext} />
+          </div>
+        )}
+
+        {/* Mobile uses focused sections rather than shrinking the desktop two-column layout. */}
+        <div className="shrink-0 border-b border-slate-800 px-3 py-2 md:hidden" role="tablist" aria-label="Auction information">
+          {(["set", "players", "details"] as const).map((section) => (
+            <button key={section} type="button" role="tab" aria-selected={mobileSection === section}
+              onClick={() => setMobileSection(section)}
+              className={`mr-1 rounded px-3 py-1.5 text-[11px] font-black uppercase tracking-wide ${mobileSection === section ? "bg-amber-400 text-slate-950" : "text-slate-300"}`}>
+              {section}
+            </button>
+          ))}
+        </div>
+
         {/* ── Scrollable body ───────────────────────────────────────────── */}
         <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="p-4 md:hidden" role="tabpanel">
+            {mobileSection === "set" && propertyContext && <AuctionSetOverview context={propertyContext} />}
+            {mobileSection === "details" && propertyContext && <AuctionPropertyDetails context={propertyContext} />}
+            {mobileSection === "players" && <>
+              <div className="mb-2 flex items-center justify-between"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Players</p><p className="text-[10px] font-semibold text-slate-500" data-testid="participant-summary">{activeCount} active · {passedCount} passed</p></div>
+              {auction.passedPlayerIds.length > 0 && <div className="mb-3 space-y-1">{auction.passedPlayerIds.map((id) => { const player = state.players.find((candidate) => candidate.id === id); return player ? <div key={id} className="flex justify-between rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-400"><span className="line-through">{player.name} <StatusBadge status="PASSED" /></span><span>${player.cash.toLocaleString()}</span></div> : null; })}</div>}
+              <div className="flex flex-col gap-2" data-testid="ownership-overview">{allAuctionPlayers.map((player) => <PlayerOwnershipCard key={player.id} playerId={player.id} state={state} isBidding={player.id === currentBidderId} isLeading={player.id === auction.highestBidderId} status={getParticipantStatus(player.id, auction)} isExpanded={expandedPlayers.has(player.id)} onToggle={() => toggleExpanded(player.id)} />)}</div>
+            </>}
+          </div>
           {/* Two-column on desktop, single column on mobile */}
-          <div className="grid grid-cols-1 gap-0 md:grid-cols-[1fr_1fr]">
+          <div className="hidden gap-0 md:grid md:grid-cols-[1fr_1fr]">
 
             {/* Left col: passed players + desktop bid controls */}
             <div className="border-b border-slate-700 p-4 md:border-b-0 md:border-r">
@@ -564,6 +672,12 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
                   );
                 })}
               </div>
+              {propertyContext && (
+                <details className="mt-3 rounded-lg border border-slate-700 bg-slate-800/40 p-2">
+                  <summary className="cursor-pointer text-[10px] font-black uppercase tracking-wide text-slate-300">Property details</summary>
+                  <div className="mt-2"><AuctionPropertyDetails context={propertyContext} /></div>
+                </details>
+              )}
             </div>
           </div>
           {/* Bottom padding so content is not obscured by the mobile sticky footer */}
