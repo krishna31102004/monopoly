@@ -98,7 +98,14 @@ export type LandingAction =
 
 export type BankruptcyCreditor =
   | { type: "bank" }
-  | { type: "player"; playerId: string };
+  | { type: "player"; playerId: string }
+  | { type: "multiple-players"; playerIds: string[]; amountPerPlayer: number };
+
+/** Deferred action to execute immediately after a debt is resolved. */
+export type BankruptcyContinuation = {
+  type: "jail-third-roll-movement";
+  dice: DiceRoll;
+};
 
 export type BankruptcyState = {
   debtorPlayerId: string;
@@ -107,6 +114,10 @@ export type BankruptcyState = {
   reason: string;
   status: "pending";
   phaseBeforeBankruptcy: GamePhase;
+  /** When true and creditor is "bank", the payment goes into Free Parking. */
+  potEligible?: boolean;
+  /** Action to run after the debt is paid (e.g. saved jail-roll movement). */
+  continuation?: BankruptcyContinuation;
 };
 
 export type TradeOffer = {

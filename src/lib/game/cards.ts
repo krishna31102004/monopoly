@@ -9,6 +9,12 @@ import { applyAuctionGameIntercept } from "@/lib/game/auctionHelpers";
 import type { DrawnCard, GameState } from "@/types/game";
 import type { Player } from "@/types/player";
 
+function applyFreeParkingDelta(state: GameState, delta: number): number {
+  if (!state.rules.freeParkingCash || delta === 0) return state.freeParkingPot;
+  const next = state.freeParkingPot + delta;
+  return state.rules.gameMode === "auction" ? Math.min(500, Math.max(0, next)) : Math.max(0, next);
+}
+
 /**
  * Apply a landing resolution from a card movement to the state.
  * Checks for Auction Game intercept (unowned ownable → immediate auction).
@@ -17,10 +23,15 @@ function applyCardLandingResolution(
   stateAfterMove: GameState,
   resolution: ReturnType<typeof resolveLanding>,
 ): GameState {
+  const potDelta = resolution.freeParkingPotDelta ?? 0;
+  const baseWithPot: GameState = {
+    ...stateAfterMove,
+    freeParkingPot: applyFreeParkingDelta(stateAfterMove, potDelta),
+  };
   if (resolution.debtPending) {
     return enterDebtPendingFromCard(
       {
-        ...stateAfterMove,
+        ...baseWithPot,
         players: resolution.players,
         phase: resolution.phase,
         doublesCount: resolution.doublesCount,
@@ -35,13 +46,13 @@ function applyCardLandingResolution(
     ? resolution.landingAction.spaceIndex
     : undefined;
   const intercepted = applyAuctionGameIntercept(
-    { ...stateAfterMove, players: resolution.players, gameLog: resolution.gameLog, doublesCount: resolution.doublesCount },
+    { ...baseWithPot, players: resolution.players, gameLog: resolution.gameLog, doublesCount: resolution.doublesCount },
     resolution.phase,
     spaceIndex,
   );
   if (intercepted) return intercepted;
   return {
-    ...stateAfterMove,
+    ...baseWithPot,
     players: resolution.players,
     phase: resolution.phase,
     doublesCount: resolution.doublesCount,
@@ -69,6 +80,7 @@ function enterDebtPendingFromCard(state: GameState, debt: DebtPending): GameStat
       reason: debt.reason,
       status: "pending",
       phaseBeforeBankruptcy: state.phase,
+      potEligible: debt.potEligible,
     },
   };
 }
@@ -122,6 +134,7 @@ export function drawAndApplyCard(
   state: GameState,
   deckType: "chance" | "community-chest",
   rolledDouble: boolean,
+  options?: { fromDiceRoll?: boolean },
 ): GameState {
   const deckKey = deckType === "chance" ? "chanceDeck" : "communityChestDeck";
   const deck = state[deckKey];
@@ -139,6 +152,7 @@ export function drawAndApplyCard(
     card,
     deckType,
     rolledDouble,
+    options,
   );
 
   return {
@@ -152,6 +166,7 @@ function applyCardEffect(
   card: CardDefinition,
   deckType: "chance" | "community-chest",
   rolledDouble: boolean,
+  options?: { fromDiceRoll?: boolean },
 ): Omit<CardResult, "card"> {
   const currentPlayer = state.players[state.currentPlayerIndex];
   const deckKey = deckType === "chance" ? "chanceDeck" : "communityChestDeck";
@@ -307,9 +322,17 @@ function applyCardEffect(
 
     case "go-to-jail": {
       const jailMsg = `${currentPlayer.name} drew "${card.text}" and went to Jail.`;
+      // When drawn via a dice roll, reverse any GO bonus the player collected during
+      // movement to the Chance/CC space — "go-to-jail" means "do not pass GO".
+      let goReversal = 0;
+      if (options?.fromDiceRoll && state.diceRoll) {
+        const prevPos = (currentPlayer.position - state.diceRoll.total + 40) % 40;
+        const passedGoDuringMove = prevPos > currentPlayer.position;
+        goReversal = getGoAward(passedGoDuringMove, false, state.rules);
+      }
       const nextPlayers = state.players.map((p, i) =>
         i === state.currentPlayerIndex
-          ? { ...p, position: 10, isInJail: true, jailTurns: 0 }
+          ? { ...p, position: 10, isInJail: true, jailTurns: 0, cash: p.cash - goReversal }
           : p,
       );
       const log = addLogEntry(state.gameLog, jailMsg);
@@ -445,14 +468,17 @@ function applyCardEffect(
         landingAction: { kind: "message", spaceIndex: currentPlayer.position, message: msg },
       };
       if (!canAfford) {
-        // No-negative-cash rule: enter debt pending (creditor = bank as simplification)
         const debtState: GameState = {
           ...stateWithCardReturned,
           gameLog: addLogEntry(log, `${currentPlayer.name} must resolve the debt.`),
           phase: "bankruptcyPending",
           bankruptcy: {
             debtorPlayerId: currentPlayer.id,
-            creditor: { type: "bank" },
+            creditor: {
+              type: "multiple-players",
+              playerIds: activePlayers.map((p) => p.id),
+              amountPerPlayer: amount,
+            },
             amountOwed: totalPaid,
             reason: `${currentPlayer.name} owes $${totalPaid} to other players (card: "${card.text}").`,
             status: "pending",

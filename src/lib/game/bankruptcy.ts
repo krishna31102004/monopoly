@@ -26,9 +26,9 @@ export function checkBankruptcy(
   const creditorName =
     creditor.type === "bank"
       ? "the Bank"
-      : (state.players.find(
-          (p) => p.id === (creditor as { type: "player"; playerId: string }).playerId,
-        )?.name ?? "another player");
+      : creditor.type === "multiple-players"
+        ? "other players"
+        : (state.players.find((p) => p.id === creditor.playerId)?.name ?? "another player");
 
   const reason = `${debtor.name} owes $${amountOwed} to ${creditorName}.`;
   const log = addLogEntry(state.gameLog, `${debtor.name} cannot pay and must resolve bankruptcy.`);
