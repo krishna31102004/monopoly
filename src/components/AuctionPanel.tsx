@@ -387,9 +387,13 @@ function AuctionPropertyDetails({ context }: { context: AuctionPropertyContext }
         <dt>List price</dt><dd className="text-right font-bold text-white">${property.listPrice}</dd>
         <dt>Mortgage value</dt><dd className="text-right font-bold text-white">${property.mortgageValue}</dd>
         {property.baseRent !== undefined && <><dt>Base rent</dt><dd className="text-right font-bold text-white">${property.baseRent}</dd><dt>Full undeveloped group</dt><dd className="text-right font-bold text-white">${property.fullGroupRent}</dd><dt>House cost</dt><dd className="text-right font-bold text-white">${property.houseCost}</dd></>}
-        {property.rentLevels?.map((rent, index) => (
-          <span key={index} className="contents"><dt>{context.groupType === "color" ? index === 5 ? "Hotel rent" : `Rent with ${index} house${index === 1 ? "" : "s"}` : `Rent with ${index + 1} ${label}${index === 0 ? "" : "s"}`}</dt><dd className="text-right font-bold text-white">${rent}</dd></span>
-        ))}
+        {property.rentLevels?.map((rent, index) => {
+          if (context.groupType === "color" && index === 0) return null;
+          const rentLabel = context.groupType === "color"
+            ? index === 5 ? "Hotel rent" : `Rent with ${index} house${index === 1 ? "" : "s"}`
+            : `Rent with ${index + 1} ${label}${index === 0 ? "" : "s"}`;
+          return <span key={index} className="contents"><dt>{rentLabel}</dt><dd className="text-right font-bold text-white">${rent}</dd></span>;
+        })}
         {property.utilityMultipliers?.map((multiplier, index) => (
           <span key={multiplier} className="contents"><dt>Rent with {index + 1} utilit{index === 0 ? "y" : "ies"}</dt><dd className="text-right font-bold text-white">{multiplier}× dice roll</dd></span>
         ))}
@@ -586,7 +590,7 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
         {/* Mobile uses focused sections rather than shrinking the desktop two-column layout. */}
         <div className="shrink-0 border-b border-slate-800 px-3 py-2 md:hidden" role="tablist" aria-label="Auction information">
           {(["set", "players", "details"] as const).map((section) => (
-            <button key={section} type="button" role="tab" aria-selected={mobileSection === section}
+            <button key={section} id={`auction-tab-${section}`} type="button" role="tab" aria-controls={`auction-panel-${section}`} aria-selected={mobileSection === section}
               onClick={() => setMobileSection(section)}
               className={`mr-1 rounded px-3 py-1.5 text-[11px] font-black uppercase tracking-wide ${mobileSection === section ? "bg-amber-400 text-slate-950" : "text-slate-300"}`}>
               {section}
@@ -596,7 +600,7 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
 
         {/* ── Scrollable body ───────────────────────────────────────────── */}
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="p-4 md:hidden" role="tabpanel">
+          <div className="p-4 md:hidden" id={`auction-panel-${mobileSection}`} role="tabpanel" aria-labelledby={`auction-tab-${mobileSection}`}>
             {mobileSection === "set" && propertyContext && <AuctionSetOverview context={propertyContext} />}
             {mobileSection === "details" && propertyContext && <AuctionPropertyDetails context={propertyContext} />}
             {mobileSection === "players" && <>

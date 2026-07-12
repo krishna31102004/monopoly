@@ -26,7 +26,7 @@ describe("getAuctionPropertyContext", () => {
     expect(context.groupMembers[2]).toMatchObject({ ownerId: first.id, hasHotel: true });
     expect(context.completionByPlayer).toContainEqual(expect.objectContaining({ playerId: first.id, ownedBeforeAuction: 2, groupSize: 3, wouldCompleteGroup: true }));
     expect(context.completionByPlayer.find((completion) => completion.playerId === bankrupt.id)).toBeUndefined();
-    expect(context.auctionedProperty).toMatchObject({ baseRent: 10, fullGroupRent: 20, houseCost: 100 });
+    expect(context.auctionedProperty).toMatchObject({ baseRent: 10, fullGroupRent: 20, houseCost: 100, rentLevels: [10, 50, 150, 450, 625, 750] });
     expect(second).toBeDefined();
   });
 
@@ -42,6 +42,7 @@ describe("getAuctionPropertyContext", () => {
     expect(context.groupMembers.find((member) => member.spaceIndex === 5)?.isBeingAuctioned).toBe(true);
     expect(context.groupMembers.find((member) => member.spaceIndex === 25)).toMatchObject({ ownerId: state.players[0].id, isMortgaged: true, houseCount: 0, hasHotel: false });
     expect(context.completionByPlayer[0]).toMatchObject({ ownedBeforeAuction: 2, groupSize: 4, wouldCompleteGroup: false });
+    expect(context.auctionedProperty.rentLevels).toEqual([25, 50, 100, 200]);
   });
 
   it("returns both utilities and treats mortgaged ownership as owned for completion", () => {

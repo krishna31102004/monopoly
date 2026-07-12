@@ -28,6 +28,8 @@ describe("auction property context presentation", () => {
     expect(source).toContain('role="tablist"');
     expect(source).toContain('role="tab"');
     expect(source).toContain("aria-selected");
+    expect(source).toContain("aria-controls");
+    expect(source).toContain("aria-labelledby");
     expect(source).toContain('role="tabpanel"');
     expect(source).toContain('["set", "players", "details"]');
   });
