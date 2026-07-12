@@ -1,5 +1,6 @@
 import { validateTrade } from "@/lib/game/trade";
 import { boardSpaces } from "@/data/board";
+import { CITY_COLOR_HEX } from "@/lib/ui/propertyColors";
 import type { GameState, PropertyOwnership, TradeOffer, TradeState } from "@/types/game";
 import type { TradeDraftState } from "@/types/multiplayer";
 
@@ -171,17 +172,6 @@ export type PropertyCardPresentation = {
   icon: string;
   isMortgaged: boolean;
   houses: number;
-};
-
-const CITY_COLOR_HEX: Record<string, string> = {
-  brown: "#8b5e3c",
-  "light-blue": "#6ec6ea",
-  pink: "#d946a8",
-  orange: "#f97316",
-  red: "#dc2626",
-  yellow: "#eab308",
-  green: "#16a34a",
-  "dark-blue": "#1d4ed8",
 };
 
 /**

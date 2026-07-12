@@ -197,8 +197,9 @@ describe("AuctionPanel.tsx — header and bid status", () => {
     expect(auctionSrc).toContain("No properties yet");
   });
 
-  it("has color group hex mapping", () => {
-    expect(auctionSrc).toContain("COLOR_GROUP_HEX");
+  it("uses the shared city color mapping", () => {
+    expect(auctionSrc).toContain('import { CITY_COLOR_HEX } from "@/lib/ui/propertyColors"');
+    expect(auctionSrc).toContain("CITY_COLOR_HEX[space.colorGroup]");
   });
 
   it("shows isBidding state on current bidder", () => {

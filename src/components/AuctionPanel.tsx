@@ -8,8 +8,10 @@ import {
   getAuctionPropertyContext,
   type AuctionPropertyContext,
 } from "@/lib/ui/auctionPropertyContext";
+import { getAuctionTheme, type AuctionTheme } from "@/lib/ui/auctionTheme";
+import { CITY_COLOR_HEX } from "@/lib/ui/propertyColors";
 import type { GameAction, GameState } from "@/types/game";
-import type { CityColorGroup } from "@/types/board";
+import type { CSSProperties } from "react";
 
 type AuctionPanelProps = {
   state: GameState;
@@ -64,17 +66,6 @@ function getSpaceTypeLabel(kind: string) {
   return "Property";
 }
 
-const COLOR_GROUP_HEX: Record<CityColorGroup, string> = {
-  brown: "#a16207",
-  "light-blue": "#38bdf8",
-  pink: "#f472b6",
-  orange: "#fb923c",
-  red: "#f87171",
-  yellow: "#facc15",
-  green: "#4ade80",
-  "dark-blue": "#60a5fa",
-};
-
 // ── Property chip ─────────────────────────────────────────────────────────────
 
 /** Compact chip for a single owned property during the auction overview. */
@@ -87,7 +78,7 @@ function PropertyChip({ spaceIndex, state }: { spaceIndex: number; state: GameSt
 
   let dotColor = "#94a3b8"; // slate-400 default
   if (space.kind === "city") {
-    dotColor = COLOR_GROUP_HEX[(space as { colorGroup: CityColorGroup }).colorGroup] ?? dotColor;
+    dotColor = CITY_COLOR_HEX[space.colorGroup] ?? dotColor;
   }
 
   let badge: string | null = null;
@@ -240,7 +231,7 @@ function TimerRing({ secondsLeft }: { secondsLeft: number }) {
   const ringColor = isUrgent ? "#dc2626" : "#d97706";
 
   return (
-    <div className="relative h-12 w-12 shrink-0" aria-label="Time remaining" data-urgent={isUrgent}>
+    <div className="relative h-12 w-12 shrink-0 rounded-full bg-slate-950/70" aria-label="Time remaining" data-urgent={isUrgent}>
       <svg viewBox="0 0 52 52" className={isUrgent ? "auction-timer-ring-urgent" : ""}>
         <circle cx="26" cy="26" r={radius} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="4" />
         <circle
@@ -259,7 +250,7 @@ function TimerRing({ secondsLeft }: { secondsLeft: number }) {
       </svg>
       <span
         className={`absolute inset-0 flex items-center justify-center text-sm font-black ${
-          isUrgent ? "text-red-300" : "text-amber-100"
+          isUrgent ? "text-red-300" : "text-amber-200"
         }`}
       >
         {secondsLeft}
@@ -324,11 +315,11 @@ function BidControls({
 
 type AuctionMobileSection = "set" | "players" | "details";
 
-function AuctionSetOverview({ context }: { context: AuctionPropertyContext }) {
+function AuctionSetOverview({ context, theme }: { context: AuctionPropertyContext; theme: AuctionTheme }) {
   return (
     <section aria-label={`${context.groupName} ownership`} data-testid="auction-set-overview">
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="text-[11px] font-black uppercase tracking-wide text-amber-300">{context.groupName}</h3>
+        <h3 className="text-[11px] font-black uppercase tracking-wide" style={{ color: theme.accentColor }}>{theme.icon} {context.groupName}</h3>
         <span className="text-[10px] font-semibold text-slate-400">{context.groupMembers.length} properties</span>
       </div>
       <div className={`mt-2 flex gap-2 ${context.groupType === "airport" ? "overflow-x-auto pb-1" : ""}`}>
@@ -337,13 +328,16 @@ function AuctionSetOverview({ context }: { context: AuctionPropertyContext }) {
             key={member.spaceIndex}
             className={`min-w-0 flex-1 rounded-lg border p-2 text-[11px] ${
               member.isBeingAuctioned
-                ? "border-amber-300 bg-amber-500/15 ring-1 ring-amber-300/40"
+                ? "ring-1"
                 : "border-slate-700 bg-slate-800/70"
             } ${context.groupType === "airport" ? "min-w-[145px]" : ""}`}
+            style={member.isBeingAuctioned
+              ? { borderColor: theme.borderColor, backgroundColor: theme.mutedAccentColor, boxShadow: `0 0 0 1px ${theme.glowColor}` }
+              : { borderColor: theme.mutedAccentColor }}
           >
             <p className="font-black leading-tight text-white">{member.name}</p>
             {member.isBeingAuctioned ? (
-              <p className="mt-1 text-[9px] font-black uppercase tracking-wide text-amber-300">Being auctioned</p>
+              <p className="mt-1 text-[9px] font-black uppercase tracking-wide" style={{ color: theme.accentColor }}>Being auctioned</p>
             ) : member.isUnowned ? (
               <p className="mt-1 font-semibold text-slate-400">Unowned</p>
             ) : (
@@ -377,12 +371,12 @@ function AuctionSetOverview({ context }: { context: AuctionPropertyContext }) {
   );
 }
 
-function AuctionPropertyDetails({ context }: { context: AuctionPropertyContext }) {
+function AuctionPropertyDetails({ context, theme }: { context: AuctionPropertyContext; theme: AuctionTheme }) {
   const property = context.auctionedProperty;
   const label = context.groupType === "airport" ? "airport" : context.groupType === "utility" ? "utility" : "group";
   return (
     <section aria-label="Property details" data-testid="auction-property-details" className="text-[11px]">
-      <h3 className="text-[11px] font-black uppercase tracking-wide text-amber-300">Property details</h3>
+      <h3 className="text-[11px] font-black uppercase tracking-wide" style={{ color: theme.accentColor }}>Property details</h3>
       <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg border border-slate-700 bg-slate-800/70 p-2 text-slate-300">
         <dt>List price</dt><dd className="text-right font-bold text-white">${property.listPrice}</dd>
         <dt>Mortgage value</dt><dd className="text-right font-bold text-white">${property.mortgageValue}</dd>
@@ -478,6 +472,12 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
     : null;
   const listPrice = isOwnableSpace(space) ? space.price : 0;
   const propertyContext = getAuctionPropertyContext(state, auction.propertySpaceIndex);
+  const theme = getAuctionTheme(space);
+  const panelStyle = {
+    background: `linear-gradient(180deg, ${theme.bodyTintColor} 0%, #0f172a 42%, #0f172a 100%)`,
+    borderColor: theme.borderColor,
+    boxShadow: `0 32px 100px rgba(0,0,0,0.6), 0 0 28px ${theme.glowColor}`,
+  } as CSSProperties;
 
   const isActiveBidder = isMyTurn && !!currentBidder;
   const secondsLeft = Math.max(0, Math.ceil((auction.turnDeadlineAt - now) / 1000));
@@ -528,22 +528,23 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
         aria-modal="true"
         aria-labelledby="auction-title"
         aria-live="polite"
-        className={`flex w-full max-w-3xl flex-col rounded-t-2xl border border-amber-400/40 bg-slate-900 shadow-[0_32px_100px_rgba(0,0,0,0.6)] sm:rounded-2xl sm:max-h-[92vh] max-h-[95vh] lg:max-w-5xl ${
+        className={`flex w-full max-w-3xl flex-col rounded-t-2xl border bg-slate-900 sm:rounded-2xl sm:max-h-[92vh] max-h-[95vh] lg:max-w-5xl ${
           isUrgent ? "auction-modal-urgent" : ""
         }`}
+        style={panelStyle}
       >
         {/* ── Sticky header ─────────────────────────────────────────────── */}
-        <div className="shrink-0 flex items-center justify-between gap-3 border-b border-amber-400/30 bg-gradient-to-r from-amber-700 via-amber-600 to-amber-700 px-4 py-3 rounded-t-2xl">
+        <div className="shrink-0 flex items-center justify-between gap-3 border-b px-4 py-3 rounded-t-2xl" style={{ backgroundColor: theme.accentColor, borderColor: theme.mutedAccentColor, color: theme.accentTextColor }}>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-100">
-              Live Auction
+            <p className="inline-flex rounded bg-amber-400/90 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-[0.18em] text-slate-950">
+              Live Auction · {theme.groupLabel}
             </p>
-            <h2 id="auction-title" className="mt-0.5 truncate text-lg font-black text-white sm:text-xl">
+            <h2 id="auction-title" className="mt-0.5 truncate text-lg font-black sm:text-xl">
               {space.name}
             </h2>
             {isOwnableSpace(space) ? (
-              <p className="text-xs font-semibold text-amber-100/90">
-                {getSpaceTypeLabel(space.kind)} · List ${listPrice}
+              <p className="text-xs font-semibold opacity-85">
+                {getSpaceTypeLabel(space.kind)} · List ${listPrice} · Mortgage ${space.mortgageValue}
               </p>
             ) : null}
           </div>
@@ -552,7 +553,7 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
 
         {/* ── Bid status strip (always visible) ────────────────────────── */}
         <div className="shrink-0 grid grid-cols-2 gap-2 px-4 py-2 border-b border-slate-800">
-          <div className="rounded-lg border border-amber-400/30 bg-slate-800 p-2 text-center">
+          <div className="rounded-lg border bg-slate-800 p-2 text-center" style={{ borderColor: theme.mutedAccentColor }}>
             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">
               Current Bid
             </p>
@@ -560,7 +561,7 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
               {auction.currentBid > 0 ? `$${auction.currentBid}` : "—"}
             </p>
           </div>
-          <div className="rounded-lg border border-amber-400/30 bg-slate-800 p-2 text-center">
+          <div className="rounded-lg border bg-slate-800 p-2 text-center" style={{ borderColor: theme.mutedAccentColor }}>
             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">
               Highest Bidder
             </p>
@@ -582,17 +583,18 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
         </div>
 
         {propertyContext && (
-          <div className="hidden shrink-0 border-b border-slate-800 px-4 py-3 md:block">
-            <AuctionSetOverview context={propertyContext} />
+          <div className="hidden shrink-0 border-b border-slate-800 px-4 py-3 md:block" style={{ borderColor: theme.mutedAccentColor }}>
+            <AuctionSetOverview context={propertyContext} theme={theme} />
           </div>
         )}
 
         {/* Mobile uses focused sections rather than shrinking the desktop two-column layout. */}
-        <div className="shrink-0 border-b border-slate-800 px-3 py-2 md:hidden" role="tablist" aria-label="Auction information">
+        <div className="shrink-0 border-b border-slate-800 px-3 py-2 md:hidden" style={{ borderColor: theme.mutedAccentColor }} role="tablist" aria-label="Auction information">
           {(["set", "players", "details"] as const).map((section) => (
             <button key={section} id={`auction-tab-${section}`} type="button" role="tab" aria-controls={`auction-panel-${section}`} aria-selected={mobileSection === section}
               onClick={() => setMobileSection(section)}
-              className={`mr-1 rounded px-3 py-1.5 text-[11px] font-black uppercase tracking-wide ${mobileSection === section ? "bg-amber-400 text-slate-950" : "text-slate-300"}`}>
+              className={`mr-1 rounded px-3 py-1.5 text-[11px] font-black uppercase tracking-wide ${mobileSection === section ? "text-slate-950" : "text-slate-300"}`}
+              style={mobileSection === section ? { backgroundColor: theme.accentColor, color: theme.accentTextColor } : undefined}>
               {section}
             </button>
           ))}
@@ -601,8 +603,8 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
         {/* ── Scrollable body ───────────────────────────────────────────── */}
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="p-4 md:hidden" id={`auction-panel-${mobileSection}`} role="tabpanel" aria-labelledby={`auction-tab-${mobileSection}`}>
-            {mobileSection === "set" && propertyContext && <AuctionSetOverview context={propertyContext} />}
-            {mobileSection === "details" && propertyContext && <AuctionPropertyDetails context={propertyContext} />}
+            {mobileSection === "set" && propertyContext && <AuctionSetOverview context={propertyContext} theme={theme} />}
+            {mobileSection === "details" && propertyContext && <AuctionPropertyDetails context={propertyContext} theme={theme} />}
             {mobileSection === "players" && <>
               <div className="mb-2 flex items-center justify-between"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Players</p><p className="text-[10px] font-semibold text-slate-500" data-testid="participant-summary">{activeCount} active · {passedCount} passed</p></div>
               {auction.passedPlayerIds.length > 0 && <div className="mb-3 space-y-1">{auction.passedPlayerIds.map((id) => { const player = state.players.find((candidate) => candidate.id === id); return player ? <div key={id} className="flex justify-between rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-400"><span className="line-through">{player.name} <StatusBadge status="PASSED" /></span><span>${player.cash.toLocaleString()}</span></div> : null; })}</div>}
@@ -679,7 +681,7 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
               {propertyContext && (
                 <details className="mt-3 rounded-lg border border-slate-700 bg-slate-800/40 p-2">
                   <summary className="cursor-pointer text-[10px] font-black uppercase tracking-wide text-slate-300">Property details</summary>
-                  <div className="mt-2"><AuctionPropertyDetails context={propertyContext} /></div>
+                  <div className="mt-2"><AuctionPropertyDetails context={propertyContext} theme={theme} /></div>
                 </details>
               )}
             </div>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { CSSProperties } from "react";
 import { getBoardSpaceByIndex } from "@/data/board";
 import { getOwnedSpaceIds } from "@/lib/game/ownership";
+import { CITY_COLOR_HEX } from "@/lib/ui/propertyColors";
 import { TokenIcon } from "@/components/board/TokenIcon";
 import {
   getJailDisplay,
@@ -13,7 +14,7 @@ import {
   PLAYER_CARD_DEFAULT_EXPANDED,
   type PlayerStatusChip,
 } from "@/lib/game/playerPanelHelpers";
-import type { BoardSpace, CityColorGroup } from "@/types/board";
+import type { BoardSpace } from "@/types/board";
 import type { PropertyOwnership } from "@/types/game";
 import type { Player } from "@/types/player";
 
@@ -27,17 +28,6 @@ type PlayerPanelProps = {
   isInActiveTrade?: boolean;
   isInActiveAuction?: boolean;
   isInDebt?: boolean;
-};
-
-const COLOR_GROUP_HEX: Record<CityColorGroup, string> = {
-  brown: "#8b5e3c",
-  "light-blue": "#6ec6ea",
-  pink: "#d946a8",
-  orange: "#f97316",
-  red: "#dc2626",
-  yellow: "#eab308",
-  green: "#16a34a",
-  "dark-blue": "#1d4ed8",
 };
 
 const STATUS_CHIP_STYLES: Record<PlayerStatusChip, string> = {
@@ -202,7 +192,7 @@ export function PlayerPanel({
                   key={chip.spaceIndex}
                   title={chip.name}
                   className={`rounded-full px-2 py-0.5 text-[10px] font-bold text-white ${chip.isMortgaged ? "opacity-50" : ""}`}
-                  style={{ backgroundColor: COLOR_GROUP_HEX[group.colorGroup] }}
+                  style={{ backgroundColor: CITY_COLOR_HEX[group.colorGroup] }}
                 >
                   {chip.name}
                   {group.isFullSet ? " ★" : ""}

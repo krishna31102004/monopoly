@@ -61,7 +61,7 @@ describe("AuctionPanel ownership overview — source-text checks", () => {
   });
 
   it("uses color dots to indicate city color groups", () => {
-    expect(src).toContain("COLOR_GROUP_HEX");
+    expect(src).toContain("CITY_COLOR_HEX");
     expect(src).toContain("backgroundColor: dotColor");
   });
 
