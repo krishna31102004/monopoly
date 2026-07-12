@@ -10,6 +10,7 @@ import {
 } from "@/lib/ui/auctionPropertyContext";
 import { getAuctionTheme, type AuctionTheme } from "@/lib/ui/auctionTheme";
 import { CITY_COLOR_HEX } from "@/lib/ui/propertyColors";
+import { AUCTION_ACTION_TOKENS } from "@/lib/ui/auctionVisualTokens";
 import type { GameAction, GameState } from "@/types/game";
 import type { CSSProperties } from "react";
 
@@ -39,17 +40,18 @@ function getParticipantStatus(
   return "ACTIVE";
 }
 
-const STATUS_BADGE_STYLE: Record<ParticipantStatus, string> = {
-  TURN:    "bg-amber-500 text-slate-950 font-black",
-  HIGHEST: "bg-emerald-600 text-white font-black",
-  ACTIVE:  "bg-slate-600 text-slate-200 font-semibold",
-  PASSED:  "bg-slate-800 text-slate-500 font-semibold",
+const STATUS_BADGE_STYLE: Record<ParticipantStatus, CSSProperties> = {
+  TURN: { color: AUCTION_ACTION_TOKENS.gold, borderColor: AUCTION_ACTION_TOKENS.goldBorder, backgroundColor: AUCTION_ACTION_TOKENS.goldSoft },
+  HIGHEST: { color: AUCTION_ACTION_TOKENS.highest, borderColor: AUCTION_ACTION_TOKENS.highest, backgroundColor: AUCTION_ACTION_TOKENS.highestSoft },
+  ACTIVE: { color: "#cbd5e1", borderColor: AUCTION_ACTION_TOKENS.neutralBorder, backgroundColor: "rgba(51,65,85,0.45)" },
+  PASSED: { color: AUCTION_ACTION_TOKENS.passed, borderColor: "rgba(100,116,139,0.35)", backgroundColor: "rgba(15,23,42,0.55)" },
 };
 
 function StatusBadge({ status }: { status: ParticipantStatus }) {
   return (
     <span
-      className={`shrink-0 rounded px-1 py-0.5 text-[9px] uppercase tracking-wide ${STATUS_BADGE_STYLE[status]}`}
+      className="shrink-0 rounded border px-1 py-0.5 text-[9px] font-black uppercase tracking-wide"
+      style={STATUS_BADGE_STYLE[status]}
       aria-label={`Auction status: ${status}`}
     >
       {status}
@@ -139,25 +141,18 @@ function PlayerOwnershipCard({
 
   const isPassed = status === "PASSED";
 
-  const borderClass = isBidding
-    ? "border-amber-400"
+  const rowStyle: CSSProperties = isBidding
+    ? { borderColor: AUCTION_ACTION_TOKENS.goldBorder, backgroundColor: AUCTION_ACTION_TOKENS.raised, boxShadow: `inset 3px 0 0 ${AUCTION_ACTION_TOKENS.gold}` }
     : isLeading
-      ? "border-emerald-500/60"
+      ? { borderColor: AUCTION_ACTION_TOKENS.highest, backgroundColor: AUCTION_ACTION_TOKENS.raised, boxShadow: `inset 3px 0 0 ${AUCTION_ACTION_TOKENS.highest}` }
       : isPassed
-        ? "border-slate-800"
-        : "border-slate-700";
-
-  const headerBg = isBidding
-    ? "bg-amber-500 text-slate-950"
-    : isLeading
-      ? "bg-emerald-900/60 text-emerald-200"
-      : isPassed
-        ? "bg-slate-900 text-slate-500"
-        : "bg-slate-800 text-slate-300";
+        ? { borderColor: "rgba(100,116,139,0.35)", backgroundColor: "rgba(15,23,42,0.72)" }
+        : { borderColor: AUCTION_ACTION_TOKENS.neutralBorder, backgroundColor: AUCTION_ACTION_TOKENS.raised };
 
   return (
     <div
-      className={`rounded-lg border ${borderClass} overflow-hidden ${isPassed ? "opacity-60" : ""}`}
+      className={`overflow-hidden rounded-lg border ${isPassed ? "opacity-60" : ""}`}
+      style={rowStyle}
       data-testid="player-ownership-card"
     >
       {/* Clickable header: name · cash · status badge · expand toggle */}
@@ -165,13 +160,13 @@ function PlayerOwnershipCard({
         type="button"
         onClick={onToggle}
         aria-expanded={isExpanded}
-        className={`flex w-full items-center justify-between gap-1.5 px-2.5 py-1.5 text-left text-[11px] font-bold ${headerBg} active:opacity-80`}
+        className="flex w-full items-center justify-between gap-1.5 px-2.5 py-1.5 text-left text-[11px] font-bold text-white transition-colors hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6A15B] active:opacity-80"
       >
         <span className="min-w-0 flex items-center gap-1.5">
-          {isBidding ? "▶ " : ""}
+          {isBidding ? <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: AUCTION_ACTION_TOKENS.gold }} aria-hidden="true" /> : null}
           <span className="truncate">{player.name}</span>
-          {isLeading && !isBidding ? " ★" : ""}
           <StatusBadge status={status} />
+          {isLeading && isBidding ? <StatusBadge status="HIGHEST" /> : null}
         </span>
         <span className="flex items-center gap-1 shrink-0">
           <span className="tabular-nums font-black" aria-label={`${player.name} cash: $${player.cash}`}>
@@ -228,10 +223,10 @@ function TimerRing({ secondsLeft }: { secondsLeft: number }) {
   const radius = 22;
   const circumference = 2 * Math.PI * radius;
   const isUrgent = secondsLeft <= 5;
-  const ringColor = isUrgent ? "#dc2626" : "#d97706";
+  const ringColor = isUrgent ? AUCTION_ACTION_TOKENS.urgent : AUCTION_ACTION_TOKENS.gold;
 
   return (
-    <div className="relative h-12 w-12 shrink-0 rounded-full bg-slate-950/70" aria-label="Time remaining" data-urgent={isUrgent}>
+    <div className="relative h-12 w-12 shrink-0 rounded-full bg-slate-950/80" aria-label="Time remaining" data-urgent={isUrgent}>
       <svg viewBox="0 0 52 52" className={isUrgent ? "auction-timer-ring-urgent" : ""}>
         <circle cx="26" cy="26" r={radius} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="4" />
         <circle
@@ -250,7 +245,7 @@ function TimerRing({ secondsLeft }: { secondsLeft: number }) {
       </svg>
       <span
         className={`absolute inset-0 flex items-center justify-center text-sm font-black ${
-          isUrgent ? "text-red-300" : "text-amber-200"
+          isUrgent ? "text-red-300" : "text-white"
         }`}
       >
         {secondsLeft}
@@ -278,8 +273,9 @@ function BidControls({
 
   if (!isActiveBidder) {
     return (
-      <div className="p-3 text-center text-sm font-semibold text-slate-400" data-testid="waiting-state">
-        Waiting for {currentBidder.name}…
+      <div className="m-3 rounded-lg border px-3 py-4 text-center text-sm" style={{ borderColor: AUCTION_ACTION_TOKENS.goldBorder, backgroundColor: AUCTION_ACTION_TOKENS.raised }} data-testid="waiting-state">
+        <p className="font-semibold text-white"><span className="mr-2 inline-block h-2 w-2 rounded-full" style={{ backgroundColor: AUCTION_ACTION_TOKENS.gold }} aria-hidden="true" />Waiting for {currentBidder.name} to bid</p>
+        <p className="mt-1 text-xs text-slate-400">Review the set and player portfolios while waiting.</p>
       </div>
     );
   }
@@ -289,14 +285,17 @@ function BidControls({
       <p className="text-xs font-semibold text-slate-400">
         Cash: ${currentBidder.cash.toLocaleString()}
       </p>
-      <div className="mt-2 grid grid-cols-3 gap-2">
+      <div className="mt-2 grid grid-cols-3 gap-1 rounded-lg" style={{ backgroundColor: AUCTION_ACTION_TOKENS.goldBorder }}>
         {bidOptions.map((opt) => (
           <button
             key={opt.label}
             type="button"
             disabled={opt.amount > currentBidder.cash}
             onClick={() => onBid(opt.amount)}
-            className="rounded-lg bg-amber-500 px-2 py-3 text-sm font-black text-slate-950 shadow-[0_4px_0_rgba(0,0,0,0.25)] transition-all duration-100 hover:bg-amber-400 active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none"
+            className={`min-h-11 px-2 py-3 text-sm font-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500 ${bidOptions.length === 1 ? "col-span-3 rounded-lg" : ""}`}
+            style={bidOptions.length === 1
+              ? { backgroundColor: AUCTION_ACTION_TOKENS.gold, color: AUCTION_ACTION_TOKENS.navy, borderColor: AUCTION_ACTION_TOKENS.darkGold, boxShadow: "0 3px 8px rgba(0,0,0,0.22)" }
+              : { backgroundColor: AUCTION_ACTION_TOKENS.raised, color: AUCTION_ACTION_TOKENS.gold, borderColor: AUCTION_ACTION_TOKENS.goldBorder }}
           >
             {opt.label}
           </button>
@@ -534,9 +533,9 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
         style={panelStyle}
       >
         {/* ── Sticky header ─────────────────────────────────────────────── */}
-        <div className="shrink-0 flex items-center justify-between gap-3 border-b px-4 py-3 rounded-t-2xl" style={{ backgroundColor: theme.accentColor, borderColor: theme.mutedAccentColor, color: theme.accentTextColor }}>
+        <div className="shrink-0 flex items-center justify-between gap-3 border-b px-4 py-3 rounded-t-2xl" style={{ background: `linear-gradient(180deg, ${theme.accentColor}, ${theme.mutedAccentColor})`, borderColor: theme.mutedAccentColor, color: theme.accentTextColor }}>
           <div className="min-w-0 flex-1">
-            <p className="inline-flex rounded bg-amber-400/90 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-[0.18em] text-slate-950">
+            <p className="inline-flex rounded border px-1.5 py-0.5 text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: AUCTION_ACTION_TOKENS.gold, borderColor: AUCTION_ACTION_TOKENS.goldBorder, backgroundColor: "rgba(15,23,42,0.72)" }}>
               Live Auction · {theme.groupLabel}
             </p>
             <h2 id="auction-title" className="mt-0.5 truncate text-lg font-black sm:text-xl">
@@ -557,7 +556,7 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">
               Current Bid
             </p>
-            <p className="mt-0.5 text-xl font-black text-amber-300">
+            <p className="mt-0.5 text-xl font-black text-white">
               {auction.currentBid > 0 ? `$${auction.currentBid}` : "—"}
             </p>
           </div>
@@ -573,13 +572,14 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
 
         {/* ── Active bidder spotlight (always visible) ──────────────────── */}
         <div
-          className={`shrink-0 px-4 py-2 text-center text-sm font-black border-b ${
+          className={`shrink-0 border-b px-4 py-2 text-center text-sm font-semibold ${
             isUrgent
               ? "border-red-800 bg-red-950/60 text-red-200"
-              : "border-slate-800 bg-amber-900/30 text-amber-200"
+              : "bg-[#182235] text-slate-300"
           }`}
+          style={isUrgent ? undefined : { borderColor: AUCTION_ACTION_TOKENS.goldBorder }}
         >
-          {currentBidder ? `🔥 ${currentBidder.name}'s turn to bid` : "Resolving…"}
+          {currentBidder ? <><span className="mr-2 inline-block h-2 w-2 rounded-full" style={{ backgroundColor: AUCTION_ACTION_TOKENS.gold }} aria-hidden="true" /><span className="font-black text-white">{currentBidder.name}</span>&apos;s turn to bid</> : "Resolving…"}
         </div>
 
         {propertyContext && (

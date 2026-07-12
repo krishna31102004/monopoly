@@ -45,14 +45,14 @@ describe("auction player cash visibility", () => {
     expect(auctionSource).toContain("Passed");
   });
 
-  it("active bidder is visually distinguished (▶ indicator)", () => {
-    expect(auctionSource).toContain("▶");
+  it("active bidder is visually distinguished with a gold status accent", () => {
+    expect(auctionSource).toContain("AUCTION_ACTION_TOKENS.gold");
     expect(auctionSource).toContain("isBidding");
   });
 
-  it("leading bidder is distinguished with a star", () => {
+  it("leading bidder is distinguished with a highest status badge", () => {
     expect(auctionSource).toContain("isLeading");
-    expect(auctionSource).toContain("★");
+    expect(auctionSource).toContain('<StatusBadge status="HIGHEST" />');
   });
 
   it("non-active player sees Waiting state (read-only)", () => {

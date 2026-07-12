@@ -16,9 +16,9 @@ describe("auction timer ring", () => {
     expect(auctionSource).toContain("AUCTION_TURN_MS");
   });
 
-  it("uses an amber ring color by default and red once urgent", () => {
-    expect(auctionSource).toContain('"#d97706"');
-    expect(auctionSource).toContain('"#dc2626"');
+  it("uses shared metallic gold by default and red once urgent", () => {
+    expect(auctionSource).toContain("AUCTION_ACTION_TOKENS.gold");
+    expect(auctionSource).toContain("AUCTION_ACTION_TOKENS.urgent");
   });
 
   it("applies an urgent pulse animation class only in the final 5 seconds", () => {

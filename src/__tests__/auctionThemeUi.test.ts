@@ -14,10 +14,10 @@ describe("auction theme presentation safeguards", () => {
   });
 
   it("keeps auction action and state colors independent of the property accent", () => {
-    expect(source).toContain('TURN:    "bg-amber-500');
-    expect(source).toContain('HIGHEST: "bg-emerald-600');
-    expect(source).toContain('PASSED:  "bg-slate-800');
-    expect(source).toContain('bg-amber-500 px-2 py-3');
-    expect(source).toContain('isUrgent ? "#dc2626"');
+    expect(source).toContain("AUCTION_ACTION_TOKENS.gold");
+    expect(source).toContain("AUCTION_ACTION_TOKENS.highest");
+    expect(source).toContain("AUCTION_ACTION_TOKENS.passed");
+    expect(source).toContain("AUCTION_ACTION_TOKENS.raised");
+    expect(source).toContain("AUCTION_ACTION_TOKENS.urgent");
   });
 });
