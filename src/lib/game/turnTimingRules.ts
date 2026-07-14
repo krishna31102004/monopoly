@@ -29,6 +29,11 @@ export function canOpenTradeNow(state: GameState, playerId: string): Preconditio
   if (state.phase === "awaitingPurchaseDecision") return { ok: false, reason: PURCHASE_REASON };
   if (state.phase === "auction") return { ok: false, reason: AUCTION_REASON };
   if (state.phase === "bankruptcyPending") {
+    const debt = state.bankruptcy;
+    const debtor = debt ? state.players.find((player) => player.id === debt.debtorPlayerId) : undefined;
+    if (debt && debtor && debtor.cash >= debt.amountOwed) {
+      return { ok: false, reason: "Pay the outstanding debt before trading again." };
+    }
     return isDebtor(state, playerId)
       ? { ok: true }
       : { ok: false, reason: TRADE_REASON };

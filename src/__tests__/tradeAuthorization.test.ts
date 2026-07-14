@@ -14,12 +14,13 @@ function p0(s: ReturnType<typeof makeGameState>) { return s.players[0].id; }
 function p1(s: ReturnType<typeof makeGameState>) { return s.players[1].id; }
 
 function propose(state: ReturnType<typeof makeGameState>, initiatorIdx = 0, recipientIdx = 1) {
+  state = withOwnership(state, BERLIN, state.players[initiatorIdx].id);
   return gameReducer(state, {
     type: "PROPOSE_TRADE",
     actorPlayerId: state.players[initiatorIdx].id,
     initiatorId: state.players[initiatorIdx].id,
     recipientId: state.players[recipientIdx].id,
-    offerFromInitiator: EMPTY,
+    offerFromInitiator: { ...EMPTY, propertySpaceIndices: [BERLIN] },
     offerFromRecipient: EMPTY,
   });
 }
@@ -41,7 +42,7 @@ describe("PROPOSE_TRADE — turn authorization", () => {
       actorPlayerId: state.players[1].id, // not the current player
       initiatorId: state.players[1].id,
       recipientId: state.players[0].id,
-      offerFromInitiator: EMPTY,
+      offerFromInitiator: { ...EMPTY, propertySpaceIndices: [BERLIN] },
       offerFromRecipient: EMPTY,
     });
     expect(next.trade).toBeNull();
@@ -54,7 +55,7 @@ describe("PROPOSE_TRADE — turn authorization", () => {
       actorPlayerId: p0(state),
       initiatorId: p1(state), // wrong: actor is p0 but claims p1 as initiator
       recipientId: p0(state),
-      offerFromInitiator: EMPTY,
+      offerFromInitiator: { ...EMPTY, propertySpaceIndices: [BERLIN] },
       offerFromRecipient: EMPTY,
     });
     expect(next.trade).toBeNull();
@@ -69,7 +70,7 @@ describe("PROPOSE_TRADE — turn authorization", () => {
       actorPlayerId: state.players[0].id,
       initiatorId: state.players[0].id,
       recipientId: state.players[2].id,
-      offerFromInitiator: EMPTY,
+      offerFromInitiator: { ...EMPTY, propertySpaceIndices: [BERLIN] },
       offerFromRecipient: EMPTY,
     });
     expect(next.trade?.recipientPlayerId).toBe(state.players[1].id); // still original trade
@@ -106,7 +107,7 @@ describe("PROPOSE_TRADE — turn authorization", () => {
       actorPlayerId: p0(state),
       initiatorId: p0(state),
       recipientId: p0(state),
-      offerFromInitiator: EMPTY,
+      offerFromInitiator: { ...EMPTY, propertySpaceIndices: [BERLIN] },
       offerFromRecipient: EMPTY,
     });
     expect(next.trade).toBeNull();
@@ -289,6 +290,10 @@ describe("RoomManager — trade action server authorization", () => {
     // currentPlayerIndex=0, which maps to Alice (first active player)
     const firstId = gs.players[gs.currentPlayerIndex].id;
     const secondId = gs.players.find(p => p.id !== firstId)!.id;
+    // A real normal trade must include a non-cash asset.
+    const ownerIndex = gs.players.findIndex((player) => player.id === firstId);
+    gs.ownerships = gs.ownerships.map((ownership) => ownership.spaceIndex === BERLIN ? { ...ownership, ownerId: firstId } : ownership);
+    gs.players = gs.players.map((player, index) => index === ownerIndex ? { ...player, ownedCityIds: [...player.ownedCityIds, BERLIN] } : player);
     // Map game IDs back to room socket IDs
     // Since we fixed room IDs = game IDs, aliceId/bobId are same as game player IDs
     return { mgr, roomCode, aliceId, bobId, firstId, secondId, gs };
@@ -300,7 +305,7 @@ describe("RoomManager — trade action server authorization", () => {
       type: "PROPOSE_TRADE",
       initiatorId: firstId,
       recipientId: secondId,
-      offerFromInitiator: EMPTY,
+      offerFromInitiator: { ...EMPTY, propertySpaceIndices: [BERLIN] },
       offerFromRecipient: EMPTY,
     }, null);
     expect(result.ok).toBe(true);
@@ -313,7 +318,7 @@ describe("RoomManager — trade action server authorization", () => {
       type: "PROPOSE_TRADE",
       initiatorId: secondId,
       recipientId: firstId,
-      offerFromInitiator: EMPTY,
+      offerFromInitiator: { ...EMPTY, propertySpaceIndices: [BERLIN] },
       offerFromRecipient: EMPTY,
     }, null);
     expect(result.ok).toBe(false);
@@ -326,7 +331,7 @@ describe("RoomManager — trade action server authorization", () => {
       type: "PROPOSE_TRADE",
       initiatorId: secondId, // pretending to be someone else
       recipientId: firstId,
-      offerFromInitiator: EMPTY,
+      offerFromInitiator: { ...EMPTY, propertySpaceIndices: [BERLIN] },
       offerFromRecipient: EMPTY,
     }, null);
     expect(result.ok).toBe(false);
@@ -340,7 +345,7 @@ describe("RoomManager — trade action server authorization", () => {
       type: "PROPOSE_TRADE",
       initiatorId: firstId,
       recipientId: secondId,
-      offerFromInitiator: EMPTY,
+      offerFromInitiator: { ...EMPTY, propertySpaceIndices: [BERLIN] },
       offerFromRecipient: EMPTY,
     }, null);
     // Recipient accepts
@@ -355,7 +360,7 @@ describe("RoomManager — trade action server authorization", () => {
       type: "PROPOSE_TRADE",
       initiatorId: firstId,
       recipientId: secondId,
-      offerFromInitiator: EMPTY,
+      offerFromInitiator: { ...EMPTY, propertySpaceIndices: [BERLIN] },
       offerFromRecipient: EMPTY,
     }, null);
     // Initiator tries to accept their own trade
@@ -385,12 +390,14 @@ describe("RoomManager — trade action server authorization", () => {
     const firstId = gs.players[gs.currentPlayerIndex].id;
     const secondId = gs.players.find(p => p.id !== firstId && p.id !== carolId)?.id ?? bobId;
     const thirdId = gs.players.find(p => p.id !== firstId && p.id !== secondId)!.id;
+    gs.ownerships = gs.ownerships.map((ownership) => ownership.spaceIndex === BERLIN ? { ...ownership, ownerId: firstId } : ownership);
+    gs.players = gs.players.map((player) => player.id === firstId ? { ...player, ownedCityIds: [...player.ownedCityIds, BERLIN] } : player);
     // Propose trade between first and second
     mgr.applyGameAction(roomCode, firstId, {
       type: "PROPOSE_TRADE",
       initiatorId: firstId,
       recipientId: secondId,
-      offerFromInitiator: EMPTY,
+      offerFromInitiator: { ...EMPTY, propertySpaceIndices: [BERLIN] },
       offerFromRecipient: EMPTY,
     }, null);
     // Third player tries to accept
@@ -405,7 +412,7 @@ describe("RoomManager — trade action server authorization", () => {
       type: "PROPOSE_TRADE",
       initiatorId: firstId,
       recipientId: secondId,
-      offerFromInitiator: EMPTY,
+      offerFromInitiator: { ...EMPTY, propertySpaceIndices: [BERLIN] },
       offerFromRecipient: EMPTY,
     }, null);
     const result = mgr.applyGameAction(roomCode, firstId, { type: "DECLINE_TRADE" }, null);
@@ -420,7 +427,7 @@ describe("RoomManager — trade action server authorization", () => {
       type: "PROPOSE_TRADE",
       initiatorId: firstId,
       recipientId: secondId,
-      offerFromInitiator: EMPTY,
+      offerFromInitiator: { ...EMPTY, propertySpaceIndices: [BERLIN] },
       offerFromRecipient: EMPTY,
     }, null);
     const result = mgr.applyGameAction(roomCode, secondId, { type: "DECLINE_TRADE" }, null);
@@ -434,7 +441,7 @@ describe("RoomManager — trade action server authorization", () => {
       type: "PROPOSE_TRADE",
       initiatorId: firstId,
       recipientId: secondId,
-      offerFromInitiator: EMPTY,
+      offerFromInitiator: { ...EMPTY, propertySpaceIndices: [BERLIN] },
       offerFromRecipient: EMPTY,
     }, null);
     const result = mgr.applyGameAction(roomCode, secondId, { type: "CANCEL_TRADE" }, null);
@@ -449,7 +456,7 @@ describe("RoomManager — trade action server authorization", () => {
       type: "PROPOSE_TRADE",
       initiatorId: firstId,
       recipientId: secondId,
-      offerFromInitiator: EMPTY,
+      offerFromInitiator: { ...EMPTY, propertySpaceIndices: [BERLIN] },
       offerFromRecipient: EMPTY,
     }, null);
     const result = mgr.applyGameAction(roomCode, firstId, { type: "CANCEL_TRADE" }, null);
@@ -463,7 +470,7 @@ describe("RoomManager — trade action server authorization", () => {
       type: "PROPOSE_TRADE",
       initiatorId: firstId,
       recipientId: secondId,
-      offerFromInitiator: EMPTY,
+      offerFromInitiator: { ...EMPTY, propertySpaceIndices: [BERLIN] },
       offerFromRecipient: EMPTY,
     }, null);
     const stateBefore = JSON.stringify(mgr.getGameState(roomCode));

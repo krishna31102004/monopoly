@@ -174,6 +174,12 @@
 ### `src/__tests__/multiplayerReconnect.test.ts` (18 tests)
 - Disconnected player can reconnect in lobby with saved playerId
 - Reconnect restores correct player identity
+
+### `src/__tests__/debtResolutionTrade.test.ts`
+- Normal trades reject empty and cash-only offers while retaining property gifts.
+- Debt-resolution offers reject cash/property dumping, free cash, and packages that leave insufficient retained legal mortgage capacity.
+- Asset-for-cash liquidation preserves the original player creditor and closes further trading once the debtor can pay.
+- Mortgaged transferred properties contribute zero retained capacity; only retained, eligible unmortgaged properties contribute mortgage capacity.
 - Unknown playerId falls through to new join
 - Reconnect fails when room does not exist
 - Reconnect after inactivity cleanup fails safely

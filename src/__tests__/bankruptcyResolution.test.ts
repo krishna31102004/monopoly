@@ -49,6 +49,8 @@ describe("Bankruptcy pending — created by payments", () => {
     let state = makeGameState(2);
     const p0id = state.players[0].id;
     const p1id = state.players[1].id;
+    state = withOwnership(state, GUADALAJARA, p0id);
+    state = withPlayer(state, 0, { cash: 0 });
     state = withOwnership(state, GUADALAJARA, p1id);
     state = withPlayer(state, 0, { position: 39, cash: 1 }); // next to Guadalajara
 
@@ -486,6 +488,8 @@ describe("Existing behavior preserved", () => {
     let state = makeGameState(2);
     const p0id = state.players[0].id;
     const p1id = state.players[1].id;
+    state = withOwnership(state, GUADALAJARA, p0id);
+    state = withPlayer(state, 0, { cash: 0 });
     state = makePendingBankruptcy(state, 0, { type: "bank" });
 
     const next = gameReducer(state, {
@@ -493,8 +497,8 @@ describe("Existing behavior preserved", () => {
       actorPlayerId: p0id,
       initiatorId: p0id,
       recipientId: p1id,
-      offerFromInitiator: { cash: 0, propertySpaceIndices: [], getOutOfJailFreeCards: 0 },
-      offerFromRecipient: { cash: 0, propertySpaceIndices: [], getOutOfJailFreeCards: 0 },
+      offerFromInitiator: { cash: 0, propertySpaceIndices: [GUADALAJARA], getOutOfJailFreeCards: 0 },
+      offerFromRecipient: { cash: 50, propertySpaceIndices: [], getOutOfJailFreeCards: 0 },
     });
     // Debtor is allowed to propose trades during bankruptcy to raise cash
     expect(next.trade).not.toBeNull();

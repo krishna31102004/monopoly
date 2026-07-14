@@ -1,5 +1,9 @@
 # Phase 4: Private Friends-Only Multiplayer Architecture
 
+## Phase 4K — Creditor-Protected Debt Resolution Trading
+
+When `bankruptcyPending` records a mandatory payment that the debtor cannot yet afford, trade validation switches from normal negotiation to debt resolution. The debtor may transfer only legally tradeable non-cash assets and must receive positive cash; the debtor cannot send cash or receive properties/cards. Each proposal and acceptance is validated against the authoritative state and a projected legal liquidation calculation (cash, legally sellable buildings, then eligible mortgages). The original creditor, amount, continuation and destination remain on the existing bankruptcy state until the mandatory payment is resolved. Normal trading remains flexible but rejects empty and cash-only offers. This validation is shared by the reducer and RoomManager, so socket clients cannot bypass it.
+
 ## Status: Phase 4C.1 COMPLETE (4A = planning, 4B.1 = room/lobby, 4B.2 = gameplay actions, 4B.3 = reconnect/LAN/QA, 4C.1 = deployment readiness)
 
 ---

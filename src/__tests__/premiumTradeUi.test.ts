@@ -41,7 +41,7 @@ describe("Premium trade UI — three visual states map to distinct roles", () =>
   it("draft state: only the proposer's submit action is gated by validation, never the recipient's", () => {
     const state = makeGameState(2);
     const liveDraft: TradeDraftState = { ...draft, proposerId: state.players[0].id, recipientId: state.players[1].id };
-    expect(canSubmitTradeDraft(state, liveDraft.proposerId, liveDraft)).toBe(true);
+    expect(canSubmitTradeDraft(state, liveDraft.proposerId, liveDraft)).toBe(false);
     expect(canSubmitTradeDraft(state, liveDraft.recipientId, liveDraft)).toBe(false);
   });
 });

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { canOpenTradeNow } from "@/lib/game/turnTimingRules";
+import { calculateGuaranteedDebtCapacity, calculateProjectedTradeState, getTradingMode } from "@/lib/game/trade";
 import {
   validateTradeDraft,
   getTradeModalRole,
@@ -253,6 +254,9 @@ function TradeSidePanel({
   ownedIndices,
   label,
   editable,
+  allowCash = editable,
+  allowAssets = editable,
+  allowGOJF = editable,
   ownerships,
   onCashChange,
   onToggleProp,
@@ -264,6 +268,9 @@ function TradeSidePanel({
   ownedIndices: number[];
   label: string;
   editable: boolean;
+  allowCash?: boolean;
+  allowAssets?: boolean;
+  allowGOJF?: boolean;
   ownerships: PropertyOwnership[];
   onCashChange: (v: number) => void;
   onToggleProp: (idx: number) => void;
@@ -293,7 +300,7 @@ function TradeSidePanel({
           value={offer.cash}
           max={player.cash}
           onChange={onCashChange}
-          disabled={!editable}
+          disabled={!allowCash}
           playerCash={player.cash}
           cashReceived={cashReceived}
         />
@@ -310,7 +317,7 @@ function TradeSidePanel({
             inputMode="numeric"
             value={offer.getOutOfJailFreeCards === 0 ? "" : String(offer.getOutOfJailFreeCards)}
             placeholder="0"
-            disabled={!editable}
+            disabled={!allowGOJF}
             onChange={(e) => {
               const raw = e.target.value.replace(/\D/g, "");
               onGOJFChange(raw === "" ? 0 : Math.max(0, parseInt(raw, 10)));
@@ -339,7 +346,7 @@ function TradeSidePanel({
                 spaceIndex={idx}
                 selected={selectedSet.has(idx)}
                 onToggle={() => onToggleProp(idx)}
-                disabled={!editable}
+                disabled={!allowAssets}
                 ownerships={ownerships}
               />
             ))}
@@ -541,6 +548,8 @@ function LocalTradeForm({ state, dispatch, myPlayerId }: Props) {
   const activePlayers = state.players.filter((p) => !p.isBankrupt && p.id !== effectiveInitiatorId);
   const effectiveRecipientId = recipientId || activePlayers[0]?.id || "";
   const recipientPlayer = state.players.find((p) => p.id === effectiveRecipientId);
+  const tradingMode = getTradingMode(state);
+  const isDebtResolution = tradingMode.type === "debt-resolution";
 
   function resetForm() {
     setInitiatorCash(0); setRecipientCash(0);
@@ -578,6 +587,13 @@ function LocalTradeForm({ state, dispatch, myPlayerId }: Props) {
     effectiveInitiatorId && effectiveRecipientId
       ? validateTradeDraft(state, effectiveInitiatorId, effectiveRecipientId, offerFromInitiator, offerFromRecipient)
       : { ok: false as const, reason: "Select a recipient" };
+  const projected = isDebtResolution && effectiveInitiatorId && effectiveRecipientId
+    ? calculateProjectedTradeState(state, effectiveInitiatorId, effectiveRecipientId, offerFromInitiator, offerFromRecipient)
+    : null;
+  const projectedCash = projected?.players.find((player) => player.id === effectiveInitiatorId)?.cash ?? null;
+  const capacity = projected && isDebtResolution && effectiveInitiatorId
+    ? calculateGuaranteedDebtCapacity(projected, effectiveInitiatorId)
+    : null;
 
   function handlePropose() {
     if (!validation.ok || !effectiveInitiatorId || !effectiveRecipientId) return;
@@ -591,10 +607,10 @@ function LocalTradeForm({ state, dispatch, myPlayerId }: Props) {
 
   return (
     <TradeModalShell
-      statusLabel="Trade Negotiation"
+      statusLabel={isDebtResolution ? "Debt Resolution Trade" : "Trade Negotiation"}
       statusBadge={{ text: getTradeStatusBadgeText({ hasDraft: true, hasPendingTrade: false, isProposer: true }), tone: "live" }}
       title="Build a Deal"
-      subtitle="Both sides must agree before the trade goes through"
+      subtitle={isDebtResolution ? "Liquidate your assets for cash while protecting the outstanding payment." : "Both sides must agree before the trade goes through"}
       onClose={() => { setOpen(false); resetForm(); }}
       footer={
         <>
@@ -622,20 +638,26 @@ function LocalTradeForm({ state, dispatch, myPlayerId }: Props) {
           {activePlayers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
       </div>
+      {isDebtResolution && state.bankruptcy && initiatorPlayer && (
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-950">
+          <span className="font-black">You owe ${state.bankruptcy.amountOwed.toLocaleString()}</span> · Current cash: ${initiatorPlayer.cash.toLocaleString()} · Shortfall: ${(state.bankruptcy.amountOwed - initiatorPlayer.cash).toLocaleString()}
+          {capacity && <span className="block mt-1 text-[11px]">After trade: ${projectedCash?.toLocaleString()} cash · legal building sales: ${capacity.legalBuildingSaleProceeds.toLocaleString()} · mortgage capacity: ${capacity.remainingMortgageProceeds.toLocaleString()} · guaranteed funds: ${capacity.totalGuaranteedFunds.toLocaleString()}</span>}
+        </div>
+      )}
       <TwoSideLayout
         left={initiatorPlayer ? (
           <TradeSidePanel player={initiatorPlayer} offer={offerFromInitiator} cashReceived={recipientCash}
             ownedIndices={initiatorOwnedIndices} label="gives" editable={true} ownerships={state.ownerships}
             onCashChange={setInitiatorCash}
             onToggleProp={(idx) => toggleProp(idx, initiatorProps, setInitiatorProps)}
-            onGOJFChange={setInitiatorGOJF} />
+            onGOJFChange={setInitiatorGOJF} allowCash={!isDebtResolution} />
         ) : <div className="p-3 text-xs text-slate-400">No player</div>}
         right={recipientPlayer ? (
           <TradeSidePanel player={recipientPlayer} offer={offerFromRecipient} cashReceived={initiatorCash}
             ownedIndices={recipientOwnedIndices} label="gives" editable={true} ownerships={state.ownerships}
             onCashChange={setRecipientCash}
             onToggleProp={(idx) => toggleProp(idx, recipientProps, setRecipientProps)}
-            onGOJFChange={setRecipientGOJF} />
+            onGOJFChange={setRecipientGOJF} allowAssets={!isDebtResolution} allowGOJF={!isDebtResolution} />
         ) : <div className="p-3 text-xs text-slate-400">No recipient</div>}
       />
     </TradeModalShell>

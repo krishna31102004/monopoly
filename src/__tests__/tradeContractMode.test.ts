@@ -112,11 +112,11 @@ describe("contract mode — trade validation logic", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("cash-only offer from proposer is valid", () => {
+  it("cash-only offer from proposer is invalid", () => {
     const state = makeGameState(2);
     const offer: TradeOffer = { cash: 100, propertySpaceIndices: [], getOutOfJailFreeCards: 0 };
     const result = validateTradeDraft(state, state.players[0].id, state.players[1].id, offer, EMPTY_OFFER);
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
   });
 
   it("listed value of pending offer is computed correctly from both sides", () => {

@@ -133,18 +133,18 @@ describe("validateTrade", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("accepts valid empty-for-empty trade", () => {
+  it("rejects an empty trade", () => {
     const state = makeGameState();
     const result = validateTrade(state, p0Id(state), p1Id(state), EMPTY_OFFER, EMPTY_OFFER);
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
   });
 
-  it("accepts cash-for-cash trade within means", () => {
+  it("rejects a cash-only trade within means", () => {
     const state = makeGameState();
     const offerA: TradeOffer = { cash: 100, propertySpaceIndices: [], getOutOfJailFreeCards: 0 };
     const offerB: TradeOffer = { cash: 200, propertySpaceIndices: [], getOutOfJailFreeCards: 0 };
     const result = validateTrade(state, p0Id(state), p1Id(state), offerA, offerB);
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
   });
 
   it("accepts property trade when both own their offered properties (no improvements)", () => {
@@ -183,13 +183,14 @@ describe("validateTrade", () => {
 
 describe("PROPOSE_TRADE reducer", () => {
   it("sets trade state when valid", () => {
-    const state = makeGameState();
+    let state = makeGameState();
+    state = withOwnership(state, BERLIN, p0Id(state));
     const next = gameReducer(state, {
       type: "PROPOSE_TRADE",
       actorPlayerId: p0Id(state),
       initiatorId: p0Id(state),
       recipientId: p1Id(state),
-      offerFromInitiator: EMPTY_OFFER,
+      offerFromInitiator: { cash: 0, propertySpaceIndices: [BERLIN], getOutOfJailFreeCards: 0 },
       offerFromRecipient: EMPTY_OFFER,
     });
     expect(next.trade).not.toBeNull();
@@ -229,12 +230,13 @@ describe("PROPOSE_TRADE reducer", () => {
 describe("CANCEL_TRADE reducer", () => {
   it("clears trade state", () => {
     let state = makeGameState();
+    state = withOwnership(state, BERLIN, p0Id(state));
     state = gameReducer(state, {
       type: "PROPOSE_TRADE",
       actorPlayerId: p0Id(state),
       initiatorId: p0Id(state),
       recipientId: p1Id(state),
-      offerFromInitiator: EMPTY_OFFER,
+      offerFromInitiator: { cash: 0, propertySpaceIndices: [BERLIN], getOutOfJailFreeCards: 0 },
       offerFromRecipient: EMPTY_OFFER,
     });
     expect(state.trade).not.toBeNull();
@@ -244,12 +246,13 @@ describe("CANCEL_TRADE reducer", () => {
 
   it("logs a cancellation message so every client can show a result banner", () => {
     let state = makeGameState();
+    state = withOwnership(state, BERLIN, p0Id(state));
     state = gameReducer(state, {
       type: "PROPOSE_TRADE",
       actorPlayerId: p0Id(state),
       initiatorId: p0Id(state),
       recipientId: p1Id(state),
-      offerFromInitiator: EMPTY_OFFER,
+      offerFromInitiator: { cash: 0, propertySpaceIndices: [BERLIN], getOutOfJailFreeCards: 0 },
       offerFromRecipient: EMPTY_OFFER,
     });
     const next = gameReducer(state, { type: "CANCEL_TRADE", actorPlayerId: p0Id(state) });
@@ -268,12 +271,13 @@ describe("CANCEL_TRADE reducer", () => {
 describe("DECLINE_TRADE reducer", () => {
   it("clears trade and logs decline message", () => {
     let state = makeGameState();
+    state = withOwnership(state, BERLIN, p0Id(state));
     state = gameReducer(state, {
       type: "PROPOSE_TRADE",
       actorPlayerId: p0Id(state),
       initiatorId: p0Id(state),
       recipientId: p1Id(state),
-      offerFromInitiator: EMPTY_OFFER,
+      offerFromInitiator: { cash: 0, propertySpaceIndices: [BERLIN], getOutOfJailFreeCards: 0 },
       offerFromRecipient: EMPTY_OFFER,
     });
     const next = gameReducer(state, { type: "DECLINE_TRADE", actorPlayerId: p1Id(state) });
@@ -303,8 +307,9 @@ describe("ACCEPT_TRADE reducer", () => {
     const pid1 = p1Id(state);
     const before0 = playerById(state, pid0).cash; // 1500
     const before1 = playerById(state, pid1).cash; // 1500
+    state = withOwnership(state, BERLIN, pid0);
 
-    const offerA: TradeOffer = { cash: 300, propertySpaceIndices: [], getOutOfJailFreeCards: 0 };
+    const offerA: TradeOffer = { cash: 300, propertySpaceIndices: [BERLIN], getOutOfJailFreeCards: 0 };
     const offerB: TradeOffer = { cash: 100, propertySpaceIndices: [], getOutOfJailFreeCards: 0 };
 
     state = gameReducer(state, {

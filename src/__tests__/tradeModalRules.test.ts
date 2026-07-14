@@ -61,7 +61,7 @@ describe("canEditTradeDraft", () => {
 });
 
 describe("canSubmitTradeDraft", () => {
-  it("is true for the proposer when the draft is valid", () => {
+  it("rejects a cash-only draft for the proposer", () => {
     const state = makeGameState(2);
     const p0 = state.players[0].id;
     const p1 = state.players[1].id;
@@ -72,7 +72,7 @@ describe("canSubmitTradeDraft", () => {
       offerFromRecipient: EMPTY,
       updatedAt: 0,
     };
-    expect(canSubmitTradeDraft(state, p0, draft)).toBe(true);
+    expect(canSubmitTradeDraft(state, p0, draft)).toBe(false);
   });
 
   it("is false for the recipient even if the draft is valid", () => {

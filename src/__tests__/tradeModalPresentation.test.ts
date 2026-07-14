@@ -138,7 +138,7 @@ describe("trade permission regression", () => {
   it("proposer can submit valid draft", () => {
     const state = makeGameState(2);
     const liveDraft: TradeDraftState = { ...draft, proposerId: state.players[0].id, recipientId: state.players[1].id };
-    expect(canSubmitTradeDraft(state, liveDraft.proposerId, liveDraft)).toBe(true);
+    expect(canSubmitTradeDraft(state, liveDraft.proposerId, liveDraft)).toBe(false);
   });
 
   it("recipient cannot submit draft", () => {

@@ -92,7 +92,7 @@ describe("RoomManager — live trade draft", () => {
     expect(mgr.getTradeDraft(roomCode)).toBeNull();
   });
 
-  it("only the proposer can submit the draft, converting it into a real pending trade", () => {
+  it("keeps a cash-only draft open because it cannot become a trade", () => {
     const { mgr, roomCode, aliceId, bobId } = setupRoom();
     mgr.startTradeDraft(roomCode, aliceId, bobId);
     mgr.updateTradeDraft(roomCode, aliceId, {
@@ -104,12 +104,8 @@ describe("RoomManager — live trade draft", () => {
     expect(mgr.getTradeDraft(roomCode)).not.toBeNull();
 
     const goodSubmit = mgr.submitTradeDraft(roomCode, aliceId);
-    expect(goodSubmit.ok).toBe(true);
-    if (goodSubmit.ok) {
-      expect(goodSubmit.value.trade).not.toBeNull();
-      expect(goodSubmit.value.trade?.offerFromInitiator.cash).toBe(100);
-    }
-    expect(mgr.getTradeDraft(roomCode)).toBeNull();
+    expect(goodSubmit.ok).toBe(false);
+    expect(mgr.getTradeDraft(roomCode)).not.toBeNull();
   });
 
   it("submitting an invalid draft (insufficient cash) fails and keeps the draft open", () => {

@@ -267,13 +267,15 @@ describe("Bug 5: Trading is allowed while in bankruptcyPending", () => {
     }};
     const p0Id = state.players[0].id;
     const p1Id = state.players[1].id;
+    state = withPlayer(state, 0, { cash: 0 });
+    state = withOwnership(state, 1, p0Id);
     const tradeState = gameReducer(state, {
       type: "PROPOSE_TRADE",
       actorPlayerId: p0Id,
       initiatorId: p0Id,
       recipientId: p1Id,
-      offerFromInitiator: { cash: 0, propertySpaceIndices: [], getOutOfJailFreeCards: 0 },
-      offerFromRecipient: { cash: 50, propertySpaceIndices: [], getOutOfJailFreeCards: 0 },
+      offerFromInitiator: { cash: 0, propertySpaceIndices: [1], getOutOfJailFreeCards: 0 },
+      offerFromRecipient: { cash: 100, propertySpaceIndices: [], getOutOfJailFreeCards: 0 },
     });
     // Trade should be proposed (not ignored)
     expect(tradeState.trade).not.toBeNull();

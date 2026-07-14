@@ -14,12 +14,12 @@ describe("validateTradeDraft", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("accepts a trade with cash on one side", () => {
+  it("rejects a cash-only trade", () => {
     const state = makeGameState(2);
     const p0 = state.players[0].id;
     const p1 = state.players[1].id;
     const result = validateTradeDraft(state, p0, p1, { ...EMPTY, cash: 100 }, EMPTY);
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
   });
 
   it("rejects trading with yourself", () => {
