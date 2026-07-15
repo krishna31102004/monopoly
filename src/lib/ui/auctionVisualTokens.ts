@@ -1,18 +1,19 @@
+import { DESIGN_TOKENS } from "@/lib/ui/designTokens";
+
 /** Presentation-only palette for auction actions and participant states. */
 export const AUCTION_ACTION_TOKENS = {
-  gold: "#C6A15B",
-  goldHover: "#D8BA72",
-  darkGold: "#8A6A32",
-  goldSoft: "rgba(198, 161, 91, 0.12)",
-  goldMedium: "rgba(198, 161, 91, 0.20)",
-  goldBorder: "rgba(198, 161, 91, 0.55)",
-  navy: "#0F172A",
-  raised: "#182235",
-  raisedHover: "#202C42",
-  neutralBorder: "rgba(148, 163, 184, 0.25)",
-  highest: "#22C55E",
-  highestSoft: "rgba(34, 197, 94, 0.10)",
-  passed: "#64748B",
+  gold: DESIGN_TOKENS.action.gold,
+  goldHover: DESIGN_TOKENS.action.goldHover,
+  darkGold: DESIGN_TOKENS.action.goldDark,
+  goldSoft: DESIGN_TOKENS.action.goldSoft,
+  goldMedium: DESIGN_TOKENS.action.goldMedium,
+  goldBorder: DESIGN_TOKENS.action.goldBorder,
+  navy: DESIGN_TOKENS.surface.navy,
+  raised: DESIGN_TOKENS.surface.navyRaised,
+  raisedHover: DESIGN_TOKENS.surface.navyElevated,
+  neutralBorder: DESIGN_TOKENS.border.neutral,
+  highest: DESIGN_TOKENS.state.success,
+  highestSoft: DESIGN_TOKENS.state.successSoft,
+  passed: DESIGN_TOKENS.state.muted,
   urgent: "#DC2626",
 } as const;
-

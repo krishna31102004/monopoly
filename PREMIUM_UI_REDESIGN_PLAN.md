@@ -17,6 +17,8 @@ Create one visual language: midnight-navy application shell, warm ivory physical
 
 Constraints: no gameplay or server changes, no dependency changes unless essential, no neon/casino styling, and no emojis as core UI icons.
 
+**Status: implemented on `changes` and awaiting local manual review.** The Phase 1 showcase is available only in development at `/dev/design-system`; it is not linked from gameplay or exposed in production navigation.
+
 ## Phase 2 — Entry and Multiplayer Lobby Experience
 
 Redesign home, local play, private-room creation/join, token and game-mode selection, room code, invite link/optional QR code, player manifest, host controls, ready/connection/reconnect states, and Start Game. Use a luxury world-travel club/private departure-lounge direction with boarding-pass room codes and SVG token medallions. Cover responsive desktop and mobile layouts while reducing empty desktop space.
