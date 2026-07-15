@@ -16,7 +16,7 @@ const propertyBands = [
   ["Water Works", "#0891b2"],
 ] as const;
 
-const iconNames: UiIconName[] = ["trade", "players", "dice", "home", "copy", "check", "warning", "mortgage", "building", "hotel", "airport", "utility", "jail", "card", "timer", "online"];
+const iconNames: UiIconName[] = ["trade", "log", "players", "dice", "home", "copy", "check", "warning", "mortgage", "building", "hotel", "airport", "utility", "jail", "card", "timer", "online"];
 
 export default function DesignSystemShowcasePage() {
   if (process.env.NODE_ENV !== "development") notFound();

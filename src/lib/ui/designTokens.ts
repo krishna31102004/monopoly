@@ -70,16 +70,45 @@ export const DESIGN_TOKENS = {
 
 export type DesignTokenGroup = keyof typeof DESIGN_TOKENS;
 
-/** Returns a contrast-safe foreground for a hexadecimal accent color. */
+type RgbColor = readonly [number, number, number];
+
+function parseHexColor(hex: string): RgbColor | null {
+  const normalized = hex.replace("#", "");
+  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) return null;
+
+  return [
+    Number.parseInt(normalized.slice(0, 2), 16),
+    Number.parseInt(normalized.slice(2, 4), 16),
+    Number.parseInt(normalized.slice(4, 6), 16),
+  ];
+}
+
+/** WCAG relative luminance for a six-digit hexadecimal color. */
+export function getRelativeLuminance(hex: string): number | null {
+  const rgb = parseHexColor(hex);
+  if (!rgb) return null;
+
+  const [red, green, blue] = rgb.map((channel) => {
+    const component = channel / 255;
+    return component <= 0.03928 ? component / 12.92 : ((component + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+}
+
+/** WCAG contrast ratio for two six-digit hexadecimal colors. */
+export function getContrastRatio(first: string, second: string): number | null {
+  const firstLuminance = getRelativeLuminance(first);
+  const secondLuminance = getRelativeLuminance(second);
+  if (firstLuminance === null || secondLuminance === null) return null;
+
+  return (Math.max(firstLuminance, secondLuminance) + 0.05) / (Math.min(firstLuminance, secondLuminance) + 0.05);
+}
+
+/** Returns the higher-contrast navy or white foreground for a hexadecimal accent. */
 export function getDesignReadableTextColor(backgroundHex: string): "#0F172A" | "#FFFFFF" {
-  const normalized = backgroundHex.replace("#", "");
-  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) return "#FFFFFF";
+  const navyContrast = getContrastRatio(backgroundHex, DESIGN_TOKENS.surface.navy);
+  const whiteContrast = getContrastRatio(backgroundHex, "#FFFFFF");
+  if (navyContrast === null || whiteContrast === null) return "#FFFFFF";
 
-  const channels = [0, 2, 4].map((offset) => Number.parseInt(normalized.slice(offset, offset + 2), 16) / 255);
-  const linear = channels.map((channel) =>
-    channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
-  );
-  const luminance = 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
-
-  return luminance > 0.42 ? "#0F172A" : "#FFFFFF";
+  return navyContrast >= whiteContrast ? "#0F172A" : "#FFFFFF";
 }

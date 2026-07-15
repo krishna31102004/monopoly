@@ -1,4 +1,5 @@
 import { CITY_COLOR_HEX } from "@/lib/ui/propertyColors";
+import { getDesignReadableTextColor } from "@/lib/ui/designTokens";
 import type { BoardSpace, OwnableSpace } from "@/types/board";
 
 export type AuctionTheme = {
@@ -30,17 +31,9 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${alpha})`;
 }
 
-/** Returns a contrast-safe foreground for a six-digit hexadecimal background. */
+/** Shared WCAG contrast selection, preserving this module's existing lower-case type. */
 export function getReadableTextColor(backgroundHex: string): "#ffffff" | "#0f172a" {
-  const normalized = backgroundHex.replace("#", "");
-  if (!/^[0-9a-f]{6}$/i.test(normalized)) return "#ffffff";
-  const value = Number.parseInt(normalized, 16);
-  const [red, green, blue] = [(value >> 16) & 255, (value >> 8) & 255, value & 255]
-    .map((channel) => {
-      const component = channel / 255;
-      return component <= 0.03928 ? component / 12.92 : ((component + 0.055) / 1.055) ** 2.4;
-    });
-  return 0.2126 * red + 0.7152 * green + 0.0722 * blue > 0.46 ? "#0f172a" : "#ffffff";
+  return getDesignReadableTextColor(backgroundHex) === "#0F172A" ? "#0f172a" : "#ffffff";
 }
 
 function makeTheme(accentColor: string, groupLabel: string, icon: string): AuctionTheme {

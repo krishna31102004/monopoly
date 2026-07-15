@@ -29,12 +29,12 @@ describe("auction property theme", () => {
 });
 
 describe("auction theme contrast", () => {
-  it("uses dark text for light accents and white text for dark accents", () => {
+  it("uses the shared higher-contrast navy or white foreground", () => {
     expect(getReadableTextColor("#eab308")).toBe("#0f172a");
     expect(getReadableTextColor("#6ec6ea")).toBe("#0f172a");
     expect(getReadableTextColor("#1d4ed8")).toBe("#ffffff");
-    expect(getReadableTextColor("#16a34a")).toBe("#ffffff");
-    expect(getReadableTextColor("#d946a8")).toBe("#ffffff");
+    expect(getReadableTextColor("#16a34a")).toBe("#0f172a");
+    expect(getReadableTextColor("#d946a8")).toBe("#0f172a");
     expect(getReadableTextColor("invalid")).toBe("#ffffff");
   });
 });
