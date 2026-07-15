@@ -1,5 +1,12 @@
 # TEST_PLAN.md — World Cities Monopoly
 
+## Premium entry and lobby experience (Phase 2)
+
+- Verify the home links retain `/create`, `/join`, and `/play` navigation.
+- Verify all six existing token IDs have a visual medallion mapping; no new playable tokens are introduced.
+- Verify create and join retain the existing identity payload field names and token values.
+- Manually verify boarding-pass copy feedback, host-only controls, connected/reconnecting labels, room refresh/reconnect, and Start Game with two players.
+
 ## Test Framework
 
 - **Tool:** Vitest 4.1.8 (ESM mode, node environment)

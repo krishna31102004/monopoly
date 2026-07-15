@@ -23,6 +23,8 @@ Constraints: no gameplay or server changes, no dependency changes unless essenti
 
 Redesign home, local play, private-room creation/join, token and game-mode selection, room code, invite link/optional QR code, player manifest, host controls, ready/connection/reconnect states, and Start Game. Use a luxury world-travel club/private departure-lounge direction with boarding-pass room codes and SVG token medallions. Cover responsive desktop and mobile layouts while reducing empty desktop space.
 
+**Status: implemented on `changes` and awaiting local manual review.** Phase 2 uses the shared entry shell, premium token medallions, boarding-pass room identity, factual connection states, and the existing host-authoritative start flow. It adds no Ready system or room protocol changes.
+
 ## Phase 3 — Desktop Game Shell
 
 Preserve the warm physical board while redesigning the dark command dock, current-turn panel, dice and landing controls, action toolbar, trade/mortgage/property-management access, timeline, compact roster, expandable player details, board frame, and ownership/mortgage/house/hotel indicators. Improve board-centre events without obstructing the board. Do not redesign auction/trade logic or board positions/rules.

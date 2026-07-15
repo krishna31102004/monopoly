@@ -6,6 +6,9 @@ export type UiIconName =
   | "players"
   | "dice"
   | "home"
+  | "door"
+  | "link"
+  | "play"
   | "back"
   | "close"
   | "copy"
@@ -34,6 +37,9 @@ const paths: Record<UiIconName, ReactNode> = {
   players: <><circle cx="9" cy="8" r="3" /><path d="M3 20c.7-3 2.8-5 6-5s5.3 2 6 5" /><path d="M16 5a3 3 0 0 1 0 6" /><path d="M19 20c-.3-1.8-1.1-3.1-2.5-4" /></>,
   dice: <><rect x="4" y="4" width="16" height="16" rx="3" /><circle cx="8" cy="8" r=".7" fill="currentColor" /><circle cx="16" cy="16" r=".7" fill="currentColor" /><circle cx="12" cy="12" r=".7" fill="currentColor" /></>,
   home: <><path d="m3 11 9-7 9 7" /><path d="M5 10v10h14V10" /><path d="M9 20v-6h6v6" /></>,
+  door: <><path d="M5 21V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v17" /><path d="M3 21h18" /><path d="M14 12h.01" /></>,
+  link: <><path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1" /><path d="M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1" /></>,
+  play: <path d="m9 6 9 6-9 6V6Z" />,
   back: <><path d="m14 5-7 7 7 7" /><path d="M7 12h13" /></>,
   close: <><path d="m6 6 12 12" /><path d="m18 6-12 12" /></>,
   copy: <><rect x="9" y="9" width="10" height="10" rx="2" /><path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3" /></>,

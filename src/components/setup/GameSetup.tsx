@@ -5,6 +5,7 @@ import type { GameRules, StartGamePlayer } from "@/types/game";
 import { DEFAULT_RULES } from "@/types/game";
 import { GameRulesPanel } from "@/components/setup/GameRulesPanel";
 import type { PlayerToken } from "@/types/player";
+import { TokenMedallion } from "@/components/entry/TokenMedallion";
 
 const tokenOptions: Array<{
   token: PlayerToken;
@@ -84,22 +85,17 @@ export function GameSetup({ onStartGame }: GameSetupProps) {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-3 py-8">
+    <main className="wc-midnight-shell flex min-h-screen items-center justify-center px-3 py-8">
       <div className="w-full max-w-lg">
         {/* Logo area */}
         <div className="mb-8 text-center">
-          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-500">
-            Private Board Game
+          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--wc-gold)]">
+            Local departure
           </p>
-          <h1 className="mt-2 text-4xl font-black leading-none tracking-tight text-slate-950 sm:text-5xl">
-            World Cities
+          <h1 className="mt-2 text-4xl font-black leading-none tracking-tight text-white sm:text-5xl">
+            Local Game
           </h1>
-          <div className="mt-3 flex justify-center gap-1">
-            {["🇲🇽","🇮🇳","🇩🇪","🇦🇪","🇮🇹","🇦🇺","🇬🇧","🇺🇸"].map((flag) => (
-              <span key={flag} className="text-lg">{flag}</span>
-            ))}
-          </div>
-          <p className="mt-3 text-sm font-semibold text-slate-500">
+          <p className="mt-3 text-sm font-semibold text-slate-300">
             2–6 players · Local pass-and-play · $1,500 starting cash
           </p>
         </div>
@@ -141,7 +137,7 @@ export function GameSetup({ onStartGame }: GameSetupProps) {
                     />
                   </label>
 
-                  <label className="w-36 shrink-0">
+                  <label className="w-28 shrink-0">
                     <span className="block text-[10px] font-black uppercase tracking-wide text-slate-400">
                       Token
                     </span>
@@ -163,6 +159,7 @@ export function GameSetup({ onStartGame }: GameSetupProps) {
                       ))}
                     </select>
                   </label>
+                  {tokenConfig && <TokenMedallion compact token={tokenConfig.token} />}
 
                   <button
                     type="button"

@@ -1,173 +1,25 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRoom } from "@/hooks/useRoom";
 import { TokenPicker } from "@/components/multiplayer/TokenPicker";
 import { RoomLobby } from "@/components/multiplayer/RoomLobby";
 import { RollOffScreen } from "@/components/multiplayer/RollOffScreen";
 import { GameLayoutMultiplayer } from "@/components/multiplayer/GameLayoutMultiplayer";
+import { EntryShell } from "@/components/entry/EntryShell";
+import { TokenMedallion } from "@/components/entry/TokenMedallion";
+import { UiIcon } from "@/components/ui/UiIcon";
 import type { PlayerToken } from "@/types/player";
 import type { GameRules } from "@/types/game";
 
 export function CreateRoom() {
-  const {
-    status,
-    connected,
-    connecting,
-    room,
-    myPlayerId,
-    gameState,
-    rollOff,
-    error,
-    createRoom,
-    startGame,
-    rollForOrder,
-    beginRollOffGame,
-    leaveRoom,
-    forfeitGame,
-    clearError,
-    sendAction,
-    requestGameSync,
-    tradeDraft,
-    startTradeDraft,
-    updateTradeDraft,
-    cancelTradeDraft,
-    submitTradeDraft,
-  } = useRoom();
-
-  const [name, setName] = useState("");
-  const [token, setToken] = useState<PlayerToken | null>(null);
-  const [tokenLabel, setTokenLabel] = useState("");
-  const [tokenColor, setTokenColor] = useState("");
-  const [nameError, setNameError] = useState("");
-
-  function handleCreate() {
-    const trimmed = name.trim();
-    if (!trimmed) { setNameError("Enter your display name."); return; }
-    if (!token) { setNameError("Choose a token."); return; }
-    setNameError("");
-    clearError();
-    createRoom({ displayName: trimmed, token, tokenLabel, color: tokenColor });
-  }
-
-  // Show roll-off screen during roll-off phase
-  if (room && myPlayerId && room.status === "rollOff" && rollOff) {
-    return (
-      <RollOffScreen
-        rollOff={rollOff}
-        players={room.players}
-        myPlayerId={myPlayerId}
-        isHost={room.players.find((p) => p.playerId === myPlayerId)?.isHost ?? false}
-        onRoll={rollForOrder}
-        onBeginGame={beginRollOffGame}
-      />
-    );
-  }
-
-  // Show game board once game is in progress
-  if (room && myPlayerId && gameState && room.status === "inGame") {
-    return (
-      <GameLayoutMultiplayer
-        gameState={gameState}
-        myPlayerId={myPlayerId}
-        room={room}
-        sendAction={sendAction}
-        error={error}
-        connectionStatus={status}
-        onLeave={leaveRoom}
-        onForfeit={forfeitGame}
-        onRequestSync={requestGameSync}
-        tradeDraft={tradeDraft}
-        startTradeDraft={startTradeDraft}
-        updateTradeDraft={updateTradeDraft}
-        cancelTradeDraft={cancelTradeDraft}
-        submitTradeDraft={submitTradeDraft}
-      />
-    );
-  }
-
-  // Show lobby while waiting
-  if (room && myPlayerId) {
-    return (
-      <RoomLobby
-        room={room}
-        myPlayerId={myPlayerId}
-        onStartGame={(rules: GameRules) => startGame(rules)}
-        onLeave={leaveRoom}
-        error={error}
-      />
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-slate-950 px-4 py-8">
-      <div className="mx-auto max-w-sm">
-        <Link
-          href="/"
-          className="mb-6 inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-slate-300"
-        >
-          ← Back
-        </Link>
-
-        <h1 className="mb-1 text-2xl font-black text-white">Create Private Room</h1>
-        <p className="mb-6 text-sm text-slate-400">
-          Enter your details, then share the room code with friends.
-        </p>
-
-        {/* Server connection status */}
-        {connecting && (
-          <div className="mb-4 rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-400">
-            Connecting to server…
-          </div>
-        )}
-        {!connecting && !connected && (
-          <div className="mb-4 rounded-lg border border-red-800 bg-red-950 px-4 py-3 text-sm font-bold text-red-300">
-            Cannot reach multiplayer server. Make sure it is running.
-            {error && <p className="mt-1 font-normal">{error}</p>}
-          </div>
-        )}
-
-        <div className="space-y-5">
-          {/* Name */}
-          <div>
-            <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-400">
-              Your Name
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => { setName(e.target.value); setNameError(""); }}
-              placeholder="e.g. Alice"
-              maxLength={30}
-              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-white placeholder-slate-600 focus:border-emerald-600 focus:outline-none"
-            />
-          </div>
-
-          {/* Token */}
-          <TokenPicker
-            selected={token}
-            takenTokens={[]}
-            onChange={(t, label, color) => { setToken(t); setTokenLabel(label); setTokenColor(color); setNameError(""); }}
-          />
-
-          {nameError && (
-            <p className="text-sm font-bold text-red-400">{nameError}</p>
-          )}
-          {error && !nameError && (
-            <p className="text-sm font-bold text-red-400">{error}</p>
-          )}
-
-          <button
-            type="button"
-            onClick={handleCreate}
-            disabled={!connected}
-            className="w-full rounded-xl bg-emerald-600 px-6 py-4 text-base font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {connected ? "Create Room" : "Server unavailable"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  const roomState = useRoom();
+  const { status, connected, connecting, room, myPlayerId, gameState, rollOff, error, createRoom, startGame, rollForOrder, beginRollOffGame, leaveRoom, forfeitGame, clearError, sendAction, requestGameSync, tradeDraft, startTradeDraft, updateTradeDraft, cancelTradeDraft, submitTradeDraft } = roomState;
+  const [name, setName] = useState(""); const [token, setToken] = useState<PlayerToken | null>(null); const [tokenLabel, setTokenLabel] = useState(""); const [tokenColor, setTokenColor] = useState(""); const [nameError, setNameError] = useState(""); const [submitting, setSubmitting] = useState(false);
+  useEffect(() => { if (error) setSubmitting(false); }, [error]);
+  function handleCreate() { const trimmed = name.trim(); if (!trimmed) { setNameError("Enter your display name."); return; } if (!token) { setNameError("Choose a token."); return; } if (submitting || !connected) return; setNameError(""); clearError(); setSubmitting(true); createRoom({ displayName: trimmed, token, tokenLabel, color: tokenColor }); }
+  if (room && myPlayerId && room.status === "rollOff" && rollOff) return <RollOffScreen rollOff={rollOff} players={room.players} myPlayerId={myPlayerId} isHost={room.players.find((p) => p.playerId === myPlayerId)?.isHost ?? false} onRoll={rollForOrder} onBeginGame={beginRollOffGame} />;
+  if (room && myPlayerId && gameState && room.status === "inGame") return <GameLayoutMultiplayer gameState={gameState} myPlayerId={myPlayerId} room={room} sendAction={sendAction} error={error} connectionStatus={status} onLeave={leaveRoom} onForfeit={forfeitGame} onRequestSync={requestGameSync} tradeDraft={tradeDraft} startTradeDraft={startTradeDraft} updateTradeDraft={updateTradeDraft} cancelTradeDraft={cancelTradeDraft} submitTradeDraft={submitTradeDraft} />;
+  if (room && myPlayerId) return <RoomLobby room={room} myPlayerId={myPlayerId} onStartGame={(rules: GameRules) => startGame(rules)} onLeave={leaveRoom} error={error} connectionStatus={status} />;
+  return <EntryShell backHref="/"><section className="mx-auto max-w-4xl"><div className="mb-6"><p className="wc-section-label text-[var(--wc-gold)]">Private departure</p><h1 className="wc-heading mt-2 text-white">Create Private Room</h1><p className="mt-2 text-slate-300">Choose your travel token, then share a private room code with friends.</p></div><div className="grid gap-5 lg:grid-cols-[1.25fr_.75fr]"><form className="wc-panel space-y-6" onSubmit={(event) => { event.preventDefault(); handleCreate(); }}><section><p className="wc-section-label">1. Your identity</p><label className="mt-2 grid gap-2 text-sm font-bold text-slate-100" htmlFor="create-player-name">Player name<input id="create-player-name" value={name} onChange={(e) => { setName(e.target.value); setNameError(""); }} maxLength={30} placeholder="e.g. Alice" className="wc-input" /></label></section><TokenPicker selected={token} takenTokens={[]} onChange={(nextToken, label, color) => { setToken(nextToken); setTokenLabel(label); setTokenColor(color); setNameError(""); }} />{(nameError || error) && <p aria-live="polite" className="wc-validation wc-validation-danger">{nameError || error}</p>}<button className="wc-button wc-button-primary w-full" disabled={!connected || submitting} type="submit"><UiIcon name="players" size={18} />{connected ? submitting ? "Creating room…" : "Create Private Room" : "Server unavailable"}</button></form><aside className="space-y-4"><div className="wc-paper-card"><p className="wc-section-label text-slate-600">Your boarding summary</p><div className="mt-4 flex items-center gap-3">{token ? <TokenMedallion token={token} compact /> : <span className="h-10 w-10 rounded-full border border-dashed border-slate-400" />}<div><p className="font-bold">{name.trim() || "Your name"}</p><p className="wc-caption text-slate-600">Up to 6 players · $1,500 starting cash</p></div></div></div>{connecting && <p className="wc-validation wc-validation-info">Connecting to multiplayer server…</p>}{!connecting && !connected && <p className="wc-validation wc-validation-danger">Cannot reach multiplayer server. Try again when it is available.</p>}</aside></div></section></EntryShell>;
 }
