@@ -534,6 +534,7 @@ function LocalTradeForm({ state, dispatch, myPlayerId }: Props) {
   const [recipientProps, setRecipientProps] = useState<number[]>([]);
   const [initiatorGOJF, setInitiatorGOJF] = useState(0);
   const [recipientGOJF, setRecipientGOJF] = useState(0);
+  const [debtTradeMode, setDebtTradeMode] = useState<"cash" | "swap">("cash");
 
   const currentPlayerId = state.players[state.currentPlayerIndex]?.id;
   const authorizedProposerId =
@@ -550,6 +551,7 @@ function LocalTradeForm({ state, dispatch, myPlayerId }: Props) {
   const recipientPlayer = state.players.find((p) => p.id === effectiveRecipientId);
   const tradingMode = getTradingMode(state);
   const isDebtResolution = tradingMode.type === "debt-resolution";
+  const isAssetSwap = isDebtResolution && debtTradeMode === "swap";
 
   function resetForm() {
     setInitiatorCash(0); setRecipientCash(0);
@@ -644,6 +646,13 @@ function LocalTradeForm({ state, dispatch, myPlayerId }: Props) {
           {capacity && <span className="block mt-1 text-[11px]">After trade: ${projectedCash?.toLocaleString()} cash · legal building sales: ${capacity.legalBuildingSaleProceeds.toLocaleString()} · mortgage capacity: ${capacity.remainingMortgageProceeds.toLocaleString()} · guaranteed funds: ${capacity.totalGuaranteedFunds.toLocaleString()}</span>}
         </div>
       )}
+      {isDebtResolution && (
+        <div className="flex gap-2 border-b border-slate-100 px-4 py-2">
+          <button type="button" onClick={() => { setDebtTradeMode("cash"); setRecipientProps([]); setRecipientGOJF(0); }} className={`rounded px-2 py-1 text-xs font-bold ${!isAssetSwap ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600"}`}>RAISE CASH</button>
+          <button type="button" onClick={() => { setDebtTradeMode("swap"); setInitiatorCash(0); setRecipientCash(0); }} className={`rounded px-2 py-1 text-xs font-bold ${isAssetSwap ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600"}`}>SWAP ASSETS</button>
+          {isAssetSwap && <span className="self-center text-[11px] text-slate-500">Exchange assets without moving cash.</span>}
+        </div>
+      )}
       <TwoSideLayout
         left={initiatorPlayer ? (
           <TradeSidePanel player={initiatorPlayer} offer={offerFromInitiator} cashReceived={recipientCash}
@@ -657,7 +666,7 @@ function LocalTradeForm({ state, dispatch, myPlayerId }: Props) {
             ownedIndices={recipientOwnedIndices} label="gives" editable={true} ownerships={state.ownerships}
             onCashChange={setRecipientCash}
             onToggleProp={(idx) => toggleProp(idx, recipientProps, setRecipientProps)}
-            onGOJFChange={setRecipientGOJF} allowAssets={!isDebtResolution} allowGOJF={!isDebtResolution} />
+            onGOJFChange={setRecipientGOJF} allowCash={!isDebtResolution} allowAssets={!isDebtResolution || isAssetSwap} allowGOJF={!isDebtResolution || isAssetSwap} />
         ) : <div className="p-3 text-xs text-slate-400">No recipient</div>}
       />
     </TradeModalShell>

@@ -17,9 +17,20 @@ export type GuaranteedDebtCapacity = {
   remainingMortgageProceeds: number;
   totalGuaranteedFunds: number;
 };
+export type DebtTradeSubtype = "cash-raising" | "asset-restructuring";
 
 const hasNonCashAsset = (offer: TradeOffer) =>
   offer.propertySpaceIndices.length > 0 || offer.getOutOfJailFreeCards > 0;
+
+export function classifyDebtTradeSubtype(
+  debtorOffer: TradeOffer,
+  counterpartyOffer: TradeOffer,
+): DebtTradeSubtype | null {
+  if (debtorOffer.cash !== 0 || !hasNonCashAsset(debtorOffer)) return null;
+  if (counterpartyOffer.cash > 0 && !hasNonCashAsset(counterpartyOffer)) return "cash-raising";
+  if (counterpartyOffer.cash === 0 && hasNonCashAsset(counterpartyOffer)) return "asset-restructuring";
+  return null;
+}
 
 /** The debt state is authoritative; no trade-specific debt flag is persisted. */
 export function getTradingMode(state: GameState): TradingMode {
@@ -241,11 +252,10 @@ export function validateTrade(
     const debtorIsInitiator = initiatorId === mode.debtorPlayerId;
     const debtorOffer = debtorIsInitiator ? offerFromInitiator : offerFromRecipient;
     const counterpartyOffer = debtorIsInitiator ? offerFromRecipient : offerFromInitiator;
-    if (debtorOffer.cash !== 0) return { ok: false, reason: "The debtor cannot send cash during debt resolution." };
-    if (!hasNonCashAsset(debtorOffer)) return { ok: false, reason: "The debtor must give at least one property or Get Out of Jail Free card." };
-    if (counterpartyOffer.cash <= 0) return { ok: false, reason: "The debtor must receive cash to resolve the outstanding debt." };
-    if (counterpartyOffer.propertySpaceIndices.length > 0 || counterpartyOffer.getOutOfJailFreeCards > 0) {
-      return { ok: false, reason: "Debt-resolution trades may give the debtor cash only." };
+    const subtype = classifyDebtTradeSubtype(debtorOffer, counterpartyOffer);
+    if (!subtype) return { ok: false, reason: "Debt trades must be either assets for cash or a zero-cash asset swap." };
+    if (subtype === "cash-raising" && (counterpartyOffer.propertySpaceIndices.length > 0 || counterpartyOffer.getOutOfJailFreeCards > 0)) {
+      return { ok: false, reason: "Cash-raising debt trades may give the debtor cash only." };
     }
 
     const initiatorFee = getMortgageTransferFee(state, offerFromRecipient.propertySpaceIndices);
@@ -256,8 +266,19 @@ export function validateTrade(
     }
     const projected = calculateProjectedTradeState(state, initiatorId, recipientId, offerFromInitiator, offerFromRecipient);
     const projectedDebtor = projected.players.find((player) => player.id === mode.debtorPlayerId)!;
-    if (projectedDebtor.cash <= (state.players.find((player) => player.id === mode.debtorPlayerId)?.cash ?? 0)) {
+    if (subtype === "cash-raising" && projectedDebtor.cash <= (state.players.find((player) => player.id === mode.debtorPlayerId)?.cash ?? 0)) {
       return { ok: false, reason: "The debtor's cash must increase during debt resolution." };
+    }
+    if (subtype === "asset-restructuring") {
+      const debtorMortgageFee = debtorIsInitiator ? initiatorFee : recipientFee;
+      if (debtorMortgageFee > 0) return { ok: false, reason: "The debtor cannot receive a mortgaged property that creates an immediate transfer fee." };
+      const before = calculateGuaranteedDebtCapacity(state, mode.debtorPlayerId);
+      const after = calculateGuaranteedDebtCapacity(projected, mode.debtorPlayerId);
+      const protectedFloor = Math.min(mode.outstandingAmount, before.totalGuaranteedFunds);
+      if (after.totalGuaranteedFunds < protectedFloor) {
+        return { ok: false, reason: "This swap would reduce the funds protected for the creditor." };
+      }
+      return { ok: true };
     }
     const capacity = calculateGuaranteedDebtCapacity(projected, mode.debtorPlayerId);
     if (capacity.totalGuaranteedFunds < mode.outstandingAmount) {

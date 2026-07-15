@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { gameReducer } from "@/lib/game/gameReducer";
-import { calculateGuaranteedDebtCapacity, getTradingMode, validateTrade } from "@/lib/game/trade";
+import { calculateGuaranteedDebtCapacity, classifyDebtTradeSubtype, getTradingMode, validateTrade } from "@/lib/game/trade";
 import { makeGameState, withMortgage, withOwnership, withPlayer } from "@/__tests__/helpers/factory";
 import type { GameState, TradeOffer } from "@/types/game";
 
@@ -26,6 +26,26 @@ function pendingDebt(state: GameState, amount = 450): GameState {
 }
 
 describe("creditor-protected debt-resolution trading", () => {
+  it("classifies cash raising and zero-cash restructuring without trusting a client field", () => {
+    const asset = { ...empty, propertySpaceIndices: [GUADALAJARA] };
+    expect(classifyDebtTradeSubtype(asset, { ...empty, cash: 14 })).toBe("cash-raising");
+    expect(classifyDebtTradeSubtype(asset, { ...empty, propertySpaceIndices: [JFK] })).toBe("asset-restructuring");
+    expect(classifyDebtTradeSubtype(asset, { cash: 14, propertySpaceIndices: [JFK], getOutOfJailFreeCards: 0 })).toBeNull();
+  });
+
+  it("allows a zero-cash asset swap that preserves the protected recovery floor", () => {
+    let state = makeGameState(3);
+    const [kb, ansh] = state.players;
+    state = withPlayer(state, 0, { cash: 436 });
+    state = withOwnership(state, GUADALAJARA, kb.id);
+    state = withOwnership(state, JFK, ansh.id);
+    state = pendingDebt(state);
+    const result = validateTrade(state, kb.id, ansh.id, { ...empty, propertySpaceIndices: [GUADALAJARA] }, { ...empty, propertySpaceIndices: [JFK] });
+    expect(result.ok).toBe(true);
+    const next = gameReducer(state, { type: "PROPOSE_TRADE", actorPlayerId: kb.id, initiatorId: kb.id, recipientId: ansh.id, offerFromInitiator: { ...empty, propertySpaceIndices: [GUADALAJARA] }, offerFromRecipient: { ...empty, propertySpaceIndices: [JFK] } });
+    expect(next.bankruptcy).toEqual(state.bankruptcy);
+    expect(next.players[0].cash).toBe(436);
+  });
   it("normal mode bans empty and cash-only trades but retains property gifts", () => {
     let state = makeGameState(2);
     const [debtor, counterparty] = state.players;

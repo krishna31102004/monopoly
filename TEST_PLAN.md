@@ -180,6 +180,7 @@
 - Debt-resolution offers reject cash/property dumping, free cash, and packages that leave insufficient retained legal mortgage capacity.
 - Asset-for-cash liquidation preserves the original player creditor and closes further trading once the debtor can pay.
 - Mortgaged transferred properties contribute zero retained capacity; only retained, eligible unmortgaged properties contribute mortgage capacity.
+- Zero-cash debt asset swaps require assets from both sides and preserve the pre-trade protected recovery floor.
 - Unknown playerId falls through to new join
 - Reconnect fails when room does not exist
 - Reconnect after inactivity cleanup fails safely
