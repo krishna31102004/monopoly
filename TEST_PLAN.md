@@ -223,6 +223,9 @@
 
 ## Commands
 
+### Phase 4L presentation safeguards
+- Trade presentation remains backed by pure validation helpers and the existing Send / Accept / Decline / Cancel workflow; no counter-offer state is introduced.
+
 ```bash
 nvm use 20
 npm run typecheck   # tsc --noEmit

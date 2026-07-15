@@ -112,7 +112,7 @@ function PropertyChip({
       className={`relative flex items-center gap-0 rounded-md border text-left text-xs font-semibold transition-all duration-100 overflow-hidden ${
         selected
           ? "border-transparent shadow-sm ring-1 ring-white/50"
-          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+          : "border-slate-600 bg-[#182235] text-slate-100 hover:border-[#C6A15B]/70 hover:bg-[#202C42]"
       } ${disabled ? "cursor-default opacity-70" : "cursor-pointer"}`}
       style={selected ? { backgroundColor: card.colorHex ?? "#94a3b8" } : undefined}
       title={`${card.name}${card.isMortgaged ? " — mortgaged" : ""}`}
@@ -121,7 +121,7 @@ function PropertyChip({
         className="inline-block w-1.5 shrink-0 self-stretch"
         style={{ backgroundColor: selected ? "rgba(255,255,255,0.4)" : (card.colorHex ?? "#94a3b8") }}
       />
-      <span className={`flex items-center gap-1 px-2 py-1 ${selected ? "text-white" : ""}`}>
+      <span className={`flex items-center gap-1 px-2 py-1 ${selected ? "text-white" : "text-slate-100"}`}>
         <span className="truncate max-w-[72px] leading-tight">{card.name}</span>
         {card.isMortgaged && (
           <span className={`text-[9px] font-black ${selected ? "text-white/60" : "text-amber-500"}`}>M</span>
@@ -162,10 +162,10 @@ function MoneyCounter({
       <div
         className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 transition-colors ${
           invalid
-            ? "border-red-300 bg-red-50"
+          ? "border-rose-400/70 bg-rose-500/10"
             : disabled
-            ? "border-slate-100 bg-slate-50"
-            : "border-slate-200 bg-white focus-within:border-indigo-400"
+            ? "border-slate-700 bg-slate-900/50"
+            : "border-slate-600 bg-[#182235] focus-within:border-[#C6A15B]"
         }`}
       >
         <span className={`text-sm font-black leading-none ${invalid ? "text-red-500" : "text-slate-400"}`}>$</span>
@@ -179,7 +179,7 @@ function MoneyCounter({
             const raw = e.target.value.replace(/\D/g, "");
             onChange(raw === "" ? 0 : Math.max(0, parseInt(raw, 10)));
           }}
-          className="min-w-0 flex-1 bg-transparent text-sm font-black text-slate-900 outline-none placeholder:font-normal placeholder:text-slate-300 disabled:text-slate-400"
+          className="min-w-0 flex-1 bg-transparent text-sm font-black text-slate-100 outline-none placeholder:font-normal placeholder:text-slate-500 disabled:text-slate-500"
         />
       </div>
       <div className="flex items-center justify-between text-[10px] leading-tight">
@@ -187,7 +187,7 @@ function MoneyCounter({
         {invalid ? (
           <span className="font-bold text-red-500">Exceeds balance</span>
         ) : (
-          <span className="text-slate-500">
+            <span className="text-slate-400">
             After{" "}
             <span className="font-bold text-slate-700">
               {afterTrade.valid ? `$${afterTrade.amount.toLocaleString()}` : "—"}
@@ -211,9 +211,9 @@ function DealTray({
   const isEmpty = offer.cash === 0 && offer.propertySpaceIndices.length === 0 && offer.getOutOfJailFreeCards === 0;
 
   return (
-    <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-2.5 py-2 min-h-[36px]">
+    <div className="rounded-lg border border-dashed border-slate-600 bg-[#182235] px-2.5 py-2 min-h-[52px]">
       {isEmpty ? (
-        <p className="text-[11px] italic text-slate-300">Nothing selected</p>
+        <p className="text-[11px] italic text-slate-400">No assets selected · choose holdings below.</p>
       ) : (
         <div className="flex flex-wrap gap-1.5 items-center">
           {offer.cash > 0 && (
@@ -280,12 +280,12 @@ function TradeSidePanel({
   const listedValue = getTradeSideListedValue(offer, ownerships);
 
   return (
-    <div className="flex flex-col min-w-0 p-3 space-y-3">
+      <div className="flex min-w-0 flex-col space-y-3 bg-[#0F172A] p-3">
       {/* Player header */}
       <div className="flex items-center gap-2">
         <TokenIcon token={player.token} color={player.color} size={26} label={player.tokenLabel} badge />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-black text-slate-900">{player.name}</p>
+          <p className="truncate text-sm font-black text-slate-100">{player.name}</p>
           <p className="text-[10px] font-semibold" style={{ color: player.color }}>
             {!editable && "🔒 "}
             {label}
@@ -322,7 +322,7 @@ function TradeSidePanel({
               const raw = e.target.value.replace(/\D/g, "");
               onGOJFChange(raw === "" ? 0 : Math.max(0, parseInt(raw, 10)));
             }}
-            className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-semibold text-slate-800 outline-none focus:border-indigo-400 disabled:bg-slate-50 disabled:text-slate-400"
+            className="w-full rounded-lg border border-slate-600 bg-[#182235] px-2.5 py-1.5 text-sm font-semibold text-slate-100 outline-none focus:border-[#C6A15B] disabled:bg-slate-900 disabled:text-slate-500"
           />
         </div>
       )}
@@ -355,9 +355,9 @@ function TradeSidePanel({
       )}
 
       {/* Listed value */}
-      <div className="mt-auto pt-1 border-t border-slate-100 text-[10px] text-slate-400 flex items-center justify-between">
+      <div className="mt-auto flex items-center justify-between border-t border-slate-700 pt-1 text-[10px] text-slate-400">
         <span>Listed value</span>
-        <span className="font-black text-slate-600">${listedValue.toLocaleString()}</span>
+        <span className="font-black text-slate-200">${listedValue.toLocaleString()}</span>
       </div>
     </div>
   );
@@ -456,10 +456,10 @@ function TradeModalShell({
 }) {
   const badgeClass =
     statusBadge?.tone === "live"
-      ? "bg-emerald-500 text-white"
+      ? "border border-[#C6A15B]/60 bg-slate-950/40 text-[#D8BA72]"
       : statusBadge?.tone === "pending"
-      ? "bg-indigo-500 text-white"
-      : "bg-white/20 text-white";
+      ? "border border-slate-400/30 bg-slate-950/35 text-slate-100"
+      : "border border-slate-300/20 bg-slate-950/25 text-slate-100";
 
   return (
     <div
@@ -470,14 +470,14 @@ function TradeModalShell({
         role="dialog"
         aria-modal="true"
         aria-labelledby="trade-title"
-        className="flex max-h-[94vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-indigo-400/30 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.4)] sm:rounded-2xl"
+        className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-t-2xl border border-[#C6A15B]/45 bg-[#0F172A] shadow-[0_24px_80px_rgba(0,0,0,0.58)] sm:rounded-2xl"
       >
-        <div className="bg-indigo-900 px-4 py-3 shrink-0">
+        <div className="shrink-0 border-b border-[#C6A15B]/45 bg-gradient-to-b from-[#312E81] to-[#0F172A] px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-400">{statusLabel}</p>
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#D8BA72]">{statusLabel}</p>
               <h2 id="trade-title" className="text-base font-black text-white leading-tight truncate">{title}</h2>
-              {subtitle ? <p className="text-[10px] text-indigo-400 mt-0.5">{subtitle}</p> : null}
+              {subtitle ? <p className="mt-0.5 text-[10px] text-slate-300">{subtitle}</p> : null}
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               {statusBadge ? (
@@ -489,7 +489,7 @@ function TradeModalShell({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-md border border-indigo-700 bg-indigo-800/60 px-2 py-1 text-[11px] font-bold text-indigo-300 hover:bg-indigo-700"
+                  className="rounded-md border border-slate-500/50 bg-slate-950/35 px-2 py-1 text-[11px] font-bold text-slate-200 hover:bg-slate-800"
                 >
                   ✕
                 </button>
@@ -499,7 +499,7 @@ function TradeModalShell({
         </div>
         <div className="flex-1 overflow-y-auto">{children}</div>
         {footer ? (
-          <div className="shrink-0 border-t border-slate-100 bg-slate-50/80 px-4 py-3">{footer}</div>
+          <div className="shrink-0 border-t border-slate-700 bg-[#182235] px-4 py-3">{footer}</div>
         ) : null}
       </section>
     </div>
@@ -510,10 +510,10 @@ function TradeModalShell({
 
 function TwoSideLayout({ left, right }: { left: React.ReactNode; right: React.ReactNode }) {
   return (
-    <div className="relative grid grid-cols-1 sm:grid-cols-2 divide-y divide-slate-100 sm:divide-y-0 sm:divide-x">
+    <div className="relative grid grid-cols-1 divide-y divide-slate-700 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
       <div className="min-w-0">{left}</div>
       <div className="absolute left-1/2 top-4 -translate-x-1/2 z-10 hidden sm:flex">
-        <span className="rounded-full bg-white border border-slate-200 px-1.5 py-0.5 text-[11px] font-black text-indigo-500 shadow-sm">
+        <span className="rounded-full border border-[#C6A15B]/55 bg-[#0F172A] px-1.5 py-0.5 text-[11px] font-black text-[#D8BA72] shadow-sm">
           ⇄
         </span>
       </div>
@@ -619,11 +619,11 @@ function LocalTradeForm({ state, dispatch, myPlayerId }: Props) {
           {!validation.ok && <p className="mb-2 text-xs font-semibold text-red-600">{validation.reason}</p>}
           <div className="flex gap-2">
             <button disabled={!validation.ok} onClick={handlePropose}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-black text-white shadow-sm hover:bg-indigo-700 active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500">
+              className="rounded-lg border border-[#8A6A32] bg-[#C6A15B] px-4 py-2 text-sm font-black text-[#0F172A] shadow-sm hover:bg-[#D8BA72] active:scale-[0.97] disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-800 disabled:text-slate-500">
               Send Offer
             </button>
             <button onClick={() => { setOpen(false); resetForm(); }}
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 active:scale-[0.97]">
+              className="rounded-lg border border-slate-600 bg-[#182235] px-4 py-2 text-sm font-bold text-slate-200 hover:bg-[#202C42] active:scale-[0.97]">
               Cancel
             </button>
           </div>

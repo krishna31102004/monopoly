@@ -44,8 +44,8 @@ describe("TradePanel — layout source assertions", () => {
     expect(src).toMatch(/colorHex/);
   });
 
-  it("shows 'Nothing selected' for empty deal tray", () => {
-    expect(src).toMatch(/Nothing selected/);
+  it("shows a clear empty deal-tray message", () => {
+    expect(src).toMatch(/No assets selected/);
   });
 
   it("shows 'Listed value' label", () => {
@@ -82,8 +82,8 @@ describe("TradePanel — layout source assertions", () => {
     expect(src).toMatch(/getTradePropertyCardPresentation/);
   });
 
-  it("has compact dark header (bg-indigo-900)", () => {
-    expect(src).toMatch(/bg-indigo-900/);
+  it("has a premium indigo-to-navy header", () => {
+    expect(src).toMatch(/from-\[#312E81\] to-\[#0F172A\]/);
   });
 
   it("proposer-only draft edit: toggleProp checks isProposer", () => {

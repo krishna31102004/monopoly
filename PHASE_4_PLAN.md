@@ -1,5 +1,9 @@
 # Phase 4: Private Friends-Only Multiplayer Architecture
 
+## Phase 4L — Premium Trade Negotiation Experience
+
+Trade keeps its existing authoritative state machine and creditor-protected rules while using a dark navy/indigo negotiation shell. Metallic gold identifies primary trade actions; player and property colours remain factual identity accents. Draft, offer review, and debt-resolution modes use the same trade data and validation paths on desktop and mobile.
+
 ## Phase 4K — Creditor-Protected Debt Resolution Trading
 
 When `bankruptcyPending` records a mandatory payment that the debtor cannot yet afford, trade validation switches from normal negotiation to debt resolution. A debtor may either transfer legally tradeable non-cash assets for incoming cash, or make a zero-cash asset-for-asset restructuring swap. Restructuring requires assets from both sides and may not reduce the protected recovery floor: the lesser of the debt and the debtor's guaranteed legal liquidation capacity before the swap. No speculative market or future-trade value is counted. Each proposal and acceptance is validated against projected legal liquidation (cash, legally sellable buildings, then eligible mortgages). The original creditor, amount, continuation and destination remain unchanged. Normal trading rejects empty and cash-only offers. This validation is shared by the reducer and RoomManager.
