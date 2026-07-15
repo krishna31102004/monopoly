@@ -37,7 +37,7 @@ const STAMP_CONFIGS: Record<TradeResultKind, { label: string; sub: string; icon:
   accepted: {
     label: "DEAL ACCEPTED",
     sub: "Assets have been exchanged.",
-    icon: "✅",
+    icon: "✓",
     bg: "bg-emerald-950",
     border: "border-emerald-500",
     text: "text-emerald-400",
@@ -45,7 +45,7 @@ const STAMP_CONFIGS: Record<TradeResultKind, { label: string; sub: string; icon:
   declined: {
     label: "DEAL DECLINED",
     sub: "The recipient declined the offer.",
-    icon: "🚫",
+    icon: "×",
     bg: "bg-red-950",
     border: "border-red-500",
     text: "text-red-400",
@@ -53,7 +53,7 @@ const STAMP_CONFIGS: Record<TradeResultKind, { label: string; sub: string; icon:
   cancelled: {
     label: "OFFER CANCELLED",
     sub: "The proposer cancelled the offer.",
-    icon: "↩",
+    icon: "—",
     bg: "bg-slate-900",
     border: "border-slate-600",
     text: "text-slate-400",
@@ -217,8 +217,8 @@ function DealTray({
       ) : (
         <div className="flex flex-wrap gap-1.5 items-center">
           {offer.cash > 0 && (
-            <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[11px] font-black text-emerald-700">
-              ${offer.cash.toLocaleString()}
+            <span className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-black text-emerald-300">
+              CASH · ${offer.cash.toLocaleString()}
             </span>
           )}
           {offer.propertySpaceIndices.map((idx) => {
@@ -380,12 +380,12 @@ function ContractSide({
   const isEmpty = offer.cash === 0 && offer.propertySpaceIndices.length === 0 && offer.getOutOfJailFreeCards === 0;
 
   return (
-    <div className="flex flex-col min-w-0 p-3 space-y-3">
+    <div className="flex min-w-0 flex-col space-y-3 bg-[#0F172A] p-3">
       {/* Player header */}
       <div className="flex items-center gap-2">
         <TokenIcon token={player.token} color={player.color} size={26} label={player.tokenLabel} badge />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-black text-slate-900">{player.name}</p>
+          <p className="truncate text-sm font-black text-slate-100">{player.name}</p>
           <p className="text-[10px] font-semibold" style={{ color: player.color }}>{label}</p>
         </div>
       </div>
@@ -398,8 +398,8 @@ function ContractSide({
         ) : (
           <div className="space-y-1">
             {offer.cash > 0 && (
-              <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-100 px-2.5 py-1.5">
-                <span className="text-sm font-black text-emerald-700">${offer.cash.toLocaleString()}</span>
+              <div className="flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5">
+                <span className="text-sm font-black text-emerald-300">${offer.cash.toLocaleString()}</span>
                 <span className="text-[10px] text-slate-400">cash</span>
               </div>
             )}
@@ -412,14 +412,14 @@ function ContractSide({
                   className="flex items-center gap-2 rounded-lg px-2.5 py-1.5"
                   style={{ backgroundColor: (card.colorHex ?? "#94a3b8") + "18", borderLeft: `3px solid ${card.colorHex ?? "#94a3b8"}` }}
                 >
-                  <span className="text-[11px] font-semibold text-slate-700 truncate">{card.name}</span>
+                  <span className="truncate text-[11px] font-semibold text-slate-100">{card.name}</span>
                   <span className="ml-auto text-[10px] text-slate-400">${card.price}</span>
                 </div>
               );
             })}
             {offer.getOutOfJailFreeCards > 0 && (
               <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-100 px-2.5 py-1.5">
-                <span className="text-[11px] font-semibold text-slate-700">{offer.getOutOfJailFreeCards}× GOJF card</span>
+            <span className="text-[11px] font-semibold text-slate-100">{offer.getOutOfJailFreeCards}× GOJF card</span>
               </div>
             )}
           </div>
@@ -427,9 +427,9 @@ function ContractSide({
       </div>
 
       {/* Listed value */}
-      <div className="mt-auto pt-1 border-t border-slate-100 text-[10px] text-slate-400 flex items-center justify-between">
+      <div className="mt-auto flex items-center justify-between border-t border-slate-700 pt-1 text-[10px] text-slate-400">
         <span>Listed value</span>
-        <span className="font-black text-slate-600">${listedValue.toLocaleString()}</span>
+        <span className="font-black text-slate-200">${listedValue.toLocaleString()}</span>
       </div>
     </div>
   );
@@ -630,10 +630,10 @@ function LocalTradeForm({ state, dispatch, myPlayerId }: Props) {
         </>
       }
     >
-      <div className="flex items-center gap-2.5 border-b border-slate-100 bg-slate-50 px-4 py-2">
+      <div className="flex items-center gap-2.5 border-b border-slate-700 bg-[#182235] px-4 py-2">
         <span className="text-[10px] font-black uppercase tracking-wide text-slate-400 shrink-0">Trade with</span>
         <select
-          className="flex-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-sm font-semibold text-slate-800"
+          className="flex-1 rounded-md border border-slate-600 bg-[#202C42] px-2 py-1 text-sm font-semibold text-slate-100 outline-none focus:border-[#C6A15B]"
           value={effectiveRecipientId}
           onChange={(e) => { setRecipientId(e.target.value); setRecipientProps([]); setRecipientCash(0); setRecipientGOJF(0); }}
         >
@@ -647,9 +647,9 @@ function LocalTradeForm({ state, dispatch, myPlayerId }: Props) {
         </div>
       )}
       {isDebtResolution && (
-        <div className="flex gap-2 border-b border-slate-100 px-4 py-2">
-          <button type="button" onClick={() => { setDebtTradeMode("cash"); setRecipientProps([]); setRecipientGOJF(0); }} className={`rounded px-2 py-1 text-xs font-bold ${!isAssetSwap ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600"}`}>RAISE CASH</button>
-          <button type="button" onClick={() => { setDebtTradeMode("swap"); setInitiatorCash(0); setRecipientCash(0); }} className={`rounded px-2 py-1 text-xs font-bold ${isAssetSwap ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600"}`}>SWAP ASSETS</button>
+        <div className="flex gap-2 border-b border-slate-700 bg-[#182235] px-4 py-2">
+          <button type="button" onClick={() => { setDebtTradeMode("cash"); setRecipientProps([]); setRecipientGOJF(0); }} className={`rounded border px-2 py-1 text-xs font-bold ${!isAssetSwap ? "border-[#C6A15B] bg-[#C6A15B] text-[#0F172A]" : "border-slate-600 bg-[#202C42] text-slate-300"}`}>RAISE CASH</button>
+          <button type="button" onClick={() => { setDebtTradeMode("swap"); setInitiatorCash(0); setRecipientCash(0); }} className={`rounded border px-2 py-1 text-xs font-bold ${isAssetSwap ? "border-[#C6A15B] bg-[#C6A15B] text-[#0F172A]" : "border-slate-600 bg-[#202C42] text-slate-300"}`}>SWAP ASSETS</button>
           {isAssetSwap && <span className="self-center text-[11px] text-slate-500">Exchange assets without moving cash.</span>}
         </div>
       )}
@@ -727,11 +727,11 @@ function LiveDraftModal({
             {!validation.ok && <p className="mb-2 text-xs font-semibold text-red-600">{validation.reason}</p>}
             <div className="flex gap-2">
               <button disabled={!validation.ok} onClick={onDraftSubmit}
-                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-black text-white shadow-sm hover:bg-indigo-700 active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500">
+              className="rounded-lg border border-[#8A6A32] bg-[#C6A15B] px-4 py-2 text-sm font-black text-[#0F172A] shadow-sm hover:bg-[#D8BA72] active:scale-[0.97] disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-800 disabled:text-slate-500">
                 Send Offer
               </button>
               <button onClick={onDraftCancel}
-                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 active:scale-[0.97]">
+                className="rounded-lg border border-slate-600 bg-[#182235] px-4 py-2 text-sm font-bold text-slate-200 hover:bg-[#202C42] active:scale-[0.97]">
                 Cancel
               </button>
             </div>
@@ -746,10 +746,10 @@ function LiveDraftModal({
       }
     >
       {isProposer && (
-        <div className="flex items-center gap-2.5 border-b border-slate-100 bg-slate-50 px-4 py-2">
+        <div className="flex items-center gap-2.5 border-b border-slate-700 bg-[#182235] px-4 py-2">
           <span className="text-[10px] font-black uppercase tracking-wide text-slate-400 shrink-0">Trade with</span>
           <select
-            className="flex-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-sm font-semibold text-slate-800"
+            className="flex-1 rounded-md border border-slate-600 bg-[#202C42] px-2 py-1 text-sm font-semibold text-slate-100 outline-none focus:border-[#C6A15B]"
             value={draft.recipientId}
             onChange={(e) => onDraftUpdate({ recipientId: e.target.value, offerFromRecipient: { ...EMPTY_OFFER } })}
           >
@@ -819,13 +819,13 @@ function PendingTradeView({ state, dispatch, myPlayerId }: Props) {
             {isRecipient && !isInitiator && (
               <>
                 <button
-                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 active:scale-[0.97]"
+                  className="rounded-lg border border-emerald-500/60 bg-emerald-500/15 px-4 py-2 text-sm font-bold text-emerald-100 shadow-sm hover:bg-emerald-500/25 active:scale-[0.97]"
                   onClick={() => dispatch({ type: "ACCEPT_TRADE", actorPlayerId: trade.recipientPlayerId })}
                 >
                   Accept Trade
                 </button>
                 <button
-                  className="rounded-lg bg-red-500 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-red-600 active:scale-[0.97]"
+                  className="rounded-lg border border-rose-500/60 bg-[#182235] px-4 py-2 text-sm font-bold text-rose-300 hover:bg-rose-500/10 active:scale-[0.97]"
                   onClick={() => dispatch({ type: "DECLINE_TRADE", actorPlayerId: trade.recipientPlayerId })}
                 >
                   Decline
@@ -834,7 +834,7 @@ function PendingTradeView({ state, dispatch, myPlayerId }: Props) {
             )}
             {isInitiator && !isRecipient && (
               <button
-                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 active:scale-[0.97]"
+                className="rounded-lg border border-slate-600 bg-[#182235] px-4 py-2 text-sm font-bold text-slate-200 hover:bg-[#202C42] active:scale-[0.97]"
                 onClick={() => dispatch({ type: "CANCEL_TRADE", actorPlayerId: trade.initiatorPlayerId })}
               >
                 Cancel Offer
@@ -854,10 +854,10 @@ function PendingTradeView({ state, dispatch, myPlayerId }: Props) {
         ) : null}
       />
       {/* Value comparison strip */}
-      <div className="border-t border-slate-100 bg-slate-50 px-4 py-2 flex items-center justify-between text-[10px] text-slate-400">
-        <span>{initiator?.name}: <span className="font-black text-slate-600">${initiatorValue.toLocaleString()}</span></span>
-        <span className="text-slate-300">vs</span>
-        <span>{recipient?.name}: <span className="font-black text-slate-600">${recipientValue.toLocaleString()}</span></span>
+      <div className="flex items-center justify-between border-t border-slate-700 bg-[#182235] px-4 py-2 text-[10px] text-slate-400">
+        <span>{initiator?.name}: <span className="font-black text-slate-100">${initiatorValue.toLocaleString()}</span></span>
+        <span className="text-slate-500">vs</span>
+        <span>{recipient?.name}: <span className="font-black text-slate-100">${recipientValue.toLocaleString()}</span></span>
       </div>
     </TradeModalShell>
   );
