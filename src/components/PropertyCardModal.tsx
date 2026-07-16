@@ -150,12 +150,12 @@ export function PropertyCardModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="property-card-title"
-        className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-t-[var(--wc-radius-large)] border border-slate-200 bg-white pb-[var(--wc-safe-bottom)] shadow-[0_32px_100px_rgba(15,23,42,0.3)] xl:max-h-[92vh] xl:rounded-[var(--wc-radius-large)] xl:pb-0"
+        className="flex max-h-[90dvh] w-full max-w-md flex-col overflow-hidden rounded-t-[var(--wc-radius-large)] border border-slate-200 bg-white shadow-[0_32px_100px_rgba(15,23,42,0.3)] xl:max-h-[92vh] xl:rounded-[var(--wc-radius-large)]"
         onMouseDown={(e) => e.stopPropagation()}
       >
         {/* City color header */}
         {space.kind === "city" ? (
-          <div className={`relative px-5 pt-5 pb-4 ${colorBarClasses[space.colorGroup]}`}>
+          <div className={`sticky top-0 z-10 shrink-0 px-5 pt-5 pb-4 ${colorBarClasses[space.colorGroup]}`}>
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className={`text-[10px] font-black uppercase tracking-[0.2em] opacity-80 ${colorTextClasses[space.colorGroup]}`}>
@@ -193,7 +193,7 @@ export function PropertyCardModal({
             </div>
           </div>
         ) : (
-          <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 pt-5 pb-4">
+          <div className="sticky top-0 z-10 flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-white px-5 pt-5 pb-4">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
                 {space.kind === "airport" ? "Airport" : "Utility"}
@@ -214,7 +214,7 @@ export function PropertyCardModal({
           </div>
         )}
 
-        <div className="p-5">
+        <div className="min-h-0 overflow-y-auto p-5 pb-[calc(var(--wc-safe-bottom)+1.25rem)] xl:pb-5">
           {/* Owner banner */}
           <div className={`mb-4 flex items-center gap-2 rounded-xl px-4 py-2.5 ${owner ? "bg-emerald-50 border border-emerald-200" : "bg-slate-50 border border-slate-200"}`}>
             <span className="text-sm">

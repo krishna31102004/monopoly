@@ -86,7 +86,7 @@ export function GameStatusStrip({ onSync, onLeave, onForfeit, ...params }: GameS
           <button
             type="button"
             onClick={onSync}
-            className="wc-button wc-button-secondary ml-auto min-h-[32px] px-2 text-[11px]"
+            className="wc-button wc-button-secondary ml-auto min-h-11 px-2 text-[11px] xl:min-h-[32px]"
           >
             Sync
           </button>
@@ -95,7 +95,7 @@ export function GameStatusStrip({ onSync, onLeave, onForfeit, ...params }: GameS
           <button
             type="button"
             onClick={() => setShowLeaveModal(true)}
-            className="text-[11px] text-slate-400 underline hover:text-white"
+            className="min-h-11 px-2 text-[11px] text-slate-400 underline hover:text-white xl:min-h-0"
           >
             Leave
           </button>

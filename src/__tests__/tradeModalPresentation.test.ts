@@ -44,6 +44,14 @@ describe("TradePanel — layout source assertions", () => {
     expect(src).toMatch(/colorHex/);
   });
 
+  it("uses full-width, labelled property rows below xl while retaining compact desktop chips", () => {
+    expect(src).toMatch(/min-h-11 w-full/);
+    expect(src).toMatch(/xl:min-h-0 xl:w-auto/);
+    expect(src).toMatch(/Mortgaged/);
+    expect(src).toMatch(/house\{card\.houses === 1 \? "" : "s"\}/);
+    expect(src).toMatch(/Hotel/);
+  });
+
   it("shows a clear empty deal-tray message", () => {
     expect(src).toMatch(/No assets selected/);
   });
@@ -68,6 +76,9 @@ describe("TradePanel — layout source assertions", () => {
   it("cash input uses text type with inputMode numeric (no browser spinner)", () => {
     expect(src).toMatch(/type="text"/);
     expect(src).toMatch(/inputMode="numeric"/);
+    expect(src).toMatch(/min-h-11 items-center/);
+    expect(src).toMatch(/min-h-11 min-w-0 flex-1/);
+    expect(src).toMatch(/min-h-11 w-full rounded-lg/);
   });
 
   it("imports getTradeSideListedValue from tradeHelpers", () => {

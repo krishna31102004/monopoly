@@ -123,7 +123,7 @@ export function MobileActionBar({
           type="button"
           onClick={handlePrimaryAction}
           disabled={primaryAction.disabled}
-          className="mobile-action-btn wc-button wc-button-primary shrink-0 whitespace-nowrap px-3 text-xs"
+          className="mobile-action-btn wc-button wc-button-primary min-h-11 shrink-0 whitespace-nowrap px-3 text-xs xl:min-h-0"
         >
           {actionLabel}
         </button>

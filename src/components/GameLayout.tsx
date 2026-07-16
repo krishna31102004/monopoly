@@ -93,7 +93,7 @@ export function GameLayout() {
   const actionAttention = getMobileTabAttention(state, state.players[state.currentPlayerIndex]?.id);
 
   return (
-    <main className="min-h-screen px-2 py-3 pb-28 sm:px-4 sm:py-5 xl:pb-5 xl:bg-[radial-gradient(circle_at_top_left,rgba(198,161,91,.10),transparent_35rem)]">
+    <main className="min-h-screen px-2 py-3 sm:px-4 sm:py-5 xl:pb-5 xl:bg-[radial-gradient(circle_at_top_left,rgba(198,161,91,.10),transparent_35rem)]">
       {/* Game-over banner */}
       {state.phase === "gameOver" && winner ? (
         <div className="mx-auto mb-4 max-w-[1560px] overflow-hidden rounded-xl border border-emerald-300 bg-emerald-50 px-6 py-4 shadow-sm">

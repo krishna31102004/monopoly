@@ -14,6 +14,9 @@ const dock = read("../components/MobileActionBar.tsx");
 const playerPanel = read("../components/PlayerPanel.tsx");
 const propertyModal = read("../components/PropertyCardModal.tsx");
 const tradePanel = read("../components/TradePanel.tsx");
+const statusStrip = read("../components/GameStatusStrip.tsx");
+const logDrawer = read("../components/GameLogDrawer.tsx");
+const globals = read("../app/globals.css");
 
 describe("Phase 4 responsive layout safeguards", () => {
   it("keeps one instance of key gameplay components in each layout", () => {
@@ -58,9 +61,15 @@ describe("Phase 4 responsive layout safeguards", () => {
     expect(playerPanel).toContain("aria-modal=\"true\"");
     expect(playerPanel).toContain("onMobileDetailsOpen");
     expect(playerPanel).toContain("min-h-11");
+    expect(playerPanel).toContain("aria-expanded={isBelowXl ? mobileSheetOpen : expanded}");
+    expect(playerPanel).toContain("aria-controls={isBelowXl ? `player-sheet-${player.id}` : `player-details-${player.id}`}");
+    expect(playerPanel).toContain("id={`player-details-${player.id}`}");
+    expect(playerPanel).toContain("id={`player-sheet-${player.id}`}");
     expect(propertyModal).toContain('role="dialog"');
     expect(propertyModal).toContain("xl:items-center");
     expect(propertyModal).toContain("wc-icon-button");
+    expect(propertyModal).toContain("sticky top-0 z-10 shrink-0");
+    expect(propertyModal).toContain("min-h-0 overflow-y-auto");
   });
 
   it("keeps trade mobile-first and desktop two-column without changing trade actions", () => {
@@ -73,5 +82,35 @@ describe("Phase 4 responsive layout safeguards", () => {
     expect(tradePanel).toContain("RAISE CASH");
     expect(tradePanel).toContain("SWAP ASSETS");
     expect(tradePanel).not.toContain("COUNTER_OFFER");
+  });
+
+  it("keeps compact mobile trade controls reachable without changing desktop density", () => {
+    expect(tradePanel).toContain("min-h-11 w-full");
+    expect(tradePanel).toContain("xl:min-h-0 xl:w-auto");
+    expect(tradePanel).toContain("Mortgaged");
+    expect(tradePanel).toContain("house{card.houses === 1 ? \"\" : \"s\"}");
+    expect(tradePanel).toContain("Hotel");
+    expect(tradePanel).toContain("min-h-11 items-center");
+    expect(tradePanel).toContain("min-h-11 min-w-0 flex-1");
+    expect(tradePanel).toContain("min-h-11 w-full rounded-lg");
+    expect(tradePanel).toContain("grid gap-2 xl:flex");
+    expect(tradePanel).toContain('aria-label="Close trade"');
+    expect(tradePanel).toContain("wc-icon-button");
+  });
+
+  it("keeps mobile-only touch targets and scrolling ownership with their responsive owners", () => {
+    expect(dock).toContain("mobile-action-btn wc-button wc-button-primary min-h-11");
+    expect(dock).toContain("xl:min-h-0");
+    expect(statusStrip).toContain("min-h-11 px-2");
+    expect(statusStrip).toContain("xl:min-h-[32px]");
+    expect(statusStrip).toContain("xl:min-h-0");
+    expect(multiplayerLayout).toContain("min-h-11 px-3");
+    expect(multiplayerLayout).toContain("xl:min-h-9");
+    expect(logDrawer).toContain('forceOpen && isBelowXl ? "pb-[calc(var(--wc-safe-bottom)+1rem)]" : "max-h-64 overflow-y-auto"');
+    expect(globals).toContain(".mobile-game-content");
+    expect(globals).toContain("padding-bottom: calc(7.25rem + env(safe-area-inset-bottom, 0px));");
+    expect(globals.match(/padding-bottom: calc\(7\.25rem/g) ?? []).toHaveLength(1);
+    expect(localLayout).not.toContain("pb-28");
+    expect(multiplayerLayout).not.toContain("pb-28");
   });
 });

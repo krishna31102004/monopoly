@@ -242,7 +242,8 @@ export function PlayerPanel({
           if (isBelowXl && onMobileDetailsOpen) onMobileDetailsOpen(player.id);
           else setExpanded((v) => !v);
         }}
-        aria-expanded={expanded}
+        aria-expanded={isBelowXl ? mobileSheetOpen : expanded}
+        aria-controls={isBelowXl ? `player-sheet-${player.id}` : `player-details-${player.id}`}
         className="flex min-h-11 w-full items-center justify-center gap-1 border-t border-[var(--wc-border-subtle)] py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 transition-colors hover:bg-[var(--wc-navy-hover)] hover:text-white"
       >
         Details {expanded ? "▴" : "▾"}
@@ -250,7 +251,7 @@ export function PlayerPanel({
 
       {/* Expanded detail section */}
       {expanded ? (
-        <div className="hidden space-y-2 border-t border-[var(--wc-border-subtle)] bg-[var(--wc-navy-elevated)]/60 px-3 py-2.5 xl:block">
+        <div id={`player-details-${player.id}`} className="hidden space-y-2 border-t border-[var(--wc-border-subtle)] bg-[var(--wc-navy-elevated)]/60 px-3 py-2.5 xl:block">
           <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Portfolio detail</p>
           <div className="grid grid-cols-3 gap-1.5">
             <MiniStat label="Houses" value={String(houseCount)} />
@@ -304,6 +305,7 @@ function MobilePlayerSheet({
   return (
     <div className="fixed inset-0 z-[60] flex items-end bg-[var(--wc-overlay)] p-0 xl:hidden" onMouseDown={onClose}>
       <section
+        id={`player-sheet-${player.id}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={`player-sheet-${player.id}`}

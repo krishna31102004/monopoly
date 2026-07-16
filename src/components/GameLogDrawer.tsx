@@ -54,7 +54,7 @@ export function GameLogDrawer({ entries, forceOpen = false }: GameLogDrawerProps
       </button>
 
       {isTimelineOpen && (
-        <ol className="relative max-h-64 overflow-y-auto divide-y divide-[var(--wc-border-subtle)] before:absolute before:bottom-0 before:left-6 before:top-0 before:w-px before:bg-[var(--wc-border-subtle)]">
+        <ol className={`relative divide-y divide-[var(--wc-border-subtle)] before:absolute before:bottom-0 before:left-6 before:top-0 before:w-px before:bg-[var(--wc-border-subtle)] ${forceOpen && isBelowXl ? "pb-[calc(var(--wc-safe-bottom)+1rem)]" : "max-h-64 overflow-y-auto"}`}>
           {grouped.map(({ entry, tone }, index) => (
             <li
               key={entry.id}

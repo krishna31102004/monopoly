@@ -110,7 +110,7 @@ function PropertyChip({
       type="button"
       onClick={onToggle}
       disabled={disabled}
-      className={`relative flex items-center gap-0 rounded-md border text-left text-xs font-semibold transition-all duration-100 overflow-hidden ${
+      className={`relative flex min-h-11 w-full items-center gap-0 overflow-hidden rounded-md border text-left text-xs font-semibold transition-all duration-100 xl:min-h-0 xl:w-auto ${
         selected
           ? "border-transparent shadow-sm ring-1 ring-white/50"
           : "border-slate-600 bg-[#182235] text-slate-100 hover:border-[#C6A15B]/70 hover:bg-[#202C42]"
@@ -122,16 +122,16 @@ function PropertyChip({
         className="inline-block w-1.5 shrink-0 self-stretch"
         style={{ backgroundColor: selected ? "rgba(255,255,255,0.4)" : (card.colorHex ?? "#94a3b8") }}
       />
-      <span className={`flex items-center gap-1 px-2 py-1 ${selected ? "text-white" : "text-slate-100"}`}>
-        <span className="truncate max-w-[72px] leading-tight">{card.name}</span>
+      <span className={`flex min-w-0 flex-1 items-center gap-2 px-2 py-1 ${selected ? "text-white" : "text-slate-100"}`}>
+        <span className="min-w-0 flex-1 truncate leading-tight xl:max-w-[72px]">{card.name}</span>
         {card.isMortgaged && (
-          <span className={`text-[9px] font-black ${selected ? "text-white/60" : "text-amber-500"}`}>M</span>
+          <span className={`shrink-0 text-[9px] font-black ${selected ? "text-white/70" : "text-amber-300"}`}>Mortgaged</span>
         )}
         {card.houses > 0 && card.houses < 5 && (
-          <span className={`text-[9px] ${selected ? "text-white/70" : "text-emerald-600"}`}>{"▪".repeat(card.houses)}</span>
+          <span className={`shrink-0 text-[9px] ${selected ? "text-white/80" : "text-emerald-300"}`}>{card.houses} house{card.houses === 1 ? "" : "s"}</span>
         )}
         {card.houses >= 5 && (
-          <span className={`text-[9px] ${selected ? "text-white/70" : "text-red-500"}`}>★</span>
+          <span className={`shrink-0 text-[9px] ${selected ? "text-white/80" : "text-rose-300"}`}>Hotel</span>
         )}
       </span>
     </button>
@@ -161,7 +161,7 @@ function MoneyCounter({
   return (
     <div className="space-y-1.5">
       <div
-        className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 transition-colors ${
+        className={`flex min-h-11 items-center gap-1 rounded-lg border px-2.5 py-0 transition-colors xl:min-h-0 xl:py-1.5 ${
           invalid
           ? "border-rose-400/70 bg-rose-500/10"
             : disabled
@@ -180,7 +180,7 @@ function MoneyCounter({
             const raw = e.target.value.replace(/\D/g, "");
             onChange(raw === "" ? 0 : Math.max(0, parseInt(raw, 10)));
           }}
-          className="min-w-0 flex-1 bg-transparent text-sm font-black text-slate-100 outline-none placeholder:font-normal placeholder:text-slate-500 disabled:text-slate-500"
+          className="min-h-11 min-w-0 flex-1 bg-transparent text-sm font-black text-slate-100 outline-none placeholder:font-normal placeholder:text-slate-500 disabled:text-slate-500 xl:min-h-0"
         />
       </div>
       <div className="flex items-center justify-between text-[10px] leading-tight">
@@ -323,7 +323,7 @@ function TradeSidePanel({
               const raw = e.target.value.replace(/\D/g, "");
               onGOJFChange(raw === "" ? 0 : Math.max(0, parseInt(raw, 10)));
             }}
-            className="w-full rounded-lg border border-slate-600 bg-[#182235] px-2.5 py-1.5 text-sm font-semibold text-slate-100 outline-none focus:border-[#C6A15B] disabled:bg-slate-900 disabled:text-slate-500"
+            className="min-h-11 w-full rounded-lg border border-slate-600 bg-[#182235] px-2.5 py-1.5 text-sm font-semibold text-slate-100 outline-none focus:border-[#C6A15B] disabled:bg-slate-900 disabled:text-slate-500 xl:min-h-0"
           />
         </div>
       )}
@@ -340,7 +340,7 @@ function TradeSidePanel({
           <p className="mb-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400">
             {editable ? "Properties — tap to add/remove" : "Properties"}
           </p>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="grid gap-2 xl:flex xl:flex-wrap xl:gap-1.5">
             {ownedIndices.map((idx) => (
               <PropertyChip
                 key={idx}
