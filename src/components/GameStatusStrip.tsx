@@ -17,9 +17,9 @@ const CONNECTION_LABEL: Record<string, string> = {
 };
 
 const CONNECTION_CLASS: Record<string, string> = {
-  connected: "text-emerald-600",
-  reconnecting: "text-amber-600",
-  disconnected: "text-red-600",
+  connected: "text-emerald-200",
+  reconnecting: "text-amber-200",
+  disconnected: "text-rose-200",
 };
 
 function useTurnCountdown(deadlineAt: number | null): string | null {
@@ -71,12 +71,12 @@ export function GameStatusStrip({ onSync, onLeave, onForfeit, ...params }: GameS
         ) : null}
 
         {countdown !== null && params.state.phase !== "gameOver" && params.state.phase !== "setup" ? (
-          <span className={`font-mono text-xs font-bold tabular-nums ${countdownWarning ? "text-red-600" : "text-slate-400"}`}>
+          <span className={`font-mono text-xs font-bold tabular-nums ${countdownWarning ? "text-rose-200" : "text-slate-400"}`}>
             {countdown}
             {(() => {
               const cp = params.state.players[params.state.currentPlayerIndex];
               return cp && cp.consecutiveTurnTimeouts > 0
-                ? <span className="ml-1 text-red-500">({cp.consecutiveTurnTimeouts}/3)</span>
+                ? <span className="ml-1 text-rose-200">({cp.consecutiveTurnTimeouts}/3)</span>
                 : null;
             })()}
           </span>
@@ -103,10 +103,15 @@ export function GameStatusStrip({ onSync, onLeave, onForfeit, ...params }: GameS
       </div>
 
       {showLeaveModal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="mx-4 w-full max-w-sm rounded-xl border border-slate-200 bg-white p-6 shadow-xl">
-            <h2 className="mb-1 text-base font-bold text-slate-900">Leave Game?</h2>
-            <p className="mb-4 text-sm text-slate-500">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(7,16,31,.78)] p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="leave-game-title"
+            className="w-full max-w-sm rounded-[var(--wc-radius-large)] border border-[var(--wc-border)] bg-[var(--wc-navy)] p-6 text-slate-100 shadow-[var(--wc-shadow-modal)]"
+          >
+            <h2 id="leave-game-title" className="mb-1 text-base font-bold text-white">Leave Game?</h2>
+            <p className="mb-4 text-sm text-slate-300">
               Choose how you want to leave. You can rejoin temporarily, or forfeit to remove yourself and auction your properties.
             </p>
             <div className="flex flex-col gap-2">
@@ -114,7 +119,7 @@ export function GameStatusStrip({ onSync, onLeave, onForfeit, ...params }: GameS
                 <button
                   type="button"
                   onClick={() => { setShowLeaveModal(false); onLeave(); }}
-                  className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="wc-button wc-button-secondary min-h-11 rounded-lg px-4 py-2.5 text-sm font-semibold"
                 >
                   Leave Temporarily
                   <span className="ml-1 text-xs font-normal text-slate-400">(rejoin anytime)</span>
@@ -124,16 +129,16 @@ export function GameStatusStrip({ onSync, onLeave, onForfeit, ...params }: GameS
                 <button
                   type="button"
                   onClick={() => { setShowLeaveModal(false); onForfeit(); }}
-                  className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700"
+                  className="wc-button wc-button-danger min-h-11 rounded-lg px-4 py-2.5 text-sm font-semibold"
                 >
                   Forfeit / Declare Bankruptcy
-                  <span className="ml-1 text-xs font-normal text-red-200">(auctions your properties)</span>
+                  <span className="ml-1 text-xs font-normal text-rose-200">(auctions your properties)</span>
                 </button>
               ) : null}
               <button
                 type="button"
                 onClick={() => setShowLeaveModal(false)}
-                className="mt-1 text-sm font-semibold text-slate-500 hover:text-slate-700"
+                className="mt-1 min-h-11 text-sm font-semibold text-slate-300 hover:text-white"
               >
                 Cancel
               </button>

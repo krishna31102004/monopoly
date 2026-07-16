@@ -20,35 +20,35 @@ type GameControlsProps = {
 
 function getTurnStatus(state: GameState) {
   if (state.phase === "gameOver") {
-    return { label: "Game over", color: "text-emerald-700" };
+    return { label: "Game over", color: "text-emerald-200" };
   }
   if (state.phase === "bankruptcyPending") {
     const debtorName =
       state.players.find((p) => p.id === state.bankruptcy?.debtorPlayerId)?.name ?? "Player";
     return {
       label: `${debtorName} is resolving bankruptcy — see panel below`,
-      color: "text-red-700",
+      color: "text-rose-200",
     };
   }
   if (state.phase === "awaitingJailDecision") {
-    return { label: "In Jail — choose an option below", color: "text-amber-700" };
+    return { label: "In Jail — choose an option below", color: "text-amber-200" };
   }
   if (state.phase === "awaitingPurchaseDecision") {
-    return { label: "Make a decision below", color: "text-amber-700" };
+    return { label: "Make a decision below", color: "text-amber-200" };
   }
   if (state.phase === "auction") {
-    return { label: "Auction in progress", color: "text-amber-700" };
+    return { label: "Auction in progress", color: "text-amber-200" };
   }
   if (state.phase === "turnComplete") {
-    return { label: "Ready to end turn", color: "text-emerald-700" };
+    return { label: "Ready to end turn", color: "text-emerald-200" };
   }
   if (state.doublesCount > 0) {
     return {
       label: `${state.doublesCount} double${state.doublesCount === 1 ? "" : "s"} — roll again`,
-      color: "text-blue-700",
+      color: "text-sky-200",
     };
   }
-  return { label: "Roll the dice to move", color: "text-slate-500" };
+  return { label: "Roll the dice to move", color: "text-slate-300" };
 }
 
 // Dummy die values shown while rolling animation plays
@@ -112,7 +112,7 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
       </div>
 
       <div className="p-4">
-        <p className={`text-xs font-bold ${presentationStatus ? "text-slate-500" : status.color}`}>
+        <p className={`text-xs font-bold ${presentationStatus ? "text-slate-300" : status.color}`}>
           {presentationStatus ?? status.label}
         </p>
 
@@ -129,11 +129,11 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
               <DiceFace value={state.diceRoll.die1} size={44} />
               <DiceFace value={state.diceRoll.die2} size={44} />
               <div className="min-w-0">
-                <p className="text-xl font-black leading-none text-slate-950">
+                <p className="wc-numeric text-xl font-black leading-none text-white">
                   = {state.diceRoll.total}
                 </p>
                 {state.diceRoll.isDouble ? (
-                  <p className="mt-0.5 text-[10px] font-black uppercase tracking-wide text-blue-600">
+                  <p className="mt-0.5 text-[10px] font-black uppercase tracking-wide text-sky-200">
                     Doubles!
                   </p>
                 ) : null}
@@ -149,17 +149,17 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
 
         {/* Landing message — gated on presentation reveal */}
         {state.landingMessage && showLandingMessage && state.phase !== "auction" && state.phase !== "awaitingJailDecision" ? (
-          <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold leading-5 text-emerald-900">
+          <div className="mt-3 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-3 py-2 text-sm font-semibold leading-5 text-emerald-100">
             {state.landingMessage}
           </div>
         ) : null}
 
         {/* Free Parking pot */}
         {state.rules?.freeParkingCash && (state.freeParkingPot ?? 0) > 0 ? (
-          <div className="mt-2 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600">
+          <div className="mt-2 flex items-center gap-2 rounded-lg border border-[var(--wc-border)] bg-[var(--wc-navy-raised)] px-3 py-1.5 text-xs font-semibold text-slate-300">
             <span>🅿️</span>
             <span>Free Parking pot:</span>
-            <span className="font-black text-slate-900">${(state.freeParkingPot ?? 0).toLocaleString()}</span>
+            <span className="wc-numeric font-black text-white">${(state.freeParkingPot ?? 0).toLocaleString()}</span>
           </div>
         ) : null}
 

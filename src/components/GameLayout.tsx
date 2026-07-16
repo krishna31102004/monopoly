@@ -146,12 +146,12 @@ export function GameLayout() {
 
           <div className="mb-3 flex items-end justify-between gap-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
                 Players
               </p>
-              <h2 className="text-lg font-black text-slate-950">Player Panels</h2>
+              <h2 className="text-lg font-black text-white">Player Panels</h2>
             </div>
-            <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700">
+            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-200">
               Live
             </span>
           </div>

@@ -12,6 +12,8 @@
 
 - Verify local and multiplayer retain one `GameBoard` and one `MobileActionBar` each.
 - Verify board grid, property indicators, conditional action panels, action dispatches, and multiplayer authorization remain covered by existing regression tests.
+- Verify the command dock retains readable dice/status text, dark landing and game-log surfaces, compact player rosters, and the accessible dark leave dialog.
+- Verify multiplayer reconnect, disconnect, sync, and error presentations retain their existing callbacks and rendering conditions.
 - Manually review the `xl` board-stage/command-dock presentation while checking mobile scrolling remains unchanged.
 
 ## Test Framework

@@ -31,7 +31,7 @@ Phase 2 correction: non-hosts now see an explicitly non-authoritative waiting su
 
 Preserve the warm physical board while redesigning the dark command dock, current-turn panel, dice and landing controls, action toolbar, trade/mortgage/property-management access, timeline, compact roster, expandable player details, board frame, and ownership/mortgage/house/hotel indicators. Improve board-centre events without obstructing the board. Do not redesign auction/trade logic or board positions/rules.
 
-**Status: implemented on `changes` and awaiting local manual review.** Desktop uses a warm framed board stage beside a dark command dock at the existing `xl` breakpoint; mobile structure and gameplay conditions remain unchanged.
+**Status: implemented on `changes` and awaiting local manual review.** Desktop uses a warm framed board stage beside a dark command dock at the existing `xl` breakpoint. The dock includes readable dark game controls, dark landing and timeline panels, compact expandable dark player rosters, and semantic multiplayer connection/error states. Mobile structure and gameplay conditions remain unchanged.
 
 ## Phase 4 — Mobile Information Architecture
 

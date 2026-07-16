@@ -146,15 +146,15 @@ export function GameLayoutMultiplayer({
 
       {/* Connection status banner */}
       {connectionStatus === "reconnecting" ? (
-        <div className="mx-auto mb-2 max-w-[1560px] rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800">
+        <div className="mx-auto mb-2 max-w-[1560px] rounded-[var(--wc-radius-medium)] border border-amber-400/40 bg-[var(--wc-navy)] px-4 py-2 text-sm font-semibold text-amber-100 shadow-[var(--wc-shadow-card)]">
           Reconnecting to server…
         </div>
       ) : connectionStatus === "disconnected" ? (
-        <div className="mx-auto mb-2 max-w-[1560px] flex items-center gap-3 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-800">
+        <div className="mx-auto mb-2 flex max-w-[1560px] items-center gap-3 rounded-[var(--wc-radius-medium)] border border-rose-500/40 bg-[var(--wc-navy)] px-4 py-2 text-sm font-semibold text-rose-100 shadow-[var(--wc-shadow-card)]">
           <span>Disconnected from server.</span>
           <button
             onClick={onRequestSync}
-            className="ml-auto rounded-md border border-red-300 px-3 py-1 text-xs font-bold hover:bg-red-100"
+            className="wc-button wc-button-danger ml-auto min-h-9 px-3 py-1 text-xs font-bold"
           >
             Request Sync
           </button>
@@ -174,7 +174,7 @@ export function GameLayoutMultiplayer({
           onForfeit={onForfeit}
         />
         {!isMyTurn ? (
-          <p className="mt-1 px-1 text-xs font-semibold text-slate-500">
+          <p className="mt-1 px-1 text-xs font-semibold text-slate-300">
             Waiting for {currentActor?.name ?? "another player"}…
           </p>
         ) : null}
@@ -182,7 +182,7 @@ export function GameLayoutMultiplayer({
 
       {/* Server error display */}
       {error ? (
-        <div className="mx-auto mb-3 max-w-[1560px] rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700">
+        <div className="mx-auto mb-3 max-w-[1560px] rounded-[var(--wc-radius-medium)] border border-rose-500/40 bg-[var(--wc-navy)] px-4 py-2 text-sm font-semibold text-rose-100 shadow-[var(--wc-shadow-card)]">
           {error}
         </div>
       ) : null}
@@ -231,10 +231,10 @@ export function GameLayoutMultiplayer({
           </div>
 
           <div className="mb-3">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
               Players
             </p>
-            <h2 className="text-lg font-black text-slate-950">Player Panels</h2>
+            <h2 className="text-lg font-black text-white">Player Panels</h2>
           </div>
 
           <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-1">
