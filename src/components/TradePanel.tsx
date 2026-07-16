@@ -15,6 +15,7 @@ import {
 } from "@/lib/game/tradeHelpers";
 import { TokenIcon } from "@/components/board/TokenIcon";
 import { UiIcon } from "@/components/ui/UiIcon";
+import { getDesignReadableTextColor } from "@/lib/ui/designTokens";
 import type { GameAction, GameState, PropertyOwnership, TradeOffer } from "@/types/game";
 import type { TradeDraftState, TradeDraftUpdatePayload } from "@/types/multiplayer";
 import type { Player } from "@/types/player";
@@ -104,6 +105,8 @@ function PropertyChip({
 }) {
   const card = getTradePropertyCardPresentation(spaceIndex, ownerships);
   if (!card) return null;
+  const selectedBackgroundColor = card.colorHex ?? "#94a3b8";
+  const selectedTextColor = getDesignReadableTextColor(selectedBackgroundColor);
 
   return (
     <button
@@ -115,23 +118,23 @@ function PropertyChip({
           ? "border-transparent shadow-sm ring-1 ring-white/50"
           : "border-slate-600 bg-[#182235] text-slate-100 hover:border-[#C6A15B]/70 hover:bg-[#202C42]"
       } ${disabled ? "cursor-default opacity-70" : "cursor-pointer"}`}
-      style={selected ? { backgroundColor: card.colorHex ?? "#94a3b8" } : undefined}
+      style={selected ? { backgroundColor: selectedBackgroundColor, color: selectedTextColor } : undefined}
       title={`${card.name}${card.isMortgaged ? " — mortgaged" : ""}`}
     >
       <span
         className="inline-block w-1.5 shrink-0 self-stretch"
         style={{ backgroundColor: selected ? "rgba(255,255,255,0.4)" : (card.colorHex ?? "#94a3b8") }}
       />
-      <span className={`flex min-w-0 flex-1 items-center gap-2 px-2 py-1 ${selected ? "text-white" : "text-slate-100"}`}>
+      <span className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1">
         <span className="min-w-0 flex-1 truncate leading-tight xl:max-w-[72px]">{card.name}</span>
         {card.isMortgaged && (
-          <span className={`shrink-0 text-[9px] font-black ${selected ? "text-white/70" : "text-amber-300"}`}>Mortgaged</span>
+          <span className={`shrink-0 text-[9px] font-black ${selected ? "" : "text-amber-300"}`}>Mortgaged</span>
         )}
         {card.houses > 0 && card.houses < 5 && (
-          <span className={`shrink-0 text-[9px] ${selected ? "text-white/80" : "text-emerald-300"}`}>{card.houses} house{card.houses === 1 ? "" : "s"}</span>
+          <span className={`shrink-0 text-[9px] ${selected ? "" : "text-emerald-300"}`}>{card.houses} house{card.houses === 1 ? "" : "s"}</span>
         )}
         {card.houses >= 5 && (
-          <span className={`shrink-0 text-[9px] ${selected ? "text-white/80" : "text-rose-300"}`}>Hotel</span>
+          <span className={`shrink-0 text-[9px] ${selected ? "" : "text-rose-300"}`}>Hotel</span>
         )}
       </span>
     </button>

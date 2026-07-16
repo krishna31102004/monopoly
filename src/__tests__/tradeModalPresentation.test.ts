@@ -52,6 +52,12 @@ describe("TradePanel — layout source assertions", () => {
     expect(src).toMatch(/Hotel/);
   });
 
+  it("uses the shared contrast helper for selected property rows", () => {
+    expect(src).toMatch(/getDesignReadableTextColor/);
+    expect(src).toMatch(/color:\s*selectedTextColor/);
+    expect(src).not.toContain('selected ? "text-white"');
+  });
+
   it("shows a clear empty deal-tray message", () => {
     expect(src).toMatch(/No assets selected/);
   });

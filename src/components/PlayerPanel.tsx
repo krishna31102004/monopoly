@@ -308,7 +308,7 @@ function MobilePlayerSheet({
         id={`player-sheet-${player.id}`}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={`player-sheet-${player.id}`}
+        aria-labelledby={`player-sheet-title-${player.id}`}
         className="max-h-[86dvh] w-full overflow-y-auto rounded-t-[var(--wc-radius-large)] border border-[var(--wc-border)] bg-[var(--wc-navy)] p-4 pb-[calc(var(--wc-safe-bottom)+1rem)] text-slate-100 shadow-[var(--wc-shadow-modal)]"
         onMouseDown={(event) => event.stopPropagation()}
       >
@@ -316,7 +316,7 @@ function MobilePlayerSheet({
           <div className="flex min-w-0 items-center gap-3">
             <TokenIcon token={player.token} color={player.color} size={42} label={player.tokenLabel} badge />
             <div className="min-w-0">
-              <h2 id={`player-sheet-${player.id}`} className="truncate text-lg font-black text-white">{player.name}</h2>
+              <h2 id={`player-sheet-title-${player.id}`} className="truncate text-lg font-black text-white">{player.name}</h2>
               <p className="wc-numeric text-sm font-black text-amber-100">${player.cash.toLocaleString()}</p>
             </div>
           </div>

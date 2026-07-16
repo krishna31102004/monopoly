@@ -65,6 +65,9 @@ describe("Phase 4 responsive layout safeguards", () => {
     expect(playerPanel).toContain("aria-controls={isBelowXl ? `player-sheet-${player.id}` : `player-details-${player.id}`}");
     expect(playerPanel).toContain("id={`player-details-${player.id}`}");
     expect(playerPanel).toContain("id={`player-sheet-${player.id}`}");
+    expect(playerPanel).toContain("aria-labelledby={`player-sheet-title-${player.id}`}");
+    expect(playerPanel).toContain("id={`player-sheet-title-${player.id}`}");
+    expect(playerPanel).not.toContain("aria-labelledby={`player-sheet-${player.id}`}");
     expect(propertyModal).toContain('role="dialog"');
     expect(propertyModal).toContain("xl:items-center");
     expect(propertyModal).toContain("wc-icon-button");
@@ -96,6 +99,9 @@ describe("Phase 4 responsive layout safeguards", () => {
     expect(tradePanel).toContain("grid gap-2 xl:flex");
     expect(tradePanel).toContain('aria-label="Close trade"');
     expect(tradePanel).toContain("wc-icon-button");
+    expect(tradePanel).toContain("getDesignReadableTextColor");
+    expect(tradePanel).toContain("color: selectedTextColor");
+    expect(tradePanel).not.toContain('selected ? "text-white"');
   });
 
   it("keeps mobile-only touch targets and scrolling ownership with their responsive owners", () => {
