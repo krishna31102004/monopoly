@@ -31,6 +31,8 @@ Phase 2 correction: non-hosts now see an explicitly non-authoritative waiting su
 
 Preserve the warm physical board while redesigning the dark command dock, current-turn panel, dice and landing controls, action toolbar, trade/mortgage/property-management access, timeline, compact roster, expandable player details, board frame, and ownership/mortgage/house/hotel indicators. Improve board-centre events without obstructing the board. Do not redesign auction/trade logic or board positions/rules.
 
+**Status: implemented on `changes` and awaiting local manual review.** Desktop uses a warm framed board stage beside a dark command dock at the existing `xl` breakpoint; mobile structure and gameplay conditions remain unchanged.
+
 ## Phase 4 — Mobile Information Architecture
 
 Make play board-first with a sticky current-turn bar and contextual action dock. Provide Board, Actions, Players and Log navigation; compact player rows; player/property detail sheets; compact asset cards; responsive auction/trade integration; safe-area handling; no horizontal overflow; and 44px minimum touch targets. Reduce mobile player-panel height substantially so actions are never buried below long cards.

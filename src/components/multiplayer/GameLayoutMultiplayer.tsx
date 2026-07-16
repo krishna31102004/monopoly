@@ -128,7 +128,7 @@ export function GameLayoutMultiplayer({
   const currentActor = gameState.players.find((p) => p.id === actorId);
 
   return (
-    <main className="min-h-screen px-2 py-3 pb-20 sm:pb-5 sm:px-4 sm:py-5 lg:px-6">
+    <main className="min-h-screen px-2 py-3 pb-20 sm:pb-5 sm:px-4 sm:py-5 lg:px-6 xl:bg-[radial-gradient(circle_at_top_left,rgba(198,161,91,.10),transparent_35rem)]">
       {/* Game-over banner */}
       {gameState.phase === "gameOver" && winner ? (
         <div className="mx-auto mb-4 max-w-[1560px] overflow-hidden rounded-xl border border-emerald-300 bg-emerald-50 px-6 py-4 shadow-sm">
@@ -189,7 +189,7 @@ export function GameLayoutMultiplayer({
 
       <div className="mx-auto grid max-w-[1560px] gap-4 xl:grid-cols-[minmax(680px,1fr)_370px]">
         {/* Board */}
-        <section className="min-w-0">
+        <section className="min-w-0 xl:rounded-[var(--wc-radius-large)] xl:bg-[var(--wc-ivory-raised)] xl:p-4 xl:shadow-[var(--wc-shadow-panel)]">
           <GameBoard
             spaces={boardSpaces}
             players={gameState.players}
@@ -203,7 +203,7 @@ export function GameLayoutMultiplayer({
         </section>
 
         {/* Sidebar */}
-        <aside className="min-w-0 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto">
+        <aside className="min-w-0 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto xl:rounded-[var(--wc-radius-large)] xl:border xl:border-[var(--wc-border)] xl:bg-[var(--wc-navy)] xl:p-3 xl:shadow-[var(--wc-shadow-panel)]">
           <div className="mb-3 grid gap-3">
             <GameControls state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} isAnimating={isAnimating} presentationStatus={presentationStatus} showLandingMessage={showLandingPanel} />
             {gameState.phase === "awaitingJailDecision" ? (

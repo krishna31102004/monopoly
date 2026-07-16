@@ -52,11 +52,11 @@ export function GameStatusStrip({ onSync, onLeave, onForfeit, ...params }: GameS
 
   return (
     <>
-      <div className="game-status-strip mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white/95 px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm sm:rounded-lg">
-        <span className="rounded-full bg-slate-950 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white">
+      <div className="game-status-strip mb-3 flex flex-wrap items-center gap-2 rounded-[var(--wc-radius-medium)] border border-[var(--wc-border)] bg-[var(--wc-navy)] px-3 py-2 text-xs font-semibold text-slate-300 shadow-[var(--wc-shadow-card)]">
+        <span className="wc-badge wc-badge-gold">
           {info.phaseLabel}
         </span>
-        <span className="font-bold text-slate-900">{info.currentPlayerName}&rsquo;s turn</span>
+        <span className="font-bold text-white">{info.currentPlayerName}&rsquo;s turn</span>
 
         {info.isMultiplayer && info.roomCode ? (
           <span className="text-slate-400">Room {info.roomCode}</span>
@@ -86,7 +86,7 @@ export function GameStatusStrip({ onSync, onLeave, onForfeit, ...params }: GameS
           <button
             type="button"
             onClick={onSync}
-            className="ml-auto rounded-md border border-slate-300 px-2 py-0.5 text-[11px] font-bold text-slate-500 hover:bg-slate-100"
+            className="wc-button wc-button-secondary ml-auto min-h-[32px] px-2 text-[11px]"
           >
             Sync
           </button>
@@ -95,7 +95,7 @@ export function GameStatusStrip({ onSync, onLeave, onForfeit, ...params }: GameS
           <button
             type="button"
             onClick={() => setShowLeaveModal(true)}
-            className="text-[11px] text-slate-400 underline hover:text-slate-600"
+            className="text-[11px] text-slate-400 underline hover:text-white"
           >
             Leave
           </button>

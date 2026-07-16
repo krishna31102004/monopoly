@@ -162,7 +162,7 @@ export function GameBoard({
           className={innerBoardClass}
           style={innerBoardStyle}
         >
-          <div className="board-hero-frame relative">
+          <div className="board-hero-frame relative rounded-[14px] bg-[var(--wc-board-frame)] p-2 shadow-[0_18px_40px_rgba(52,41,28,.28)] xl:p-3">
             <div
               className="relative grid aspect-square grid-cols-11 grid-rows-11 overflow-hidden rounded-[10px] border-[3px] border-[var(--board-border)] bg-[var(--board-line)] shadow-[inset_0_2px_6px_rgba(0,0,0,0.35)]"
               aria-label="World Cities game board"
@@ -175,11 +175,7 @@ export function GameBoard({
                 <h1 className="mt-0.5 text-xl font-black leading-none tracking-tight text-slate-950 sm:text-3xl lg:text-[2.6rem]">
                   World Cities
                 </h1>
-                <div className="mt-1 flex gap-1 sm:gap-1.5">
-                  {["🇲🇽","🇮🇳","🇩🇪","🇦🇪","🇮🇹","🇦🇺","🇬🇧","🇺🇸"].map((flag) => (
-                    <span key={flag} className="text-sm sm:text-lg lg:text-xl" aria-hidden="true">{flag}</span>
-                  ))}
-                </div>
+                <svg aria-hidden="true" className="mt-2 h-10 w-28 text-[var(--wc-gold-dark)] opacity-40" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 120 40"><path d="M6 28c18-22 31 8 49-8s30-24 59-5" /><circle cx="6" cy="28" r="2" fill="currentColor" /><circle cx="55" cy="20" r="2" fill="currentColor" /><circle cx="114" cy="15" r="2" fill="currentColor" /></svg>
 
                 <p className="mt-1 hidden text-[10px] font-semibold leading-5 text-slate-500 sm:block sm:text-xs">
                   Buy cities · Collect rent · Win the world

@@ -8,6 +8,12 @@
 - Manually verify boarding-pass copy feedback, host-only controls, connected/reconnecting labels, room refresh/reconnect, and Start Game with two players.
 - Verify non-hosts do not see local default rules as host-selected pending rules, and each token picker uses an independent native radio group.
 
+## Premium desktop shell (Phase 3)
+
+- Verify local and multiplayer retain one `GameBoard` and one `MobileActionBar` each.
+- Verify board grid, property indicators, conditional action panels, action dispatches, and multiplayer authorization remain covered by existing regression tests.
+- Manually review the `xl` board-stage/command-dock presentation while checking mobile scrolling remains unchanged.
+
 ## Test Framework
 
 - **Tool:** Vitest 4.1.8 (ESM mode, node environment)

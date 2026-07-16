@@ -91,10 +91,10 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
   }
 
   return (
-    <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <section className="overflow-hidden rounded-[var(--wc-radius-medium)] border border-[var(--wc-border)] bg-[var(--wc-navy)] text-slate-100 shadow-[var(--wc-shadow-card)]">
       {/* Header strip */}
       <div
-        className="flex items-center gap-3 border-b border-slate-100 px-4 py-3"
+        className="flex items-center gap-3 border-b border-[var(--wc-border-subtle)] px-4 py-3"
         style={{ borderLeftWidth: 4, borderLeftColor: currentPlayer.color }}
       >
         <TokenIcon token={currentPlayer.token} color={currentPlayer.color} size={36} label={currentPlayer.tokenLabel} badge />
@@ -102,11 +102,11 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
             {isGameOver ? "Winner" : "Current Turn"}
           </p>
-          <h2 className="truncate text-lg font-black leading-tight text-slate-950">
+          <h2 className="truncate text-lg font-black leading-tight text-white">
             {currentPlayer.name}
           </h2>
         </div>
-        <span className="shrink-0 text-sm font-black text-slate-400">
+        <span className="wc-numeric shrink-0 text-sm font-black text-white">
           ${currentPlayer.cash.toLocaleString()}
         </span>
       </div>
@@ -170,7 +170,7 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
               type="button"
               disabled={!canRoll || isGameOver || diceRolling || !!presentationStatus}
               onClick={handleRoll}
-              className="w-full rounded-lg bg-slate-950 px-4 py-3 text-sm font-black tracking-wide text-white transition-all duration-100 hover:bg-slate-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+              className="wc-button wc-button-primary w-full"
             >
               {diceRolling ? "Rolling…" : isAnimating ? "Moving…" : "Roll Dice"}
             </button>
@@ -180,8 +180,8 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
               onClick={() => { setEndTurnReminder(false); dispatch({ type: "END_TURN" }); }}
               className={`w-full rounded-lg border px-4 py-2.5 text-sm font-bold transition-all duration-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30 ${
                 endTurnReminder
-                  ? "animate-pulse border-amber-400 bg-amber-50 text-amber-800 hover:bg-amber-100"
-                  : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white hover:border-slate-300"
+                  ? "border-amber-400 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20"
+                  : "border-[var(--wc-border)] bg-[var(--wc-navy-raised)] text-slate-200 hover:bg-[var(--wc-navy-hover)]"
               }`}
             >
               End Turn{endTurnReminder ? " ↩" : ""}
