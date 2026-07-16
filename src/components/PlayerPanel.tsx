@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { CSSProperties } from "react";
 import { getBoardSpaceByIndex } from "@/data/board";
 import { getOwnedSpaceIds } from "@/lib/game/ownership";
+import { getDesignReadableTextColor } from "@/lib/ui/designTokens";
 import { CITY_COLOR_HEX } from "@/lib/ui/propertyColors";
 import { TokenIcon } from "@/components/board/TokenIcon";
 import { UiIcon } from "@/components/ui/UiIcon";
@@ -173,8 +174,11 @@ export function PlayerPanel({
                 <span
                   key={chip.spaceIndex}
                   title={chip.name}
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold text-white ${chip.isMortgaged ? "opacity-50" : ""}`}
-                  style={{ backgroundColor: CITY_COLOR_HEX[group.colorGroup] }}
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${chip.isMortgaged ? "opacity-50" : ""}`}
+                  style={{
+                    backgroundColor: CITY_COLOR_HEX[group.colorGroup],
+                    color: getDesignReadableTextColor(CITY_COLOR_HEX[group.colorGroup]),
+                  }}
                 >
                   {chip.name}
                   {group.isFullSet ? " · Full set" : ""}
@@ -212,7 +216,7 @@ export function PlayerPanel({
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
-        className="flex min-h-9 w-full items-center justify-center gap-1 border-t border-[var(--wc-border-subtle)] py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 transition-colors hover:bg-[var(--wc-navy-hover)] hover:text-white"
+        className="flex min-h-11 w-full items-center justify-center gap-1 border-t border-[var(--wc-border-subtle)] py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 transition-colors hover:bg-[var(--wc-navy-hover)] hover:text-white"
       >
         Details {expanded ? "▴" : "▾"}
       </button>

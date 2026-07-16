@@ -50,7 +50,7 @@ export function GameLogDrawer({ entries }: GameLogDrawerProps) {
 
       {isOpen && (
         <ol className="relative max-h-64 overflow-y-auto divide-y divide-[var(--wc-border-subtle)] before:absolute before:bottom-0 before:left-6 before:top-0 before:w-px before:bg-[var(--wc-border-subtle)]">
-          {grouped.map(({ entry, icon, tone }, index) => (
+          {grouped.map(({ entry, tone }, index) => (
             <li
               key={entry.id}
               className={`flex items-start gap-2.5 px-4 py-2.5 ${
@@ -63,7 +63,6 @@ export function GameLogDrawer({ entries }: GameLogDrawerProps) {
                 }`}
                 aria-hidden="true"
               >
-                {icon}
               </span>
               <div className="min-w-0 flex-1">
                 <p className={`text-xs leading-5 ${index === 0 ? "font-bold text-white" : "font-semibold text-slate-300"}`}>

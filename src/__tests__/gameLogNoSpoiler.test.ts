@@ -59,10 +59,11 @@ describe("collapsed game log header: no outcome spoilers", () => {
     expect(olBlock).toContain("entry.message");
   });
 
-  it("expanded section still carries icon/tone classification styling", () => {
+  it("expanded section still carries tone classification styling without rendering emoji icons", () => {
     const olBlock = gameLogDrawerSource.slice(gameLogDrawerSource.indexOf("<ol"));
-    expect(olBlock).toContain("icon");
     expect(olBlock).toContain("tone");
+    expect(olBlock).toContain("TONE_DOT_CLASS[tone]");
+    expect(olBlock).not.toContain("{icon}");
   });
 });
 

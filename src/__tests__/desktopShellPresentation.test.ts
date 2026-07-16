@@ -4,6 +4,8 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { getContrastRatio, getDesignReadableTextColor } from "@/lib/ui/designTokens";
+import { CITY_COLOR_HEX } from "@/lib/ui/propertyColors";
 
 function read(relativePath: string) {
   return readFileSync(fileURLToPath(new URL(relativePath, import.meta.url)), "utf-8");
@@ -65,8 +67,33 @@ describe("Phase 3 dark command-dock presentation safeguards", () => {
     expect(logDrawer).toContain('<UiIcon name="log"');
     expect(playerPanel).toContain("bg-[var(--wc-navy-raised)]");
     expect(playerPanel).not.toContain("getWealthBarPercent");
+    expect(playerPanel).toContain("getDesignReadableTextColor");
+    expect(playerPanel).toContain("min-h-11");
+    const cityChipBlock = playerPanel.slice(
+      playerPanel.indexOf("cityGroups.map"),
+      playerPanel.indexOf("airports.map"),
+    );
+    expect(cityChipBlock).not.toContain("text-white");
+    expect(logDrawer).toContain("TONE_DOT_CLASS[tone]");
+    expect(logDrawer).not.toContain("{icon}");
     expect(statusStrip).toContain('role="dialog"');
     expect(statusStrip).toContain('aria-labelledby="leave-game-title"');
     expect(statusStrip).toContain("bg-[var(--wc-navy)]");
+  });
+});
+
+describe("Phase 3 city property-chip contrast", () => {
+  it("uses the higher-contrast WCAG foreground for every shared city color", () => {
+    for (const [group, background] of Object.entries(CITY_COLOR_HEX)) {
+      const foreground = getDesignReadableTextColor(background);
+      const selectedContrast = getContrastRatio(background, foreground);
+      const alternative = foreground === "#0F172A" ? "#FFFFFF" : "#0F172A";
+      const alternativeContrast = getContrastRatio(background, alternative);
+
+      expect(selectedContrast, group).not.toBeNull();
+      expect(alternativeContrast, group).not.toBeNull();
+      expect(selectedContrast!, group).toBeGreaterThanOrEqual(alternativeContrast!);
+      expect(selectedContrast!, group).toBeGreaterThanOrEqual(4.5);
+    }
   });
 });
