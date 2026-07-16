@@ -16,6 +16,15 @@
 - Verify multiplayer reconnect, disconnect, sync, and error presentations retain their existing callbacks and rendering conditions.
 - Manually review the `xl` board-stage/command-dock presentation while checking mobile scrolling remains unchanged.
 
+## Premium mobile information architecture (Phase 4)
+
+- Verify Board is the default destination and the dock order is Board, Actions, Players, Log.
+- Verify only Roll Dice and End Turn dispatch directly from the mobile dock; purchase, jail, and debt decisions route to Actions.
+- Verify local and multiplayer layouts retain one board, action bar, controls, log, and property modal instance each.
+- Verify player detail and property detail sheets have labelled dialogs, Escape close behavior, reachable close controls, and 44px actions.
+- Verify auction hides the dock; trade preserves Send Offer, Accept, Decline, Cancel Offer, RAISE CASH, and SWAP ASSETS.
+- Manually review safe-area spacing, board panning/zoom, action priority, no overflow, and two-browser synchronization across the specified mobile and desktop widths.
+
 ## Test Framework
 
 - **Tool:** Vitest 4.1.8 (ESM mode, node environment)

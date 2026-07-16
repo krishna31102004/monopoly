@@ -37,6 +37,8 @@ Preserve the warm physical board while redesigning the dark command dock, curren
 
 Make play board-first with a sticky current-turn bar and contextual action dock. Provide Board, Actions, Players and Log navigation; compact player rows; player/property detail sheets; compact asset cards; responsive auction/trade integration; safe-area handling; no horizontal overflow; and 44px minimum touch targets. Reduce mobile player-panel height substantially so actions are never buried below long cards.
 
+**Status: implemented on `changes` and awaiting local manual review.** Below `xl`, local and multiplayer games use local-only Board, Actions, Players, and Log destinations with a two-row safe-area-aware dock. The existing gameplay component instances and dispatch/authorization paths are shared with the desktop command dock. Player and property details use responsive bottom sheets; desktop remains unchanged at `xl` and above.
+
 ## Phase 5 — Premium Motion, Sound and World-Travel Identity
 
 After structure is stable, add restrained token movement, property/rent/auction/trade/jail/bankruptcy presentations, completed-country passport stamps, travel route lines, airport network visualization, optional muted sound effects, a premium game-start sequence, and an end-game world-empire summary. Respect `prefers-reduced-motion`; no default confetti, continuous music, excessive animation, or gameplay delays.

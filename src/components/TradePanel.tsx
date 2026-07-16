@@ -14,6 +14,7 @@ import {
   type TradeResultKind,
 } from "@/lib/game/tradeHelpers";
 import { TokenIcon } from "@/components/board/TokenIcon";
+import { UiIcon } from "@/components/ui/UiIcon";
 import type { GameAction, GameState, PropertyOwnership, TradeOffer } from "@/types/game";
 import type { TradeDraftState, TradeDraftUpdatePayload } from "@/types/multiplayer";
 import type { Player } from "@/types/player";
@@ -71,7 +72,7 @@ function TradeResultStamp({ kind, onDismiss }: { kind: TradeResultKind; onDismis
   const cfg = STAMP_CONFIGS[kind];
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-[2px]"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/80 backdrop-blur-[2px]"
       role="status"
       aria-live="assertive"
     >
@@ -463,14 +464,14 @@ function TradeModalShell({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 p-3 backdrop-blur-[2px] sm:items-center"
+      className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/70 p-0 backdrop-blur-[2px] xl:items-center xl:p-3"
       role="presentation"
     >
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby="trade-title"
-        className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-t-2xl border border-[#C6A15B]/45 bg-[#0F172A] shadow-[0_24px_80px_rgba(0,0,0,0.58)] sm:rounded-2xl"
+        className="flex max-h-[92dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-[var(--wc-radius-large)] border border-[#C6A15B]/45 bg-[#0F172A] shadow-[0_24px_80px_rgba(0,0,0,0.58)] xl:max-h-[94vh] xl:rounded-[var(--wc-radius-large)]"
       >
         <div className="shrink-0 border-b border-[#C6A15B]/45 bg-gradient-to-b from-[#312E81] to-[#0F172A] px-4 py-3">
           <div className="flex items-center justify-between gap-2">
@@ -489,9 +490,10 @@ function TradeModalShell({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-md border border-slate-500/50 bg-slate-950/35 px-2 py-1 text-[11px] font-bold text-slate-200 hover:bg-slate-800"
+                  aria-label="Close trade"
+                  className="wc-icon-button rounded-md border border-slate-500/50 bg-slate-950/35 text-[11px] font-bold text-slate-200 hover:bg-slate-800"
                 >
-                  ✕
+                  <UiIcon name="close" size={18} aria-hidden="true" />
                 </button>
               ) : null}
             </div>
@@ -499,7 +501,7 @@ function TradeModalShell({
         </div>
         <div className="flex-1 overflow-y-auto">{children}</div>
         {footer ? (
-          <div className="shrink-0 border-t border-slate-700 bg-[#182235] px-4 py-3">{footer}</div>
+          <div className="wc-sticky-footer shrink-0 border-slate-700 bg-[#182235] px-4 py-3">{footer}</div>
         ) : null}
       </section>
     </div>
@@ -510,9 +512,9 @@ function TradeModalShell({
 
 function TwoSideLayout({ left, right }: { left: React.ReactNode; right: React.ReactNode }) {
   return (
-    <div className="relative grid grid-cols-1 divide-y divide-slate-700 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+    <div className="relative grid grid-cols-1 divide-y divide-slate-700 xl:grid-cols-2 xl:divide-x xl:divide-y-0">
       <div className="min-w-0">{left}</div>
-      <div className="absolute left-1/2 top-4 -translate-x-1/2 z-10 hidden sm:flex">
+      <div className="absolute left-1/2 top-4 z-10 hidden -translate-x-1/2 xl:flex">
         <span className="rounded-full border border-[#C6A15B]/55 bg-[#0F172A] px-1.5 py-0.5 text-[11px] font-black text-[#D8BA72] shadow-sm">
           ⇄
         </span>

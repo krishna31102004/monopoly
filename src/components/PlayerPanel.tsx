@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { getBoardSpaceByIndex } from "@/data/board";
 import { getOwnedSpaceIds } from "@/lib/game/ownership";
@@ -8,6 +8,7 @@ import { getDesignReadableTextColor } from "@/lib/ui/designTokens";
 import { CITY_COLOR_HEX } from "@/lib/ui/propertyColors";
 import { TokenIcon } from "@/components/board/TokenIcon";
 import { UiIcon } from "@/components/ui/UiIcon";
+import { useIsBelowXl } from "@/hooks/useIsBelowXl";
 import {
   getJailDisplay,
   getOwnedPropertyChips,
@@ -29,6 +30,9 @@ type PlayerPanelProps = {
   isInActiveTrade?: boolean;
   isInActiveAuction?: boolean;
   isInDebt?: boolean;
+  mobileSheetOpen?: boolean;
+  onMobileDetailsOpen?: (playerId: string) => void;
+  onMobileDetailsClose?: () => void;
 };
 
 const STATUS_CHIP_STYLES: Record<PlayerStatusChip, string> = {
@@ -61,11 +65,16 @@ export function PlayerPanel({
   isInActiveTrade,
   isInActiveAuction,
   isInDebt,
+  mobileSheetOpen = false,
+  onMobileDetailsOpen,
+  onMobileDetailsClose,
 }: PlayerPanelProps) {
   // Every card starts collapsed — current-player emphasis is purely visual
   // (border/glow/badge), never a structural difference, so expand state
   // can't silently diverge between cards.
   const [expanded, setExpanded] = useState(PLAYER_CARD_DEFAULT_EXPANDED);
+  const isBelowXl = useIsBelowXl();
+  const detailsTriggerRef = useRef<HTMLButtonElement>(null);
 
   const position = getBoardSpaceByIndex(player.position);
   const ownedSpaceIds = getOwnedSpaceIds(ownerships, player.id);
@@ -97,6 +106,20 @@ export function PlayerPanel({
     isInActiveAuction,
     isInDebt,
   });
+
+  useEffect(() => {
+    if (!mobileSheetOpen || !isBelowXl) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onMobileDetailsClose?.();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isBelowXl, mobileSheetOpen, onMobileDetailsClose]);
+
+  const closeMobileSheet = () => {
+    onMobileDetailsClose?.();
+    requestAnimationFrame(() => detailsTriggerRef.current?.focus());
+  };
   return (
     <article
       className={`overflow-hidden rounded-[var(--wc-radius-medium)] border bg-[var(--wc-navy-raised)] transition-colors ${
@@ -142,7 +165,7 @@ export function PlayerPanel({
       </div>
 
       {/* Compact jail status row */}
-      <div className="border-t border-[var(--wc-border-subtle)] px-3 py-2">
+      <div className="hidden border-t border-[var(--wc-border-subtle)] px-3 py-2 xl:block">
         {jail.inJail ? (
           <div className="flex items-center justify-between gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5">
             <span className="flex items-center gap-1 text-xs font-black uppercase tracking-wide text-rose-200">
@@ -167,7 +190,7 @@ export function PlayerPanel({
 
       {/* Compact property chip summary (always visible) */}
       {ownedAssetCount > 0 ? (
-        <div className="border-t border-[var(--wc-border-subtle)] px-3 py-2">
+        <div className="hidden border-t border-[var(--wc-border-subtle)] px-3 py-2 xl:block">
           <div className="flex flex-wrap gap-1">
             {cityGroups.map((group) =>
               group.chips.map((chip) => (
@@ -206,15 +229,19 @@ export function PlayerPanel({
           </div>
         </div>
       ) : (
-        <div className="border-t border-[var(--wc-border-subtle)] px-3 py-2">
+        <div className="hidden border-t border-[var(--wc-border-subtle)] px-3 py-2 xl:block">
           <p className="text-xs font-semibold text-slate-400">No properties owned</p>
         </div>
       )}
 
       {/* Explicit expand/collapse affordance — same on every card */}
       <button
+        ref={detailsTriggerRef}
         type="button"
-        onClick={() => setExpanded((v) => !v)}
+        onClick={() => {
+          if (isBelowXl && onMobileDetailsOpen) onMobileDetailsOpen(player.id);
+          else setExpanded((v) => !v);
+        }}
         aria-expanded={expanded}
         className="flex min-h-11 w-full items-center justify-center gap-1 border-t border-[var(--wc-border-subtle)] py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 transition-colors hover:bg-[var(--wc-navy-hover)] hover:text-white"
       >
@@ -223,7 +250,7 @@ export function PlayerPanel({
 
       {/* Expanded detail section */}
       {expanded ? (
-        <div className="space-y-2 border-t border-[var(--wc-border-subtle)] bg-[var(--wc-navy-elevated)]/60 px-3 py-2.5">
+        <div className="hidden space-y-2 border-t border-[var(--wc-border-subtle)] bg-[var(--wc-navy-elevated)]/60 px-3 py-2.5 xl:block">
           <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Portfolio detail</p>
           <div className="grid grid-cols-3 gap-1.5">
             <MiniStat label="Houses" value={String(houseCount)} />
@@ -237,7 +264,97 @@ export function PlayerPanel({
           ) : null}
         </div>
       ) : null}
+      {mobileSheetOpen && isBelowXl ? (
+        <MobilePlayerSheet
+          player={player}
+          positionName={position.name}
+          jail={jail}
+          statusChips={statusChips}
+          cityGroups={cityGroups}
+          airports={airports}
+          utilities={utilities}
+          houseCount={houseCount}
+          hotelCount={hotelCount}
+          mortgagedCount={mortgagedCount}
+          onClose={closeMobileSheet}
+        />
+      ) : null}
     </article>
+  );
+}
+
+type PlayerSheetProps = {
+  player: Player;
+  positionName: string;
+  jail: ReturnType<typeof getJailDisplay>;
+  statusChips: PlayerStatusChip[];
+  cityGroups: ReturnType<typeof getOwnedPropertyChips>["cityGroups"];
+  airports: ReturnType<typeof getOwnedPropertyChips>["airports"];
+  utilities: ReturnType<typeof getOwnedPropertyChips>["utilities"];
+  houseCount: number;
+  hotelCount: number;
+  mortgagedCount: number;
+  onClose: () => void;
+};
+
+function MobilePlayerSheet({
+  player, positionName, jail, statusChips, cityGroups, airports, utilities,
+  houseCount, hotelCount, mortgagedCount, onClose,
+}: PlayerSheetProps) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end bg-[var(--wc-overlay)] p-0 xl:hidden" onMouseDown={onClose}>
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`player-sheet-${player.id}`}
+        className="max-h-[86dvh] w-full overflow-y-auto rounded-t-[var(--wc-radius-large)] border border-[var(--wc-border)] bg-[var(--wc-navy)] p-4 pb-[calc(var(--wc-safe-bottom)+1rem)] text-slate-100 shadow-[var(--wc-shadow-modal)]"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <TokenIcon token={player.token} color={player.color} size={42} label={player.tokenLabel} badge />
+            <div className="min-w-0">
+              <h2 id={`player-sheet-${player.id}`} className="truncate text-lg font-black text-white">{player.name}</h2>
+              <p className="wc-numeric text-sm font-black text-amber-100">${player.cash.toLocaleString()}</p>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} aria-label={`Close ${player.name} details`} className="wc-icon-button wc-button-secondary rounded-full">
+            <UiIcon name="close" aria-hidden="true" />
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {statusChips.map((chip) => <StatusChip key={chip} chip={chip} />)}
+          <span className="wc-badge wc-badge-muted"><UiIcon name="home" size={13} aria-hidden="true" /> {positionName}</span>
+          <span className="wc-badge wc-badge-muted">{jail.inJail ? `In jail · attempt ${jail.attempt}/${jail.maxAttempts}` : "Free"}</span>
+          <span className="wc-badge wc-badge-muted">{jail.jailCardCount} jail card{jail.jailCardCount === 1 ? "" : "s"}</span>
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <MiniStat label="Houses" value={String(houseCount)} />
+          <MiniStat label="Hotels" value={String(hotelCount)} />
+          <MiniStat label="Mortgaged" value={String(mortgagedCount)} warn={mortgagedCount > 0} />
+        </div>
+        <h3 className="mt-5 text-[10px] font-black uppercase tracking-[.16em] text-slate-400">Assets</h3>
+        <div className="mt-2 space-y-2">
+          {cityGroups.flatMap((group) => group.chips.map((chip) => (
+            <AssetRow key={chip.spaceIndex} name={chip.name} accent={CITY_COLOR_HEX[group.colorGroup]} mortgaged={chip.isMortgaged} detail={group.isFullSet ? "Full set" : group.colorGroup} />
+          )))}
+          {airports.map((chip) => <AssetRow key={chip.spaceIndex} name={chip.name} accent="#64748b" mortgaged={chip.isMortgaged} detail="Airport" icon="airport" />)}
+          {utilities.map((chip) => <AssetRow key={chip.spaceIndex} name={chip.name} accent="#0891b2" mortgaged={chip.isMortgaged} detail="Utility" icon="utility" />)}
+          {cityGroups.length + airports.length + utilities.length === 0 ? <p className="wc-empty-state text-sm">No properties owned.</p> : null}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function AssetRow({ name, accent, mortgaged, detail, icon }: { name: string; accent: string; mortgaged: boolean; detail: string; icon?: "airport" | "utility" }) {
+  return (
+    <div className="flex min-h-11 items-center gap-3 rounded-[var(--wc-radius-small)] border border-[var(--wc-border-subtle)] bg-[var(--wc-navy-raised)] px-3">
+      <span className="h-7 w-1 rounded-full" style={{ backgroundColor: accent }} aria-hidden="true" />
+      {icon ? <UiIcon name={icon} size={17} className="text-slate-300" aria-hidden="true" /> : null}
+      <span className="min-w-0 flex-1 truncate text-sm font-bold text-white">{name}</span>
+      <span className={`text-[10px] font-bold ${mortgaged ? "text-amber-200" : "text-slate-400"}`}>{mortgaged ? "Mortgaged" : detail}</span>
+    </div>
   );
 }
 

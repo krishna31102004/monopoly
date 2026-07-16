@@ -2,8 +2,15 @@
 
 import { useState } from "react";
 import { DiceFace } from "@/components/DiceFace";
+import { UiIcon, type UiIconName } from "@/components/ui/UiIcon";
 import { rollDice } from "@/lib/game/dice";
 import { DICE_ROLL_MS } from "@/lib/animation/timing";
+import {
+  MOBILE_GAME_TABS,
+  getMobilePhaseLabel,
+  getMobilePrimaryAction,
+  type MobileGameTab,
+} from "@/lib/ui/mobileGameNavigation";
 import type { GameAction, GameState } from "@/types/game";
 
 type MobileActionBarProps = {
@@ -12,20 +19,17 @@ type MobileActionBarProps = {
   isMyTurn?: boolean;
   isAnimating?: boolean;
   presentationStatus?: string | null;
+  activeTab: MobileGameTab;
+  onTabChange: (tab: MobileGameTab) => void;
+  actionAttention?: string | null;
 };
 
-function shortPhaseLabel(state: GameState, isMyTurn: boolean): string {
-  switch (state.phase) {
-    case "readyToRoll":       return isMyTurn ? "Your turn — roll!" : `${state.players[state.currentPlayerIndex]?.name ?? ""}…`;
-    case "turnComplete":      return isMyTurn ? "End your turn" : "Waiting…";
-    case "awaitingPurchaseDecision": return "Buy or decline?";
-    case "awaitingJailDecision":     return "Choose jail option below";
-    case "auction":           return "Auction in progress";
-    case "bankruptcyPending": return "Resolve payment below";
-    case "gameOver":          return "Game over";
-    default:                  return "";
-  }
-}
+const TAB_CONFIG: Record<MobileGameTab, { label: string; icon: UiIconName }> = {
+  board: { label: "Board", icon: "board" },
+  actions: { label: "Actions", icon: "dice" },
+  players: { label: "Players", icon: "players" },
+  log: { label: "Log", icon: "log" },
+};
 
 export function MobileActionBar({
   state,
@@ -33,6 +37,9 @@ export function MobileActionBar({
   isMyTurn = true,
   isAnimating = false,
   presentationStatus,
+  activeTab,
+  onTabChange,
+  actionAttention,
 }: MobileActionBarProps) {
   const [localRolling, setLocalRolling] = useState(false);
 
@@ -42,18 +49,13 @@ export function MobileActionBar({
   if (state.phase === "auction") return null;
 
   const currentPlayer = state.players[state.currentPlayerIndex];
-  const canRoll =
-    state.phase === "readyToRoll" &&
-    isMyTurn &&
-    !isAnimating &&
-    !localRolling &&
-    !presentationStatus;
-  const canEndTurn =
-    state.phase === "turnComplete" &&
-    state.currentPlayerHasRolled &&
-    isMyTurn &&
-    !isAnimating &&
-    !presentationStatus;
+  const primaryAction = getMobilePrimaryAction(
+    state,
+    isMyTurn,
+    isAnimating || localRolling || !!presentationStatus,
+  );
+  const canRoll = primaryAction.kind === "roll" && !primaryAction.disabled;
+  const canEndTurn = primaryAction.kind === "end-turn" && !primaryAction.disabled;
 
   function handleRoll() {
     if (!canRoll) return;
@@ -62,25 +64,23 @@ export function MobileActionBar({
     dispatch({ type: "ROLL_DICE", dice: rollDice() });
   }
 
-  const actionLabel =
-    localRolling || presentationStatus === "Rolling dice…"
-      ? "Rolling…"
-      : isAnimating || presentationStatus
-        ? presentationStatus ?? "Moving…"
-        : canEndTurn
-          ? "End Turn"
-          : "Roll Dice";
+  const actionLabel = localRolling || presentationStatus === "Rolling dice…"
+    ? "Rolling…"
+    : presentationStatus ?? primaryAction.label;
 
-  const actionDisabled = (!canRoll && !canEndTurn) || !!presentationStatus || localRolling;
+  function handlePrimaryAction() {
+    if (primaryAction.kind === "roll") handleRoll();
+    if (primaryAction.kind === "end-turn") dispatch({ type: "END_TURN" });
+    if (primaryAction.kind === "open-actions") onTabChange("actions");
+  }
 
   return (
-    /* Hidden on sm+ — desktop uses the sidebar GameControls instead */
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 sm:hidden border-t-2 border-slate-200 bg-white/95 backdrop-blur-sm shadow-[0_-4px_20px_rgba(0,0,0,0.12)]"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--wc-border)] bg-[var(--wc-navy)] text-slate-100 shadow-[0_-10px_28px_rgba(7,16,31,.28)] xl:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
       <div
-        className="flex items-center gap-2 px-3 py-2"
+        className="flex min-h-14 items-center gap-2 px-3 py-2"
         style={{ borderLeftWidth: 4, borderLeftColor: currentPlayer?.color ?? "#94a3b8" }}
       >
         {/* Dice faces */}
@@ -105,29 +105,50 @@ export function MobileActionBar({
 
         {/* Player info */}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-black leading-tight text-slate-950">
+          <p className="truncate text-sm font-black leading-tight text-white">
             {currentPlayer?.name ?? ""}
           </p>
-          <p className="truncate text-[10px] font-semibold text-slate-500">
-            {presentationStatus ?? shortPhaseLabel(state, isMyTurn)}
+          <p className="truncate text-[10px] font-semibold text-slate-400">
+            {presentationStatus ?? getMobilePhaseLabel(state)}
           </p>
         </div>
 
         {/* Cash */}
-        <span className="shrink-0 text-sm font-black text-slate-700">
+        <span className="wc-numeric shrink-0 text-sm font-black text-white">
           ${(currentPlayer?.cash ?? 0).toLocaleString()}
         </span>
 
         {/* Primary action button */}
         <button
           type="button"
-          onClick={canEndTurn ? () => dispatch({ type: "END_TURN" }) : handleRoll}
-          disabled={actionDisabled}
-          className="mobile-action-btn shrink-0 rounded-xl bg-slate-950 px-4 py-2 text-sm font-black text-white transition-all active:scale-[0.97] disabled:bg-slate-300 disabled:text-slate-400 whitespace-nowrap"
+          onClick={handlePrimaryAction}
+          disabled={primaryAction.disabled}
+          className="mobile-action-btn wc-button wc-button-primary shrink-0 whitespace-nowrap px-3 text-xs"
         >
           {actionLabel}
         </button>
       </div>
+      <nav aria-label="Game sections" className="grid grid-cols-4 border-t border-[var(--wc-border-subtle)]">
+        {MOBILE_GAME_TABS.map((tab) => {
+          const config = TAB_CONFIG[tab];
+          const selected = activeTab === tab;
+          const hasAttention = tab === "actions" && !!actionAttention;
+          return (
+            <button
+              key={tab}
+              type="button"
+              aria-current={selected ? "page" : undefined}
+              aria-label={hasAttention ? `${config.label}: ${actionAttention}` : config.label}
+              onClick={() => onTabChange(tab)}
+              className={`relative flex min-h-11 flex-col items-center justify-center gap-0.5 text-[10px] font-bold ${selected ? "bg-[var(--wc-navy-elevated)] text-amber-100" : "text-slate-400 hover:bg-[var(--wc-navy-raised)] hover:text-white"}`}
+            >
+              <UiIcon name={config.icon} size={17} aria-hidden="true" />
+              <span>{config.label}</span>
+              {hasAttention ? <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-rose-400" aria-hidden="true" /> : null}
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 }

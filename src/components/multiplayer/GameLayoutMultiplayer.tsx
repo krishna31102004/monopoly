@@ -22,6 +22,7 @@ import {
   isPlayerInActiveTrade,
   isPlayerInDebt,
 } from "@/lib/game/playerPanelHelpers";
+import { getMobileTabAttention, type MobileGameTab } from "@/lib/ui/mobileGameNavigation";
 import type { GameAction, GameState } from "@/types/game";
 import type { GameActionIntent, RoomPublicView, TradeDraftState, TradeDraftStartPayload, TradeDraftUpdatePayload } from "@/types/multiplayer";
 import type { OwnableSpace } from "@/types/board";
@@ -69,6 +70,8 @@ export function GameLayoutMultiplayer({
   submitTradeDraft,
 }: Props) {
   const [selectedSpace, setSelectedSpace] = useState<OwnableSpace | null>(null);
+  const [mobileTab, setMobileTab] = useState<MobileGameTab>("board");
+  const [mobilePlayerId, setMobilePlayerId] = useState<string | null>(null);
   const diceKey =
     gameState.diceRoll && gameState.currentPlayerHasRolled
       ? `${gameState.currentPlayerIndex}:${gameState.doublesCount}:${gameState.diceRoll.die1}:${gameState.diceRoll.die2}`
@@ -126,9 +129,10 @@ export function GameLayoutMultiplayer({
     : null;
 
   const currentActor = gameState.players.find((p) => p.id === actorId);
+  const actionAttention = getMobileTabAttention(gameState, myPlayerId);
 
   return (
-    <main className="min-h-screen px-2 py-3 pb-20 sm:pb-5 sm:px-4 sm:py-5 lg:px-6 xl:bg-[radial-gradient(circle_at_top_left,rgba(198,161,91,.10),transparent_35rem)]">
+    <main className="min-h-screen px-2 py-3 pb-28 sm:px-4 sm:py-5 xl:pb-5 xl:bg-[radial-gradient(circle_at_top_left,rgba(198,161,91,.10),transparent_35rem)]">
       {/* Game-over banner */}
       {gameState.phase === "gameOver" && winner ? (
         <div className="mx-auto mb-4 max-w-[1560px] overflow-hidden rounded-xl border border-emerald-300 bg-emerald-50 px-6 py-4 shadow-sm">
@@ -187,9 +191,9 @@ export function GameLayoutMultiplayer({
         </div>
       ) : null}
 
-      <div className="mx-auto grid max-w-[1560px] gap-4 xl:grid-cols-[minmax(680px,1fr)_370px]">
+      <div className="mobile-game-content mx-auto grid max-w-[1560px] gap-4 xl:grid-cols-[minmax(680px,1fr)_370px]">
         {/* Board */}
-        <section className="min-w-0 xl:rounded-[var(--wc-radius-large)] xl:bg-[var(--wc-ivory-raised)] xl:p-4 xl:shadow-[var(--wc-shadow-panel)]">
+        <section className={`${mobileTab === "board" ? "block" : "hidden xl:block"} min-w-0 xl:rounded-[var(--wc-radius-large)] xl:bg-[var(--wc-ivory-raised)] xl:p-4 xl:shadow-[var(--wc-shadow-panel)]`}>
           <GameBoard
             spaces={boardSpaces}
             players={gameState.players}
@@ -204,20 +208,20 @@ export function GameLayoutMultiplayer({
 
         {/* Sidebar */}
         <aside className="min-w-0 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto xl:rounded-[var(--wc-radius-large)] xl:border xl:border-[var(--wc-border)] xl:bg-[var(--wc-navy)] xl:p-3 xl:shadow-[var(--wc-shadow-panel)]">
-          <div className="mb-3 grid gap-3">
-            <GameControls state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} isAnimating={isAnimating} presentationStatus={presentationStatus} showLandingMessage={showLandingPanel} />
+          {gameState.phase === "auction" && showLandingPanel ? (
+            <AuctionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} serverAuthoritative />
+          ) : null}
+          <div className={`${mobileTab === "actions" ? "grid" : "hidden xl:grid"} mb-3 gap-3`}>
+            <div className="order-5 xl:order-none"><GameControls state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} isAnimating={isAnimating} presentationStatus={presentationStatus} showLandingMessage={showLandingPanel} /></div>
             {gameState.phase === "awaitingJailDecision" ? (
-              <JailActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} />
-            ) : null}
-            {gameState.phase === "auction" && showLandingPanel ? (
-              <AuctionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} serverAuthoritative />
+              <div className="order-1 xl:order-none"><JailActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} /></div>
             ) : null}
             {gameState.drawnCard && showCardPanel ? (
-              <CardPanel drawnCard={gameState.drawnCard} showResolved={showCardResolved} />
+              <div className="order-4 xl:order-none"><CardPanel drawnCard={gameState.drawnCard} showResolved={showCardResolved} /></div>
             ) : null}
-            {showLandingPanel ? <LandingActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} /> : null}
-            <BankruptcyPanel state={gameState} dispatch={dispatch} />
-            <TradePanel
+            {showLandingPanel ? <div className="order-2 xl:order-none"><LandingActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} /></div> : null}
+            <div className="order-3 xl:order-none"><BankruptcyPanel state={gameState} dispatch={dispatch} /></div>
+            <div className="order-4 xl:order-none"><TradePanel
               state={gameState}
               dispatch={dispatch}
               myPlayerId={myPlayerId}
@@ -226,18 +230,21 @@ export function GameLayoutMultiplayer({
               onDraftUpdate={updateTradeDraft}
               onDraftCancel={cancelTradeDraft}
               onDraftSubmit={submitTradeDraft}
-            />
-            <GameLogDrawer entries={gameState.gameLog} />
+            /></div>
           </div>
 
-          <div className="mb-3">
+          <div className={`${mobileTab === "log" ? "block" : "hidden xl:block"} mb-3`}>
+            <GameLogDrawer entries={gameState.gameLog} forceOpen={mobileTab === "log"} />
+          </div>
+
+          <div className={`${mobileTab === "players" ? "block" : "hidden xl:block"} mb-3`}>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
               Players
             </p>
             <h2 className="text-lg font-black text-white">Player Panels</h2>
           </div>
 
-          <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-1">
+          <div className={`${mobileTab === "players" ? "grid" : "hidden xl:grid"} gap-2.5 sm:grid-cols-2 xl:grid-cols-1`}>
             {gameState.players.map((player, index) => (
               <PlayerPanel
                 key={player.id}
@@ -250,6 +257,9 @@ export function GameLayoutMultiplayer({
                 isInActiveTrade={isPlayerInActiveTrade(gameState, player.id)}
                 isInActiveAuction={isPlayerInActiveAuction(gameState, player.id)}
                 isInDebt={isPlayerInDebt(gameState, player.id)}
+                mobileSheetOpen={mobilePlayerId === player.id}
+                onMobileDetailsOpen={setMobilePlayerId}
+                onMobileDetailsClose={() => setMobilePlayerId(null)}
               />
             ))}
           </div>
@@ -273,6 +283,9 @@ export function GameLayoutMultiplayer({
         isMyTurn={isMyTurn}
         isAnimating={isAnimating}
         presentationStatus={presentationStatus}
+        activeTab={mobileTab}
+        onTabChange={setMobileTab}
+        actionAttention={actionAttention}
       />
     </main>
   );

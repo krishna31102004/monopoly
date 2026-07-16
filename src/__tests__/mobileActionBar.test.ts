@@ -3,6 +3,8 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { getMobilePrimaryAction, MOBILE_GAME_TABS } from "@/lib/ui/mobileGameNavigation";
+import { makeGameState } from "./helpers/factory";
 
 const mobileActionBarSource = readFileSync(
   fileURLToPath(new URL("../components/MobileActionBar.tsx", import.meta.url)),
@@ -20,34 +22,35 @@ describe("MobileActionBar", () => {
     expect(mobileActionBarSource).toContain("currentPlayer?.cash");
   });
 
-  it("is hidden on desktop (sm:hidden) so it never duplicates GameControls", () => {
-    expect(mobileActionBarSource).toContain("sm:hidden");
+  it("is hidden at the shared xl desktop breakpoint so it never duplicates GameControls", () => {
+    expect(mobileActionBarSource).toContain("xl:hidden");
   });
 
-  it("roll button state mirrors the same phase/turn gating as GameControls", () => {
-    expect(mobileActionBarSource).toContain('state.phase === "readyToRoll"');
+  it("roll action retains the ready-to-roll gate shared with GameControls", () => {
+    const state = makeGameState(2);
+    expect(getMobilePrimaryAction(state, true)).toMatchObject({ kind: "roll", disabled: false });
     expect(gameControlsSource).toContain('state.phase === "readyToRoll"');
   });
 
-  it("End Turn state mirrors the same phase/turn gating as GameControls", () => {
-    expect(mobileActionBarSource).toContain('state.phase === "turnComplete"');
-    expect(mobileActionBarSource).toContain("state.currentPlayerHasRolled");
+  it("End Turn action retains the completed-turn gate shared with GameControls", () => {
+    const state = { ...makeGameState(2), phase: "turnComplete" as const, currentPlayerHasRolled: true };
+    expect(getMobilePrimaryAction(state, true)).toMatchObject({ kind: "end-turn", disabled: false });
     expect(gameControlsSource).toContain('state.phase === "turnComplete"');
   });
 
-  it("non-current player cannot act — canRoll/canEndTurn both require isMyTurn", () => {
-    expect(mobileActionBarSource).toContain("isMyTurn &&");
+  it("non-current player cannot act", () => {
+    expect(getMobilePrimaryAction(makeGameState(2), false)).toMatchObject({ kind: "waiting", disabled: true });
   });
 
-  it("handles auction/trade/debt phases safely by simply not enabling roll/end-turn", () => {
-    // canRoll/canEndTurn are gated on exact phase strings ("readyToRoll" / "turnComplete"),
-    // so auction/bankruptcyPending/awaitingPurchaseDecision phases fall through to disabled.
-    expect(mobileActionBarSource).toContain("actionDisabled");
+  it("opens Actions for mandatory decisions without inventing an action", () => {
+    const state = { ...makeGameState(2), phase: "awaitingPurchaseDecision" as const };
+    expect(getMobilePrimaryAction(state, true)).toMatchObject({ kind: "open-actions", label: "Review Purchase" });
+    expect(mobileActionBarSource).toContain('onTabChange("actions")');
   });
 
-  it("does not render a second, duplicate dangerous action (e.g. a second End Turn or Roll button)", () => {
-    const buttonCount = (mobileActionBarSource.match(/<button/g) ?? []).length;
-    expect(buttonCount).toBe(1);
+  it("uses a single contextual action plus the four visible navigation destinations", () => {
+    expect(MOBILE_GAME_TABS).toEqual(["board", "actions", "players", "log"]);
+    expect(mobileActionBarSource).toContain("MOBILE_GAME_TABS.map");
   });
 
   it("uses tap-friendly sizing via the shared mobile-action-btn class", () => {

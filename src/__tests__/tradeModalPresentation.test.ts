@@ -31,8 +31,8 @@ describe("TradePanel — layout source assertions", () => {
     expect(src).toMatch(/TwoSideLayout/);
   });
 
-  it("uses grid two-column layout (sm:grid-cols-2)", () => {
-    expect(src).toMatch(/sm:grid-cols-2/);
+  it("uses a vertical mobile sequence and switches to two columns at xl", () => {
+    expect(src).toMatch(/xl:grid-cols-2/);
   });
 
   it("renders ⇄ exchange symbol between sides", () => {

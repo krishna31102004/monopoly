@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { useIsBelowXl } from "@/hooks/useIsBelowXl";
 import { UiIcon } from "@/components/ui/UiIcon";
 import { getGroupedGameLogEntries, type GameLogTone } from "@/lib/ui/gameLogTimeline";
 import type { GameLogEntry } from "@/types/game";
 
 type GameLogDrawerProps = {
   entries: GameLogEntry[];
+  /** Opens the timeline directly in the mobile LOG destination without affecting desktop. */
+  forceOpen?: boolean;
 };
 
 const TONE_DOT_CLASS: Record<GameLogTone, string> = {
@@ -17,15 +20,17 @@ const TONE_DOT_CLASS: Record<GameLogTone, string> = {
   neutral: "bg-slate-400",
 };
 
-export function GameLogDrawer({ entries }: GameLogDrawerProps) {
+export function GameLogDrawer({ entries, forceOpen = false }: GameLogDrawerProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const isBelowXl = useIsBelowXl();
   const grouped = getGroupedGameLogEntries(entries);
+  const isTimelineOpen = isOpen || (forceOpen && isBelowXl);
 
   return (
     <section className="overflow-hidden rounded-[var(--wc-radius-medium)] border border-[var(--wc-border)] bg-[var(--wc-navy-raised)] text-slate-100 shadow-[var(--wc-shadow-card)]">
       <button
         type="button"
-        className="flex min-h-12 w-full items-center justify-between border-b border-[var(--wc-border-subtle)] px-4 py-3 text-left hover:bg-[var(--wc-navy-hover)]"
+        className={`min-h-12 w-full items-center justify-between border-b border-[var(--wc-border-subtle)] px-4 py-3 text-left hover:bg-[var(--wc-navy-hover)] ${forceOpen && isBelowXl ? "hidden xl:flex" : "flex"}`}
         onClick={() => setIsOpen((v) => !v)}
         aria-expanded={isOpen}
       >
@@ -48,7 +53,7 @@ export function GameLogDrawer({ entries }: GameLogDrawerProps) {
         </div>
       </button>
 
-      {isOpen && (
+      {isTimelineOpen && (
         <ol className="relative max-h-64 overflow-y-auto divide-y divide-[var(--wc-border-subtle)] before:absolute before:bottom-0 before:left-6 before:top-0 before:w-px before:bg-[var(--wc-border-subtle)]">
           {grouped.map(({ entry, tone }, index) => (
             <li

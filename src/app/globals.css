@@ -311,11 +311,18 @@ button {
 
 /* On mobile, the status strip sticks to the top of the viewport so the current
    turn/phase stays visible while the player scrolls the board or log. */
-@media (max-width: 639px) {
+@media (max-width: 1279px) {
   .game-status-strip {
     position: sticky;
-    top: 0;
+    top: env(safe-area-inset-top, 0px);
     z-index: 30;
+  }
+}
+
+/* The mobile dock is two rows tall; active tab content reserves this space. */
+@media (max-width: 1279px) {
+  .mobile-game-content {
+    padding-bottom: calc(7.25rem + env(safe-area-inset-bottom, 0px));
   }
 }
 
