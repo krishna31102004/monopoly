@@ -6,6 +6,7 @@
 - Verify all six existing token IDs have a visual medallion mapping; no new playable tokens are introduced.
 - Verify create and join retain the existing identity payload field names and token values.
 - Manually verify boarding-pass copy feedback, host-only controls, connected/reconnecting labels, room refresh/reconnect, and Start Game with two players.
+- Verify non-hosts do not see local default rules as host-selected pending rules, and each token picker uses an independent native radio group.
 
 ## Test Framework
 

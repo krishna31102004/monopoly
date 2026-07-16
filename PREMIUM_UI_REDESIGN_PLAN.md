@@ -25,6 +25,8 @@ Redesign home, local play, private-room creation/join, token and game-mode selec
 
 **Status: implemented on `changes` and awaiting local manual review.** Phase 2 uses the shared entry shell, premium token medallions, boarding-pass room identity, factual connection states, and the existing host-authoritative start flow. It adds no Ready system or room protocol changes.
 
+Phase 2 correction: non-hosts now see an explicitly non-authoritative waiting summary while the host selects pending rules locally; local setup now uses the shared native-radio token medallions and dark rules panel.
+
 ## Phase 3 — Desktop Game Shell
 
 Preserve the warm physical board while redesigning the dark command dock, current-turn panel, dice and landing controls, action toolbar, trade/mortgage/property-management access, timeline, compact roster, expandable player details, board frame, and ownership/mortgage/house/hotel indicators. Improve board-centre events without obstructing the board. Do not redesign auction/trade logic or board positions/rules.
