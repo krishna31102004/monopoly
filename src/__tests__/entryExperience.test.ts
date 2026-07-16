@@ -23,6 +23,8 @@ describe("premium entry experience safeguards", () => {
     const join = readFileSync(resolve(process.cwd(), "src/components/multiplayer/JoinRoom.tsx"), "utf8");
     expect(picker).toContain('type="radio"');
     expect(picker).toContain("useId");
+    expect(picker).toContain("has-[:focus-visible]");
+    expect(picker).toContain("disabled={unavailable}");
     for (const field of ["displayName", "token", "tokenLabel", "color"]) expect(create).toContain(field);
     for (const field of ["displayName", "roomCode", "token", "tokenLabel", "color"]) expect(join).toContain(field);
   });
@@ -40,5 +42,7 @@ describe("premium entry experience safeguards", () => {
     for (const value of ["normal", "auction", "doubleRentOnFullSet", "freeParkingCash", "auctions", "noRentInJail", "mortgages", "evenBuild", "exactGoBonus"]) expect(panel).toContain(value);
     expect(panel).toContain('type="radio"');
     expect(panel).toContain("aria-pressed");
+    expect(panel).toContain("min-h-[44px]");
+    expect(panel).toContain("min-w-[44px]");
   });
 });

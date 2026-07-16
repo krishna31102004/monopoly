@@ -15,6 +15,7 @@ type Props = {
 export function TokenPicker({ name, selected, takenTokens, onChange }: Props) {
   const generatedName = useId();
   const groupName = name ?? `token-picker-${generatedName}`;
+
   return (
     <fieldset>
       <legend className="wc-section-label mb-2">Choose your token</legend>
@@ -22,11 +23,15 @@ export function TokenPicker({ name, selected, takenTokens, onChange }: Props) {
         {TOKEN_PRESENTATION.map((entry) => {
           const unavailable = takenTokens.includes(entry.token) && entry.token !== selected;
           const checked = entry.token === selected;
+
           return (
             <label
               className={[
                 "relative flex min-h-[44px] cursor-pointer rounded-[var(--wc-radius-medium)] border p-2 transition",
-                checked ? "border-[var(--wc-gold)] bg-[var(--wc-gold-soft)] shadow-[0_0_0_1px_var(--wc-gold-border)]" : "border-[var(--wc-border)] bg-[var(--wc-navy-raised)] hover:bg-[var(--wc-navy-hover)]",
+                "has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--wc-gold)]",
+                checked
+                  ? "border-[var(--wc-gold)] bg-[var(--wc-gold-soft)] shadow-[0_0_0_1px_var(--wc-gold-border)]"
+                  : "border-[var(--wc-border)] bg-[var(--wc-navy-raised)] hover:bg-[var(--wc-navy-hover)]",
                 unavailable ? "cursor-not-allowed opacity-45" : "",
               ].join(" ")}
               key={entry.token}
