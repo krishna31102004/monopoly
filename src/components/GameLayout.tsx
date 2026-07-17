@@ -96,7 +96,7 @@ export function GameLayout() {
 
   return (
     <main className="min-h-screen px-2 py-3 sm:px-4 sm:py-5 xl:pb-5 xl:bg-[radial-gradient(circle_at_top_left,rgba(198,161,91,.10),transparent_35rem)]">
-      <GamePresentationLayer state={state} showStart={showStartSequence} onStartShown={() => setShowStartSequence(false)} />
+      <GamePresentationLayer state={state} showStart={showStartSequence} onStartShown={() => setShowStartSequence(false)} onNavigate={setMobileTab} />
 
       <div className="mx-auto mb-3 max-w-[1560px]">
         <GameStatusStrip state={state} isMultiplayer={false} />

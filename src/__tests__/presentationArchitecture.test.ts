@@ -31,5 +31,16 @@ describe("Phase 5 presentation architecture safeguards", () => {
     expect(layer).toContain("Begin journey");
     expect(layer).toContain('aria-labelledby="world-empire-title"');
     expect(layer).toContain("getEndGameFacts");
+    expect(layer).toContain("if (reduced) return");
+    expect(layer).toContain("Review Board");
+    expect(layer).toContain("View Players");
+    expect(layer).toContain("View Log");
+  });
+
+  it("keeps queue dismissal independent from ordinary state transitions", () => {
+    expect(layer).toContain("const [queue, setQueue]");
+    expect(layer).toContain("enqueuePresentationEvents");
+    expect(layer).toContain("activeEvent?.key");
+    expect(layer).toContain("current.slice(1)");
   });
 });

@@ -1,4 +1,5 @@
 import { boardSpaces } from "@/data/board";
+import { classifyTradeResultFromLogMessage } from "@/lib/game/tradeHelpers";
 import type { CityProperty } from "@/types/board";
 import type { GameState, PropertyOwnership } from "@/types/game";
 
@@ -14,6 +15,15 @@ export type PresentationEvent = {
   detail: string;
   accent?: string;
 };
+
+/** Appends transition events once, preserving their factual transition order. */
+export function enqueuePresentationEvents(
+  queue: PresentationEvent[],
+  incoming: PresentationEvent[],
+  seen: ReadonlySet<string>,
+) {
+  return [...queue, ...incoming.filter((event) => !seen.has(event.key) && !queue.some((queued) => queued.key === event.key))];
+}
 
 function playerName(state: GameState, id: string | null | undefined) {
   return state.players.find((player) => player.id === id)?.name ?? "A player";
@@ -56,7 +66,9 @@ export function deriveGamePresentationEvents(previous: GameState, current: GameS
         key: `${wasAuction ? "auction" : "purchase"}:${ownership.spaceIndex}:${ownership.ownerId}:${latestLogId}`,
         kind: wasAuction ? "auction-won" : "property-purchased",
         title: wasAuction ? `${playerName(current, ownership.ownerId)} wins the auction` : `${playerName(current, ownership.ownerId)} acquires ${property?.name ?? "a property"}`,
-        detail: property && "price" in property ? `${property.name} · $${property.price} · ${property.kind}` : "Property acquired",
+        detail: wasAuction
+          ? `${property?.name ?? "Property"} · final bid $${previous.auction?.currentBid ?? 0}`
+          : property && "price" in property ? `${property.name} · $${property.price} · ${property.kind}` : "Property acquired",
       });
     }
   }
@@ -82,8 +94,9 @@ export function deriveGamePresentationEvents(previous: GameState, current: GameS
   }
 
   if (previous.trade && !current.trade) {
-    const message = current.gameLog.at(-1)?.message.toLowerCase() ?? "";
-    const kind = message.includes("declined") ? "trade-declined" : message.includes("cancelled") ? "trade-cancelled" : "trade-accepted";
+    const result = classifyTradeResultFromLogMessage(current.gameLog.at(-1)?.message);
+    if (!result) return events;
+    const kind = result === "accepted" ? "trade-accepted" : result === "declined" ? "trade-declined" : "trade-cancelled";
     events.push({ key: `trade:${kind}:${latestLogId}`, kind, title: kind === "trade-accepted" ? "Trade completed" : kind === "trade-declined" ? "Trade declined" : "Trade cancelled", detail: `${playerName(previous, previous.trade.initiatorPlayerId)} and ${playerName(previous, previous.trade.recipientPlayerId)}` });
   }
   return events;

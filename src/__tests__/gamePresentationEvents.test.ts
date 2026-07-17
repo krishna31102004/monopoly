@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { deriveGamePresentationEvents, getEndGameFacts } from "@/lib/ui/gamePresentationEvents";
+import { deriveGamePresentationEvents, enqueuePresentationEvents, getEndGameFacts, type PresentationEvent } from "@/lib/ui/gamePresentationEvents";
+import { classifyTradeResultFromLogMessage } from "@/lib/game/tradeHelpers";
 import { readSoundEnabled, SOUND_PREFERENCE_KEY, writeSoundEnabled } from "@/lib/ui/soundPreferences";
 import { makeGameState, withOwnership } from "./helpers/factory";
 
@@ -30,6 +31,23 @@ describe("game presentation event derivation", () => {
     const facts = getEndGameFacts(mexico, mexico.players[0].id);
     expect(facts.properties).toBe(2);
     expect(facts.completedGroups).toContain("Mexico");
+  });
+
+  it("queues simultaneous events in order and does not replay seen keys", () => {
+    const purchase: PresentationEvent = { key: "purchase", kind: "property-purchased", title: "Purchase", detail: "A" };
+    const stamp: PresentationEvent = { key: "stamp", kind: "country-set-completed", title: "Stamp", detail: "B" };
+    expect(enqueuePresentationEvents([], [purchase, stamp], new Set())).toEqual([purchase, stamp]);
+    expect(enqueuePresentationEvents([purchase], [purchase, stamp], new Set(["purchase"]))).toEqual([purchase, stamp]);
+  });
+
+  it("uses the previous auction bid and exact reducer trade-result messages", () => {
+    const before = { ...makeGameState(), auction: { propertySpaceIndex: 1, activePlayerIds: [], passedPlayerIds: [], currentBid: 137, highestBidderId: null, currentBidderIndex: 0, turnStartedAt: 0, turnDeadlineAt: 0, status: "active" as const } };
+    const after = withOwnership({ ...before, auction: null }, 1, before.players[0].id);
+    expect(deriveGamePresentationEvents(before, after).find((event) => event.kind === "auction-won")?.detail).toContain("$137");
+    expect(classifyTradeResultFromLogMessage("Trade accepted: A gave $1 to B in exchange for nothing.")).toBe("accepted");
+    expect(classifyTradeResultFromLogMessage("B declined the trade.")).toBe("declined");
+    expect(classifyTradeResultFromLogMessage("A cancelled the trade.")).toBe("cancelled");
+    expect(classifyTradeResultFromLogMessage("Trade changed.")).toBeNull();
   });
 });
 

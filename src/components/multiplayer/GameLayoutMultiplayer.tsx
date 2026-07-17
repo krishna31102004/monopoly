@@ -45,6 +45,8 @@ type Props = {
   updateTradeDraft: (payload: TradeDraftUpdatePayload) => void;
   cancelTradeDraft: () => void;
   submitTradeDraft: () => void;
+  showStartSequence?: boolean;
+  onStartSequenceShown?: () => void;
 };
 
 // Determine which player ID should be acting right now
@@ -69,6 +71,8 @@ export function GameLayoutMultiplayer({
   updateTradeDraft,
   cancelTradeDraft,
   submitTradeDraft,
+  showStartSequence = false,
+  onStartSequenceShown,
 }: Props) {
   const [selectedSpace, setSelectedSpace] = useState<OwnableSpace | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileGameTab>("board");
@@ -130,7 +134,7 @@ export function GameLayoutMultiplayer({
 
   return (
     <main className="min-h-screen px-2 py-3 sm:px-4 sm:py-5 xl:pb-5 xl:bg-[radial-gradient(circle_at_top_left,rgba(198,161,91,.10),transparent_35rem)]">
-      <GamePresentationLayer state={gameState} />
+      <GamePresentationLayer state={gameState} showStart={showStartSequence} onStartShown={onStartSequenceShown} onNavigate={setMobileTab} />
 
       {/* Connection status banner */}
       {connectionStatus === "reconnecting" ? (
