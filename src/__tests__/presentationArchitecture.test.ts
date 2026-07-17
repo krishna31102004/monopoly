@@ -7,6 +7,7 @@ const layer = read("components/presentation/GamePresentationLayer.tsx");
 const localLayout = read("components/GameLayout.tsx");
 const multiplayerLayout = read("components/multiplayer/GameLayoutMultiplayer.tsx");
 const board = read("components/board/GameBoard.tsx");
+const statusStrip = read("components/GameStatusStrip.tsx");
 
 describe("Phase 5 presentation architecture safeguards", () => {
   it("keeps presentation local and outside reducer or socket paths", () => {
@@ -24,6 +25,10 @@ describe("Phase 5 presentation architecture safeguards", () => {
     expect(layer).toContain("aria-pressed={enabled}");
     expect(layer).toContain("localStorage");
     expect(layer).toContain("world-cities-presentation");
+    expect((statusStrip.match(/<SoundControl\b/g) ?? [])).toHaveLength(1);
+    expect(statusStrip).toContain('import { SoundControl }');
+    expect(layer).not.toContain('fixed right-3 top-');
+    expect(layer).not.toContain("<SoundControl />");
   });
 
   it("keeps an accessible start sequence and factual end-game heading", () => {

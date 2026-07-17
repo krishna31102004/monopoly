@@ -41,7 +41,8 @@ function ownsCompleteGroup(state: GameState, playerId: string, group: string) {
 /** Pure, presentation-only transition derivation. It never mutates game state. */
 export function deriveGamePresentationEvents(previous: GameState, current: GameState): PresentationEvent[] {
   const events: PresentationEvent[] = [];
-  const latestLogId = current.gameLog.at(-1)?.id ?? `${current.currentPlayerIndex}:${current.phase}`;
+  const latestLogEntry = current.gameLog[0];
+  const latestLogId = latestLogEntry?.id ?? `${current.currentPlayerIndex}:${current.phase}`;
 
   if (previous.phase === "setup" && current.phase !== "setup") {
     events.push({ key: `start:${latestLogId}`, kind: "game-started", title: "World Cities", detail: "Your journey begins." });
@@ -72,8 +73,13 @@ export function deriveGamePresentationEvents(previous: GameState, current: GameS
       });
     }
   }
-  if (previous.auction && !current.auction && !current.ownerships.find((entry) => entry.spaceIndex === previous.auction!.propertySpaceIndex)?.ownerId) {
-    events.push({ key: `auction-none:${previous.auction.propertySpaceIndex}:${latestLogId}`, kind: "auction-no-bid", title: "Auction closed", detail: "No bids were placed." });
+  const previousAuction = previous.auction;
+  const previousAuctionCompleted = previousAuction && (
+    !current.auction || current.auction.propertySpaceIndex !== previousAuction.propertySpaceIndex
+  );
+  if (previousAuctionCompleted && !current.ownerships.find((entry) => entry.spaceIndex === previousAuction.propertySpaceIndex)?.ownerId) {
+    const property = boardSpaces[previousAuction.propertySpaceIndex];
+    events.push({ key: `auction-none:${previousAuction.propertySpaceIndex}:${latestLogId}`, kind: "auction-no-bid", title: `Auction closed: ${property?.name ?? "Property"}`, detail: "No bids were placed." });
   }
 
   for (const player of current.players) {
@@ -94,7 +100,7 @@ export function deriveGamePresentationEvents(previous: GameState, current: GameS
   }
 
   if (previous.trade && !current.trade) {
-    const result = classifyTradeResultFromLogMessage(current.gameLog.at(-1)?.message);
+    const result = classifyTradeResultFromLogMessage(latestLogEntry?.message);
     if (!result) return events;
     const kind = result === "accepted" ? "trade-accepted" : result === "declined" ? "trade-declined" : "trade-cancelled";
     events.push({ key: `trade:${kind}:${latestLogId}`, kind, title: kind === "trade-accepted" ? "Trade completed" : kind === "trade-declined" ? "Trade declined" : "Trade cancelled", detail: `${playerName(previous, previous.trade.initiatorPlayerId)} and ${playerName(previous, previous.trade.recipientPlayerId)}` });

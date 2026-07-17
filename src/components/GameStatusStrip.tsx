@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { SoundControl } from "@/components/presentation/GamePresentationLayer";
 import { getGameStatusStripInfo, type GameStatusStripParams } from "@/lib/ui/gameStatusStrip";
 
 type GameStatusStripProps = GameStatusStripParams & {
@@ -82,11 +83,13 @@ export function GameStatusStrip({ onSync, onLeave, onForfeit, ...params }: GameS
           </span>
         ) : null}
 
+        <div className="ml-auto shrink-0"><SoundControl /></div>
+
         {info.isMultiplayer && onSync ? (
           <button
             type="button"
             onClick={onSync}
-            className="wc-button wc-button-secondary ml-auto min-h-11 px-2 text-[11px] xl:min-h-[32px]"
+            className="wc-button wc-button-secondary min-h-11 px-2 text-[11px] xl:min-h-[32px]"
           >
             Sync
           </button>

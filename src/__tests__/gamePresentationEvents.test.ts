@@ -47,7 +47,27 @@ describe("game presentation event derivation", () => {
     expect(classifyTradeResultFromLogMessage("Trade accepted: A gave $1 to B in exchange for nothing.")).toBe("accepted");
     expect(classifyTradeResultFromLogMessage("B declined the trade.")).toBe("declined");
     expect(classifyTradeResultFromLogMessage("A cancelled the trade.")).toBe("cancelled");
+    expect(classifyTradeResultFromLogMessage("Trade cancelled: a party cannot afford mortgage transfer fees.")).toBe("cancelled");
     expect(classifyTradeResultFromLogMessage("Trade changed.")).toBeNull();
+  });
+
+  it("uses the prepended newest log entry for trade events and fresh repeated rent keys", () => {
+    const before = makeGameState();
+    const trade = { initiatorPlayerId: before.players[0].id, recipientPlayerId: before.players[1].id, offerFromInitiator: { cash: 10, propertySpaceIndices: [], getOutOfJailFreeCards: 0 }, offerFromRecipient: { cash: 0, propertySpaceIndices: [], getOutOfJailFreeCards: 0 } };
+    for (const [message, kind] of [["Trade accepted: A gave $10 to B in exchange for nothing.", "trade-accepted"], ["B declined the trade.", "trade-declined"], ["Trade cancelled: a party cannot afford mortgage transfer fees.", "trade-cancelled"]] as const) {
+      const after = { ...before, trade: null, gameLog: [{ id: `new-${kind}`, message, createdAt: "now" }, ...before.gameLog] };
+      expect(deriveGamePresentationEvents({ ...before, trade }, after).some((event) => event.kind === kind)).toBe(true);
+    }
+    const rent = (id: string) => ({ ...before, gameLog: [{ id, message: "rent", createdAt: "now" }, ...before.gameLog], landingAction: { kind: "rentPayment" as const, spaceIndex: 1, message: "rent", payerId: before.players[0].id, ownerId: before.players[1].id, rentAmount: 20, payerCashAfter: 1480, ownerCashAfter: 1520, bankruptcyDeferred: false } });
+    expect(deriveGamePresentationEvents(before, rent("rent-1")).find((event) => event.kind === "rent-paid")?.key).not.toBe(deriveGamePresentationEvents(before, rent("rent-2")).find((event) => event.kind === "rent-paid")?.key);
+  });
+
+  it("recognizes a chained no-bid auction without mistaking the next active auction for it", () => {
+    const before = { ...makeGameState(), auction: { propertySpaceIndex: 1, activePlayerIds: [], passedPlayerIds: [], currentBid: 0, highestBidderId: null, currentBidderIndex: 0, turnStartedAt: 0, turnDeadlineAt: 0, status: "active" as const } };
+    const current = { ...before, auction: { ...before.auction, propertySpaceIndex: 3 }, gameLog: [{ id: "auction-chain", message: "Next auction", createdAt: "now" }, ...before.gameLog] };
+    const events = deriveGamePresentationEvents(before, current).filter((event) => event.kind === "auction-no-bid");
+    expect(events).toHaveLength(1);
+    expect(events[0].title).toContain("Guadalajara");
   });
 });
 
