@@ -25,6 +25,8 @@ describe("card reveal UI data", () => {
     const drawnCard = makeDrawnCard("chance", "Advance to GO. Collect $200.", "kb collected $200.");
     const tone = getCardRevealTone(drawnCard.card.deck);
     expect(tone.label).toBe("Chance");
+    expect(tone.bg).toBe("bg-[var(--wc-paper)]");
+    expect(tone.header).toBe("text-amber-700");
     expect(drawnCard.card.text.length).toBeGreaterThan(0);
   });
 
@@ -32,6 +34,8 @@ describe("card reveal UI data", () => {
     const drawnCard = makeDrawnCard("community-chest", "Bank error in your favor. Collect $200.", "kb collected $200.");
     const tone = getCardRevealTone(drawnCard.card.deck);
     expect(tone.label).toBe("Community Chest");
+    expect(tone.bg).toBe("bg-[var(--wc-paper)]");
+    expect(tone.header).toBe("text-cyan-800");
     expect(drawnCard.card.text.length).toBeGreaterThan(0);
   });
 
@@ -72,5 +76,14 @@ describe("CardPanel is non-blocking markup", () => {
 
   it("has an accessible label so screen readers know what was drawn", () => {
     expect(cardPanelSource).toContain("aria-label=");
+  });
+
+  it("uses a readable paper hierarchy without truncating long card descriptions", () => {
+    expect(cardPanelSource).toContain("wc-paper-card");
+    expect(cardPanelSource).toContain("text-[var(--wc-text-on-light)]");
+    expect(cardPanelSource).toContain("whitespace-normal");
+    expect(cardPanelSource).toContain("bg-[var(--wc-ivory)]");
+    expect(cardPanelSource).not.toContain("truncate");
+    expect(cardPanelSource).not.toContain("line-clamp");
   });
 });

@@ -36,13 +36,13 @@ type PlayerPanelProps = {
 };
 
 const STATUS_CHIP_STYLES: Record<PlayerStatusChip, string> = {
-  TURN: "border border-[var(--wc-gold-border)] bg-[var(--wc-gold-soft)] text-amber-100",
-  ONLINE: "border border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
-  "IN JAIL": "border border-rose-500/30 bg-rose-500/10 text-rose-200",
-  DEBT: "border border-amber-500/30 bg-amber-500/10 text-amber-100",
-  BANKRUPT: "border border-rose-500/30 bg-rose-500/10 text-rose-200",
-  TRADING: "border border-violet-400/30 bg-violet-400/10 text-violet-200",
-  AUCTION: "border border-sky-400/30 bg-sky-400/10 text-sky-200",
+  TURN: "border border-[var(--wc-gold-border)] bg-[var(--wc-gold-soft)] text-amber-800 xl:text-amber-100",
+  ONLINE: "border border-emerald-500/30 bg-emerald-500/10 text-emerald-800 xl:text-emerald-200",
+  "IN JAIL": "border border-rose-500/30 bg-rose-500/10 text-rose-800 xl:text-rose-200",
+  DEBT: "border border-amber-500/30 bg-amber-500/10 text-amber-800 xl:text-amber-100",
+  BANKRUPT: "border border-rose-500/30 bg-rose-500/10 text-rose-800 xl:text-rose-200",
+  TRADING: "border border-violet-400/30 bg-violet-400/10 text-violet-800 xl:text-violet-200",
+  AUCTION: "border border-sky-400/30 bg-sky-400/10 text-sky-800 xl:text-sky-200",
 };
 
 function StatusChip({ chip }: { chip: PlayerStatusChip }) {
@@ -122,15 +122,15 @@ export function PlayerPanel({
   };
   return (
     <article
-      className={`overflow-hidden rounded-[var(--wc-radius-medium)] border bg-[var(--wc-navy-raised)] transition-colors ${
+      className={`overflow-hidden rounded-[var(--wc-radius-medium)] border border-[var(--wc-paper-border)] bg-[var(--wc-paper)] transition-colors xl:border-[var(--wc-border)] xl:bg-[var(--wc-navy-raised)] ${
         isCurrentPlayer
           ? "border-[var(--wc-gold-border)] shadow-[0_0_0_1px_var(--wc-gold-soft),var(--wc-shadow-card)]"
-          : "border-[var(--wc-border)] shadow-[var(--wc-shadow-card)]"
+          : "xl:border-[var(--wc-border)] shadow-[var(--wc-shadow-card)]"
       } ${player.isBankrupt ? "opacity-50" : ""}`}
       style={{ borderLeftWidth: 3, borderLeftColor: player.color } as CSSProperties}
     >
       {isCurrentPlayer ? (
-        <div className="border-b border-[var(--wc-gold-border)] bg-[var(--wc-gold-soft)] px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-amber-100">
+        <div className="border-b border-[var(--wc-gold-border)] bg-[var(--wc-gold-soft)] px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-amber-800 xl:text-amber-100">
           Now Playing
         </div>
       ) : null}
@@ -146,19 +146,19 @@ export function PlayerPanel({
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1">
-            <h3 className="truncate text-[15px] font-black text-white">{player.name}</h3>
+            <h3 className="truncate text-[15px] font-black text-[var(--wc-text-on-light)] xl:text-white">{player.name}</h3>
             {statusChips.map((chip) => (
               <StatusChip key={chip} chip={chip} />
             ))}
           </div>
-          <p className="flex min-w-0 items-center gap-1 truncate text-xs font-semibold text-slate-400">
+          <p className="flex min-w-0 items-center gap-1 truncate text-xs font-semibold text-slate-600 xl:text-slate-400">
             <UiIcon name="home" size={13} aria-hidden="true" />
             <span className="truncate">{position.name}</span>
             <span className="shrink-0 text-slate-500">· {ownedAssetCount} assets</span>
           </p>
         </div>
         <div className="shrink-0 text-right">
-          <p className="wc-numeric text-lg font-black tracking-tight text-white">
+          <p className="wc-numeric text-lg font-black tracking-tight text-[var(--wc-text-on-light)] xl:text-white">
             ${player.cash.toLocaleString()}
           </p>
         </div>
@@ -244,7 +244,7 @@ export function PlayerPanel({
         }}
         aria-expanded={isBelowXl ? mobileSheetOpen : expanded}
         aria-controls={isBelowXl ? `player-sheet-${player.id}` : `player-details-${player.id}`}
-        className="flex min-h-11 w-full items-center justify-center gap-1 border-t border-[var(--wc-border-subtle)] py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 transition-colors hover:bg-[var(--wc-navy-hover)] hover:text-white"
+        className="flex min-h-11 w-full items-center justify-center gap-1 border-t border-[var(--wc-paper-border)] py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-600 transition-colors hover:bg-[var(--wc-ivory)] hover:text-[var(--wc-text-on-light)] xl:border-[var(--wc-border-subtle)] xl:text-slate-400 xl:hover:bg-[var(--wc-navy-hover)] xl:hover:text-white"
       >
         Details {expanded ? "▴" : "▾"}
       </button>
@@ -309,15 +309,15 @@ function MobilePlayerSheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby={`player-sheet-title-${player.id}`}
-        className="max-h-[86dvh] w-full overflow-y-auto rounded-t-[var(--wc-radius-large)] border border-[var(--wc-border)] bg-[var(--wc-navy)] p-4 pb-[calc(var(--wc-safe-bottom)+1rem)] text-slate-100 shadow-[var(--wc-shadow-modal)]"
+        className="max-h-[86dvh] w-full overflow-y-auto rounded-t-[var(--wc-radius-large)] border border-[var(--wc-paper-border)] bg-[var(--wc-paper)] p-4 pb-[calc(var(--wc-safe-bottom)+1rem)] text-[var(--wc-text-on-light)] shadow-[var(--wc-shadow-modal)]"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <TokenIcon token={player.token} color={player.color} size={42} label={player.tokenLabel} badge />
             <div className="min-w-0">
-              <h2 id={`player-sheet-title-${player.id}`} className="truncate text-lg font-black text-white">{player.name}</h2>
-              <p className="wc-numeric text-sm font-black text-amber-100">${player.cash.toLocaleString()}</p>
+              <h2 id={`player-sheet-title-${player.id}`} className="truncate text-lg font-black text-[var(--wc-text-on-light)]">{player.name}</h2>
+              <p className="wc-numeric text-sm font-black text-amber-800">${player.cash.toLocaleString()}</p>
             </div>
           </div>
           <button type="button" onClick={onClose} aria-label={`Close ${player.name} details`} className="wc-icon-button wc-button-secondary rounded-full">
@@ -326,23 +326,23 @@ function MobilePlayerSheet({
         </div>
         <div className="flex flex-wrap gap-1.5">
           {statusChips.map((chip) => <StatusChip key={chip} chip={chip} />)}
-          <span className="wc-badge wc-badge-muted"><UiIcon name="home" size={13} aria-hidden="true" /> {positionName}</span>
-          <span className="wc-badge wc-badge-muted">{jail.inJail ? `In jail · attempt ${jail.attempt}/${jail.maxAttempts}` : "Free"}</span>
-          <span className="wc-badge wc-badge-muted">{jail.jailCardCount} jail card{jail.jailCardCount === 1 ? "" : "s"}</span>
+          <span className="wc-badge border-[var(--wc-paper-border)] bg-[var(--wc-ivory)] text-slate-700"><UiIcon name="home" size={13} aria-hidden="true" /> {positionName}</span>
+          <span className="wc-badge border-[var(--wc-paper-border)] bg-[var(--wc-ivory)] text-slate-700">{jail.inJail ? `In jail · attempt ${jail.attempt}/${jail.maxAttempts}` : "Free"}</span>
+          <span className="wc-badge border-[var(--wc-paper-border)] bg-[var(--wc-ivory)] text-slate-700">{jail.jailCardCount} jail card{jail.jailCardCount === 1 ? "" : "s"}</span>
         </div>
         <div className="mt-4 grid grid-cols-3 gap-2">
           <MiniStat label="Houses" value={String(houseCount)} />
           <MiniStat label="Hotels" value={String(hotelCount)} />
           <MiniStat label="Mortgaged" value={String(mortgagedCount)} warn={mortgagedCount > 0} />
         </div>
-        <h3 className="mt-5 text-[10px] font-black uppercase tracking-[.16em] text-slate-400">Assets</h3>
+        <h3 className="mt-5 text-[10px] font-black uppercase tracking-[.16em] text-slate-600">Assets</h3>
         <div className="mt-2 space-y-2">
           {cityGroups.flatMap((group) => group.chips.map((chip) => (
             <AssetRow key={chip.spaceIndex} name={chip.name} accent={CITY_COLOR_HEX[group.colorGroup]} mortgaged={chip.isMortgaged} detail={group.isFullSet ? "Full set" : group.colorGroup} />
           )))}
           {airports.map((chip) => <AssetRow key={chip.spaceIndex} name={chip.name} accent="#64748b" mortgaged={chip.isMortgaged} detail="Airport" icon="airport" />)}
           {utilities.map((chip) => <AssetRow key={chip.spaceIndex} name={chip.name} accent="#0891b2" mortgaged={chip.isMortgaged} detail="Utility" icon="utility" />)}
-          {cityGroups.length + airports.length + utilities.length === 0 ? <p className="wc-empty-state text-sm">No properties owned.</p> : null}
+          {cityGroups.length + airports.length + utilities.length === 0 ? <p className="rounded-[var(--wc-radius-medium)] border border-[var(--wc-paper-border)] bg-[var(--wc-ivory)] p-4 text-center text-sm text-slate-600">No properties owned.</p> : null}
         </div>
       </section>
     </div>
@@ -351,20 +351,20 @@ function MobilePlayerSheet({
 
 function AssetRow({ name, accent, mortgaged, detail, icon }: { name: string; accent: string; mortgaged: boolean; detail: string; icon?: "airport" | "utility" }) {
   return (
-    <div className="flex min-h-11 items-center gap-3 rounded-[var(--wc-radius-small)] border border-[var(--wc-border-subtle)] bg-[var(--wc-navy-raised)] px-3">
+    <div className="flex min-h-11 items-center gap-3 rounded-[var(--wc-radius-small)] border border-[var(--wc-paper-border)] bg-[var(--wc-ivory)] px-3">
       <span className="h-7 w-1 rounded-full" style={{ backgroundColor: accent }} aria-hidden="true" />
-      {icon ? <UiIcon name={icon} size={17} className="text-slate-300" aria-hidden="true" /> : null}
-      <span className="min-w-0 flex-1 truncate text-sm font-bold text-white">{name}</span>
-      <span className={`text-[10px] font-bold ${mortgaged ? "text-amber-200" : "text-slate-400"}`}>{mortgaged ? "Mortgaged" : detail}</span>
+      {icon ? <UiIcon name={icon} size={17} className="text-slate-600" aria-hidden="true" /> : null}
+      <span className="min-w-0 flex-1 truncate text-sm font-bold text-[var(--wc-text-on-light)]">{name}</span>
+      <span className={`text-[10px] font-bold ${mortgaged ? "text-amber-800" : "text-slate-600"}`}>{mortgaged ? "Mortgaged" : detail}</span>
     </div>
   );
 }
 
 function MiniStat({ label, value, warn = false }: { label: string; value: string; warn?: boolean }) {
   return (
-    <div className="rounded-lg border border-[var(--wc-border-subtle)] bg-[var(--wc-navy)] px-2 py-1.5">
-      <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">{label}</p>
-      <p className={`wc-numeric text-xs font-black ${warn ? "text-amber-200" : "text-white"}`}>{value}</p>
+    <div className="rounded-lg border border-[var(--wc-paper-border)] bg-[var(--wc-ivory)] px-2 py-1.5 xl:border-[var(--wc-border-subtle)] xl:bg-[var(--wc-navy)]">
+      <p className="text-[9px] font-black uppercase tracking-wide text-slate-600 xl:text-slate-400">{label}</p>
+      <p className={`wc-numeric text-xs font-black ${warn ? "text-amber-800 xl:text-amber-200" : "text-[var(--wc-text-on-light)] xl:text-white"}`}>{value}</p>
     </div>
   );
 }

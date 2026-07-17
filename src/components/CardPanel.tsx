@@ -21,7 +21,7 @@ export function CardPanel({ drawnCard, showResolved = true }: CardPanelProps) {
   return (
     <section
       aria-label={`${tone.label} card drawn`}
-      className={`card-reveal-flip rounded-2xl border-2 ${tone.border} ${tone.bg} shadow-sm`}
+      className={`card-reveal-flip wc-paper-card overflow-hidden rounded-[var(--wc-radius-medium)] border ${tone.border} ${tone.bg}`}
     >
       <div className={`flex items-center gap-2 border-b ${tone.border} px-4 py-3`}>
         <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base text-white shadow-sm ${tone.accent}`} aria-hidden="true">
@@ -31,14 +31,14 @@ export function CardPanel({ drawnCard, showResolved = true }: CardPanelProps) {
           <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${tone.header}`}>
             {tone.label} Card
           </p>
-          <p className="text-sm font-black leading-snug text-slate-950">{card.text}</p>
+          <p className="mt-1 whitespace-normal text-sm font-black leading-6 text-[var(--wc-text-on-light)]">{card.text}</p>
         </div>
       </div>
 
       {drawnCard.resolvedMessage && showResolved ? (
-        <div className="px-4 py-3">
-          <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Result</p>
-          <p className="mt-1 text-sm font-bold leading-5 text-slate-800">{drawnCard.resolvedMessage}</p>
+        <div className="border-t border-[var(--wc-paper-border)] bg-[var(--wc-ivory)] px-4 py-3">
+          <p className="text-[10px] font-black uppercase tracking-wide text-slate-600">Result</p>
+          <p className="mt-1 whitespace-normal text-sm font-bold leading-5 text-[var(--wc-text-on-light)]">{drawnCard.resolvedMessage}</p>
         </div>
       ) : null}
     </section>

@@ -17,6 +17,7 @@ const controls = read("../components/GameControls.tsx");
 const landingPanel = read("../components/LandingActionPanel.tsx");
 const logDrawer = read("../components/GameLogDrawer.tsx");
 const playerPanel = read("../components/PlayerPanel.tsx");
+const saveControls = read("../components/GameSaveControls.tsx");
 const statusStrip = read("../components/GameStatusStrip.tsx");
 
 describe("Phase 3 desktop shell layout safeguards", () => {
@@ -49,7 +50,7 @@ describe("Phase 3 desktop shell layout safeguards", () => {
   });
 });
 
-describe("Phase 3 dark command-dock presentation safeguards", () => {
+describe("responsive command-dock presentation safeguards", () => {
   it("keeps dice status readable and preserves the original dispatch action types", () => {
     expect(controls).toContain("text-white");
     expect(controls).toContain("text-amber-200");
@@ -60,11 +61,16 @@ describe("Phase 3 dark command-dock presentation safeguards", () => {
     expect(controls).toContain('state.phase === "turnComplete" && state.currentPlayerHasRolled');
   });
 
-  it("uses dark premium surfaces for landing, log, roster, and leave UI", () => {
+  it("keeps dark desktop command surfaces while restoring paper information cards below xl", () => {
+    expect(controls).toContain("bg-[var(--wc-paper)]");
+    expect(controls).toContain("xl:bg-[var(--wc-navy)]");
+    expect(landingPanel).toContain("bg-[var(--wc-paper)]");
     expect(landingPanel).toContain("bg-[var(--wc-navy)]");
     expect(landingPanel).toContain("wc-button-primary");
+    expect(logDrawer).toContain("bg-[var(--wc-paper)]");
     expect(logDrawer).toContain("bg-[var(--wc-navy-raised)]");
     expect(logDrawer).toContain('<UiIcon name="log"');
+    expect(playerPanel).toContain("bg-[var(--wc-paper)]");
     expect(playerPanel).toContain("bg-[var(--wc-navy-raised)]");
     expect(playerPanel).not.toContain("getWealthBarPercent");
     expect(playerPanel).toContain("getDesignReadableTextColor");
@@ -79,6 +85,14 @@ describe("Phase 3 dark command-dock presentation safeguards", () => {
     expect(statusStrip).toContain('role="dialog"');
     expect(statusStrip).toContain('aria-labelledby="leave-game-title"');
     expect(statusStrip).toContain("bg-[var(--wc-navy)]");
+  });
+
+  it("keeps save utilities compact and preserves their three stateful actions", () => {
+    expect(saveControls).toContain("bg-[var(--wc-paper)]");
+    expect(saveControls).toContain("Export Save");
+    expect(saveControls).toContain("Import Save");
+    expect(saveControls).toContain("New Game");
+    expect(saveControls).toContain("min-h-11");
   });
 });
 

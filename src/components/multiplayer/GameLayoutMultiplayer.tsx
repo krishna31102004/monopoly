@@ -226,10 +226,10 @@ export function GameLayoutMultiplayer({
           </div>
 
           <div className={`${mobileTab === "players" ? "block" : "hidden xl:block"} mb-3`}>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 xl:text-slate-400">
               Players
             </p>
-            <h2 className="text-lg font-black text-white">Player Panels</h2>
+            <h2 className="text-lg font-black text-[var(--wc-text-on-light)] xl:text-white">Player Panels</h2>
           </div>
 
           <div className={`${mobileTab === "players" ? "grid" : "hidden xl:grid"} gap-2.5 sm:grid-cols-2 xl:grid-cols-1`}>
