@@ -86,6 +86,7 @@
 .wc-panel,
 .wc-card,
 .wc-paper-card,
+.wc-paper-shell,
 .wc-validation,
 .wc-empty-state {
   border: 1px solid var(--wc-border);
@@ -105,14 +106,20 @@
   padding: var(--wc-space-card);
 }
 
-.wc-paper-card {
+.wc-paper-card,
+.wc-paper-shell {
   background: var(--wc-paper);
   border-color: var(--wc-paper-border);
   border-radius: var(--wc-radius-medium);
   box-shadow: 0 6px 16px rgba(52, 41, 28, 0.1);
   color: var(--wc-text-on-light);
+}
+
+.wc-paper-card {
   padding: var(--wc-space-card);
 }
+
+.wc-paper-shell { padding: 0; }
 
 .wc-section-label {
   color: var(--wc-text-muted);

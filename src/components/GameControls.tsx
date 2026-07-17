@@ -5,6 +5,7 @@ import { rollDice } from "@/lib/game/dice";
 import { TokenIcon } from "@/components/board/TokenIcon";
 import { DiceFace } from "@/components/DiceFace";
 import { DICE_ROLL_MS } from "@/lib/animation/timing";
+import { getTurnStatus } from "@/lib/ui/gameControlsPresentation";
 import type { GameAction, GameState } from "@/types/game";
 
 type GameControlsProps = {
@@ -17,39 +18,6 @@ type GameControlsProps = {
   /** When false, the landing message is hidden until the reveal sequence completes */
   showLandingMessage?: boolean;
 };
-
-function getTurnStatus(state: GameState) {
-  if (state.phase === "gameOver") {
-    return { label: "Game over", color: "text-emerald-200" };
-  }
-  if (state.phase === "bankruptcyPending") {
-    const debtorName =
-      state.players.find((p) => p.id === state.bankruptcy?.debtorPlayerId)?.name ?? "Player";
-    return {
-      label: `${debtorName} is resolving bankruptcy — see panel below`,
-      color: "text-rose-200",
-    };
-  }
-  if (state.phase === "awaitingJailDecision") {
-    return { label: "In Jail — choose an option below", color: "text-amber-200" };
-  }
-  if (state.phase === "awaitingPurchaseDecision") {
-    return { label: "Make a decision below", color: "text-amber-200" };
-  }
-  if (state.phase === "auction") {
-    return { label: "Auction in progress", color: "text-amber-200" };
-  }
-  if (state.phase === "turnComplete") {
-    return { label: "Ready to end turn", color: "text-emerald-200" };
-  }
-  if (state.doublesCount > 0) {
-    return {
-      label: `${state.doublesCount} double${state.doublesCount === 1 ? "" : "s"} — roll again`,
-      color: "text-sky-200",
-    };
-  }
-  return { label: "Roll the dice to move", color: "text-slate-300" };
-}
 
 // Dummy die values shown while rolling animation plays
 let rollingTick = 1;
@@ -112,7 +80,7 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
       </div>
 
       <div className="p-4">
-        <p className="text-xs font-bold text-slate-700 xl:text-slate-300">
+        <p className={`text-xs font-bold ${presentationStatus ? "text-slate-700 xl:text-slate-300" : status.color}`}>
           {presentationStatus ?? status.label}
         </p>
 
@@ -180,7 +148,7 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
               onClick={() => { setEndTurnReminder(false); dispatch({ type: "END_TURN" }); }}
               className={`w-full rounded-lg border px-4 py-2.5 text-sm font-bold transition-all duration-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30 ${
                 endTurnReminder
-                  ? "border-amber-400 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20"
+                  ? "border-amber-400 bg-amber-500/10 text-amber-800 hover:bg-amber-500/20 xl:text-amber-200"
                   : "border-[var(--wc-paper-border)] bg-[var(--wc-ivory)] text-slate-800 hover:bg-white xl:border-[var(--wc-border)] xl:bg-[var(--wc-navy-raised)] xl:text-slate-200 xl:hover:bg-[var(--wc-navy-hover)]"
               }`}
             >

@@ -196,18 +196,18 @@ export function GameLayoutMultiplayer({
 
         {/* Sidebar */}
         <aside className="min-w-0 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto xl:rounded-[var(--wc-radius-large)] xl:border xl:border-[var(--wc-border)] xl:bg-[var(--wc-navy)] xl:p-3 xl:shadow-[var(--wc-shadow-panel)]">
-          {gameState.phase === "auction" && showLandingPanel ? (
-            <AuctionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} serverAuthoritative />
-          ) : null}
           <div className={`${mobileTab === "actions" ? "grid" : "hidden xl:grid"} mb-3 gap-3`}>
-            <div className="order-5 xl:order-none"><GameControls state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} isAnimating={isAnimating} presentationStatus={presentationStatus} showLandingMessage={showLandingPanel} /></div>
+            {gameState.phase === "auction" && showLandingPanel ? (
+              <div className="order-3 xl:order-none"><AuctionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} serverAuthoritative /></div>
+            ) : null}
+            <div className="order-1 xl:order-none"><GameControls state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} isAnimating={isAnimating} presentationStatus={presentationStatus} showLandingMessage={showLandingPanel} /></div>
             {gameState.phase === "awaitingJailDecision" ? (
-              <div className="order-1 xl:order-none"><JailActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} /></div>
+              <div className="order-3 xl:order-none"><JailActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} /></div>
             ) : null}
             {gameState.drawnCard && showCardPanel ? (
-              <div className="order-4 xl:order-none"><CardPanel drawnCard={gameState.drawnCard} showResolved={showCardResolved} /></div>
+              <div className="order-2 xl:order-none"><CardPanel drawnCard={gameState.drawnCard} showResolved={showCardResolved} /></div>
             ) : null}
-            {showLandingPanel ? <div className="order-2 xl:order-none"><LandingActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} /></div> : null}
+            {showLandingPanel ? <div className="order-3 xl:order-none"><LandingActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} /></div> : null}
             <div className="order-3 xl:order-none"><BankruptcyPanel state={gameState} dispatch={dispatch} /></div>
             <div className="order-4 xl:order-none"><TradePanel
               state={gameState}

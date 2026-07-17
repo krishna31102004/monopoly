@@ -47,6 +47,21 @@ describe("Phase 4 responsive layout safeguards", () => {
     expect(multiplayerLayout).toContain('sendAction({ type: "ROLL_DICE" })');
   });
 
+  it("orders mobile actions as controls, card, mandatory action, trade, then save without changing desktop source order", () => {
+    for (const source of [localLayout, multiplayerLayout]) {
+      expect(source).toContain('className="order-1 xl:order-none"><GameControls');
+      expect(source).toContain('className="order-2 xl:order-none"><CardPanel');
+      expect(source).toContain('className="order-3 xl:order-none"><AuctionPanel');
+      expect(source).toContain('className="order-3 xl:order-none"><JailActionPanel');
+      expect(source).toContain('className="order-3 xl:order-none"><LandingActionPanel');
+      expect(source).toContain('className="order-3 xl:order-none"><BankruptcyPanel');
+      expect(source).toContain('className="order-4 xl:order-none"><TradePanel');
+    }
+    expect(localLayout).toContain('className="order-5 xl:order-none"><GameSaveControls');
+    expect(localLayout.indexOf("<AuctionPanel")).toBeLessThan(localLayout.indexOf("<GameControls"));
+    expect(multiplayerLayout.indexOf("<AuctionPanel")).toBeLessThan(multiplayerLayout.indexOf("<GameControls"));
+  });
+
   it("keeps the dock beneath xl, exposes labelled tabs, and hides during auction", () => {
     expect(dock).toContain("xl:hidden");
     expect(dock).toContain('if (state.phase === "auction") return null');

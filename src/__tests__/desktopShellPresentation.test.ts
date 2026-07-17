@@ -14,6 +14,7 @@ function read(relativePath: string) {
 const localLayout = read("../components/GameLayout.tsx");
 const multiplayerLayout = read("../components/multiplayer/GameLayoutMultiplayer.tsx");
 const controls = read("../components/GameControls.tsx");
+const turnStatusPresentation = read("../lib/ui/gameControlsPresentation.ts");
 const landingPanel = read("../components/LandingActionPanel.tsx");
 const logDrawer = read("../components/GameLogDrawer.tsx");
 const playerPanel = read("../components/PlayerPanel.tsx");
@@ -53,8 +54,12 @@ describe("Phase 3 desktop shell layout safeguards", () => {
 describe("responsive command-dock presentation safeguards", () => {
   it("keeps dice status readable and preserves the original dispatch action types", () => {
     expect(controls).toContain("text-white");
-    expect(controls).toContain("text-amber-200");
-    expect(controls).toContain("text-emerald-200");
+    expect(controls).toContain("getTurnStatus");
+    expect(turnStatusPresentation).toContain("text-amber-800 xl:text-amber-200");
+    expect(turnStatusPresentation).toContain("text-emerald-800 xl:text-emerald-200");
+    expect(turnStatusPresentation).toContain("text-sky-800 xl:text-sky-200");
+    expect(controls).toContain('presentationStatus ? "text-slate-700 xl:text-slate-300" : status.color');
+    expect(controls).toContain("text-amber-800 hover:bg-amber-500/20 xl:text-amber-200");
     expect(controls).toContain('dispatch({ type: "ROLL_DICE", dice: rollDice() })');
     expect(controls).toContain('dispatch({ type: "END_TURN" })');
     expect(controls).toContain('state.phase === "readyToRoll" && isMyTurn && !isAnimating');

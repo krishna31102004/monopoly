@@ -21,7 +21,7 @@ export function CardPanel({ drawnCard, showResolved = true }: CardPanelProps) {
   return (
     <section
       aria-label={`${tone.label} card drawn`}
-      className={`card-reveal-flip wc-paper-card overflow-hidden rounded-[var(--wc-radius-medium)] border ${tone.border} ${tone.bg}`}
+      className={`card-reveal-flip wc-paper-shell overflow-hidden rounded-[var(--wc-radius-medium)] border ${tone.border} ${tone.bg}`}
     >
       <div className={`flex items-center gap-2 border-b ${tone.border} px-4 py-3`}>
         <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base text-white shadow-sm ${tone.accent}`} aria-hidden="true">

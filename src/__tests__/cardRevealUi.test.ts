@@ -15,6 +15,10 @@ const cardPanelSource = readFileSync(
   fileURLToPath(new URL("../components/CardPanel.tsx", import.meta.url)),
   "utf-8",
 );
+const globalsSource = readFileSync(
+  fileURLToPath(new URL("../app/globals.css", import.meta.url)),
+  "utf-8",
+);
 
 function makeDrawnCard(deck: "chance" | "community-chest", text: string, resolvedMessage: string): DrawnCard {
   return { card: { id: "test-card", deck, text, category: "collect-bank" }, resolvedMessage };
@@ -79,11 +83,15 @@ describe("CardPanel is non-blocking markup", () => {
   });
 
   it("uses a readable paper hierarchy without truncating long card descriptions", () => {
-    expect(cardPanelSource).toContain("wc-paper-card");
+    expect(cardPanelSource).toContain("wc-paper-shell");
     expect(cardPanelSource).toContain("text-[var(--wc-text-on-light)]");
     expect(cardPanelSource).toContain("whitespace-normal");
     expect(cardPanelSource).toContain("bg-[var(--wc-ivory)]");
     expect(cardPanelSource).not.toContain("truncate");
     expect(cardPanelSource).not.toContain("line-clamp");
+  });
+
+  it("uses a zero-padding paper shell so the header and result bands span the full card", () => {
+    expect(globalsSource).toContain(".wc-paper-shell { padding: 0; }");
   });
 });

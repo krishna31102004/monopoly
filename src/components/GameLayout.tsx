@@ -119,21 +119,21 @@ export function GameLayout() {
 
         {/* Sidebar */}
         <aside className="min-w-0 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto xl:rounded-[var(--wc-radius-large)] xl:border xl:border-[var(--wc-border)] xl:bg-[var(--wc-navy)] xl:p-3 xl:shadow-[var(--wc-shadow-panel)]">
-          {state.phase === "auction" && showLandingPanel ? (
-            <AuctionPanel state={state} dispatch={dispatch} />
-          ) : null}
           <div className={`${mobileTab === "actions" ? "grid" : "hidden xl:grid"} mb-3 gap-3`}>
-            <div className="order-5 xl:order-none"><GameControls state={state} dispatch={dispatch} isAnimating={isAnimating} presentationStatus={presentationStatus} showLandingMessage={showLandingPanel} /></div>
+            {state.phase === "auction" && showLandingPanel ? (
+              <div className="order-3 xl:order-none"><AuctionPanel state={state} dispatch={dispatch} /></div>
+            ) : null}
+            <div className="order-1 xl:order-none"><GameControls state={state} dispatch={dispatch} isAnimating={isAnimating} presentationStatus={presentationStatus} showLandingMessage={showLandingPanel} /></div>
             {state.phase === "awaitingJailDecision" ? (
-              <div className="order-1 xl:order-none"><JailActionPanel state={state} dispatch={dispatch} /></div>
+              <div className="order-3 xl:order-none"><JailActionPanel state={state} dispatch={dispatch} /></div>
             ) : null}
             {state.drawnCard && showCardPanel ? (
-              <div className="order-4 xl:order-none"><CardPanel drawnCard={state.drawnCard} showResolved={showCardResolved} /></div>
+              <div className="order-2 xl:order-none"><CardPanel drawnCard={state.drawnCard} showResolved={showCardResolved} /></div>
             ) : null}
-            {showLandingPanel ? <div className="order-2 xl:order-none"><LandingActionPanel state={state} dispatch={dispatch} /></div> : null}
+            {showLandingPanel ? <div className="order-3 xl:order-none"><LandingActionPanel state={state} dispatch={dispatch} /></div> : null}
             <div className="order-3 xl:order-none"><BankruptcyPanel state={state} dispatch={dispatch} /></div>
             <div className="order-4 xl:order-none"><TradePanel state={state} dispatch={dispatch} /></div>
-            <div className="order-6 xl:order-none"><GameSaveControls state={state} dispatch={dispatch} /></div>
+            <div className="order-5 xl:order-none"><GameSaveControls state={state} dispatch={dispatch} /></div>
           </div>
 
           <div className={`${mobileTab === "log" ? "block" : "hidden xl:block"} mb-3`}>
