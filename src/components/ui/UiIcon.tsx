@@ -24,7 +24,9 @@ export type UiIconName =
   | "jail"
   | "card"
   | "timer"
-  | "online";
+  | "online"
+  | "volume"
+  | "volumeOff";
 
 type UiIconProps = Omit<SVGProps<SVGSVGElement>, "children"> & {
   name: UiIconName;
@@ -57,6 +59,8 @@ const paths: Record<UiIconName, ReactNode> = {
   card: <><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 8h8M8 12h8M8 16h5" /></>,
   timer: <><circle cx="12" cy="13" r="8" /><path d="M12 9v4l3 2" /><path d="M9 3h6" /></>,
   online: <><circle cx="12" cy="12" r="8" /><path d="m8.5 12 2.2 2.2 4.8-4.8" /></>,
+  volume: <><path d="M4 10h4l5-4v12l-5-4H4z" /><path d="M16 9.5a4 4 0 0 1 0 5" /><path d="M18.5 7a7 7 0 0 1 0 10" /></>,
+  volumeOff: <><path d="M4 10h4l5-4v12l-5-4H4z" /><path d="m17 10 4 4M21 10l-4 4" /></>,
 };
 
 /** Small dependency-free, monochrome icons for shared application UI. */

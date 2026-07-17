@@ -43,6 +43,8 @@ Make play board-first with a sticky current-turn bar and contextual action dock.
 
 After structure is stable, add restrained token movement, property/rent/auction/trade/jail/bankruptcy presentations, completed-country passport stamps, travel route lines, airport network visualization, optional muted sound effects, a premium game-start sequence, and an end-game world-empire summary. Respect `prefers-reduced-motion`; no default confetti, continuous music, excessive animation, or gameplay delays.
 
+**Status: implemented on `changes` and awaiting local manual review.** Phase 5 observes authoritative state transitions locally, deduplicates presentation keys, and never places presentation events in game state or socket payloads. Sound is muted by default and stored per browser; reduced-motion users receive static feedback. Local browser and two-window multiplayer QA remain required before any merge.
+
 ## BRANCH POLICY
 
 1. Always begin by switching to `changes`.

@@ -19,6 +19,7 @@ import { GameSaveControls } from "@/components/GameSaveControls";
 import { GameSetup } from "@/components/setup/GameSetup";
 import { LocalRollOffScreen } from "@/components/setup/LocalRollOffScreen";
 import { MobileActionBar } from "@/components/MobileActionBar";
+import { GamePresentationLayer } from "@/components/presentation/GamePresentationLayer";
 import { boardSpaces } from "@/data/board";
 import { createSetupGameState } from "@/lib/game/createInitialGameState";
 import { gameReducer } from "@/lib/game/gameReducer";
@@ -38,6 +39,7 @@ export function GameLayout() {
   const [mobileTab, setMobileTab] = useState<MobileGameTab>("board");
   const [mobilePlayerId, setMobilePlayerId] = useState<string | null>(null);
   const [pendingRollOff, setPendingRollOff] = useState<{ players: StartGamePlayer[]; rules: GameRules } | null>(null);
+  const [showStartSequence, setShowStartSequence] = useState(false);
   // diceKey: opaque string that changes exactly once per new roll — passed to
   // usePlayerMovementAnimation so it can self-gate movement until dice finish.
   const diceKey =
@@ -84,30 +86,17 @@ export function GameLayout() {
         onComplete={(sortedPlayers) => {
           dispatch({ type: "START_GAME", players: sortedPlayers, rules: pendingRollOff.rules });
           setPendingRollOff(null);
+          setShowStartSequence(true);
         }}
       />
     );
   }
 
-  const winner = state.winnerId ? state.players.find((p) => p.id === state.winnerId) : null;
   const actionAttention = getMobileTabAttention(state, state.players[state.currentPlayerIndex]?.id);
 
   return (
     <main className="min-h-screen px-2 py-3 sm:px-4 sm:py-5 xl:pb-5 xl:bg-[radial-gradient(circle_at_top_left,rgba(198,161,91,.10),transparent_35rem)]">
-      {/* Game-over banner */}
-      {state.phase === "gameOver" && winner ? (
-        <div className="mx-auto mb-4 max-w-[1560px] overflow-hidden rounded-xl border border-emerald-300 bg-emerald-50 px-6 py-4 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">
-            Game Over
-          </p>
-          <h1 className="mt-0.5 text-2xl font-black text-slate-950">
-            🏆 {winner.name} wins!
-          </h1>
-          <p className="mt-1 text-sm font-semibold text-slate-600">
-            All other players have gone bankrupt. Congratulations!
-          </p>
-        </div>
-      ) : null}
+      <GamePresentationLayer state={state} showStart={showStartSequence} onStartShown={() => setShowStartSequence(false)} />
 
       <div className="mx-auto mb-3 max-w-[1560px]">
         <GameStatusStrip state={state} isMultiplayer={false} />

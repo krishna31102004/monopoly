@@ -16,6 +16,7 @@ import { PropertyCardModal } from "@/components/PropertyCardModal";
 import { BankruptcyPanel } from "@/components/BankruptcyPanel";
 import { TradePanel } from "@/components/TradePanel";
 import { MobileActionBar } from "@/components/MobileActionBar";
+import { GamePresentationLayer } from "@/components/presentation/GamePresentationLayer";
 import { boardSpaces } from "@/data/board";
 import {
   isPlayerInActiveAuction,
@@ -124,29 +125,12 @@ export function GameLayoutMultiplayer({
     [sendAction, isMyTurn],
   );
 
-  const winner = gameState.winnerId
-    ? gameState.players.find((p) => p.id === gameState.winnerId)
-    : null;
-
   const currentActor = gameState.players.find((p) => p.id === actorId);
   const actionAttention = getMobileTabAttention(gameState, myPlayerId);
 
   return (
     <main className="min-h-screen px-2 py-3 sm:px-4 sm:py-5 xl:pb-5 xl:bg-[radial-gradient(circle_at_top_left,rgba(198,161,91,.10),transparent_35rem)]">
-      {/* Game-over banner */}
-      {gameState.phase === "gameOver" && winner ? (
-        <div className="mx-auto mb-4 max-w-[1560px] overflow-hidden rounded-xl border border-emerald-300 bg-emerald-50 px-6 py-4 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">
-            Game Over
-          </p>
-          <h1 className="mt-0.5 text-2xl font-black text-slate-950">
-            🏆 {winner.name} wins!
-          </h1>
-          <p className="mt-1 text-sm font-semibold text-slate-600">
-            All other players have gone bankrupt. Congratulations!
-          </p>
-        </div>
-      ) : null}
+      <GamePresentationLayer state={gameState} />
 
       {/* Connection status banner */}
       {connectionStatus === "reconnecting" ? (

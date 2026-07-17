@@ -25,6 +25,13 @@
 - Verify auction hides the dock; trade preserves Send Offer, Accept, Decline, Cancel Offer, RAISE CASH, and SWAP ASSETS.
 - Manually review safe-area spacing, board panning/zoom, action priority, no overflow, and two-browser synchronization across the specified mobile and desktop widths.
 
+## Premium presentation (Phase 5)
+
+- Verify presentation events derive from factual state transitions, deduplicate stable transition keys, and do not dispatch gameplay actions.
+- Verify sound defaults to muted and its browser-local preference is not stored in GameState or synchronized.
+- Verify the travel ledger, country-set stamps, airport route treatment, and end-game summary remain factual.
+- Manually review local and two-browser multiplayer flows, including reconnect, reduced motion, auction, trade, jail, bankruptcy, and game-over feedback.
+
 ## Test Framework
 
 - **Tool:** Vitest 4.1.8 (ESM mode, node environment)

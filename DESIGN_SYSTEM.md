@@ -29,6 +29,10 @@ The primitives are opt-in during the staged redesign so existing game screens re
 
 All focusable controls receive a visible gold `:focus-visible` outline. Statuses retain visible text rather than colour alone. `getDesignReadableTextColor` selects a safe dark/white foreground for dynamic accent use. The global reduced-motion query shortens nonessential motion; presentation timings never control game-state timing.
 
+## Presentation and sound
+
+Phase 5 feedback is presentation-only: `gamePresentationEvents.ts` derives factual state transitions with stable keys, while `GamePresentationLayer` displays short, polite travel-ledger feedback. It does not dispatch actions or write to game state. Sound is muted by default, optional per browser, persisted only under `world-cities-monopoly-sound-enabled`, and fails silently when Web Audio is unavailable. Reduced-motion mode removes route and banner movement without hiding the factual text.
+
 ## Icons and review
 
 `src/components/ui/UiIcon.tsx` supplies small, monochrome inline SVG icons without adding a dependency. Decorative icons are hidden from assistive technology; interactive icon controls need an explicit accessible label.

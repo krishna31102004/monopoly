@@ -409,3 +409,13 @@ button {
 .auction-timer-ring-urgent {
   animation: auction-ring-urgent-pulse 0.8s ease-in-out infinite;
 }
+
+/* Phase 5 presentation remains decorative; these never gate game actions. */
+.wc-presentation-event { animation: wc-presentation-enter var(--wc-motion-panel) var(--wc-ease) both; }
+.wc-passport-stamp { border-style: double; box-shadow: inset 0 0 0 3px rgba(198, 161, 91, 0.1), var(--wc-shadow-card); }
+@keyframes wc-presentation-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.world-route-overlay path { stroke-dasharray: 4 3; }
+@media (prefers-reduced-motion: reduce) {
+  .wc-presentation-event { animation: none; }
+  .world-route-overlay path { stroke-dasharray: none; }
+}
