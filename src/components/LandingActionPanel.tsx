@@ -2,6 +2,8 @@
 
 import { getBoardSpaceByIndex } from "@/data/board";
 import { getPropertyOwner, getOwnership, isOwnableSpace } from "@/lib/game/ownership";
+import { getAuctionTheme } from "@/lib/ui/auctionTheme";
+import { UiIcon } from "@/components/ui/UiIcon";
 import type { GameAction, GameState } from "@/types/game";
 
 type LandingActionPanelProps = {
@@ -30,29 +32,25 @@ export function LandingActionPanel({ state, dispatch, isMyTurn = true }: Landing
   const canBuy = isPurchaseDecision && currentPlayer.cash >= (isOwnableSpace(space) ? space.price : 0);
   const isRent = state.landingAction.kind === "rentPayment";
 
-  const borderColor = isPurchaseDecision
-    ? "border-blue-200"
+  const accentColor = isOwnableSpace(space)
+    ? getAuctionTheme(space).accentColor
     : isRent
-      ? "border-red-200"
-      : "border-slate-200";
-  const bgColor = isPurchaseDecision
-    ? "bg-blue-50"
-    : isRent
-      ? "bg-red-50"
-      : "bg-white";
-  const headerColor = isPurchaseDecision
-    ? "text-blue-600"
-    : isRent
-      ? "text-red-600"
-      : "text-slate-500";
+      ? "var(--wc-danger)"
+      : "var(--wc-gold)";
+  const headerColor = isRent
+      ? "text-rose-700"
+      : "text-amber-700";
 
   return (
-    <section className={`overflow-hidden rounded-xl border ${borderColor} ${bgColor} shadow-sm`}>
-      <div className="border-b border-inherit px-4 py-3">
+    <section
+      className="overflow-hidden rounded-[var(--wc-radius-medium)] border border-[var(--wc-paper-border)] bg-[var(--wc-paper)] text-[var(--wc-text-on-light)] shadow-[var(--wc-shadow-card)]"
+      style={{ borderLeftWidth: 4, borderLeftColor: accentColor }}
+    >
+      <div className="border-b border-[var(--wc-paper-border)] px-4 py-3">
         <p className={`text-[10px] font-black uppercase tracking-[0.18em] ${headerColor}`}>
           {isPurchaseDecision ? "Purchase Decision" : isRent ? "Rent Payment" : "Landing"}
         </p>
-        <h2 className="mt-0.5 text-lg font-black text-slate-950">{space.name}</h2>
+        <h2 className="mt-0.5 text-lg font-black text-[var(--wc-text-on-light)]">{space.name}</h2>
       </div>
 
       <div className="p-4">
@@ -79,15 +77,16 @@ export function LandingActionPanel({ state, dispatch, isMyTurn = true }: Landing
             <Stat label="Your cash" value={`$${state.landingAction.payerCashAfter.toLocaleString()}`} warn={state.landingAction.payerCashAfter < 0} />
             <Stat label="Owner cash" value={`$${state.landingAction.ownerCashAfter.toLocaleString()}`} />
             {state.landingAction.payerCashAfter < 0 ? (
-              <div className="col-span-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs font-semibold text-red-800">
-                ⚠️ Cash went below $0. Player may be bankrupt.
+              <div className="col-span-2 flex items-center gap-2 rounded-lg border border-rose-500/40 bg-rose-500/10 p-2 text-xs font-semibold text-rose-800">
+                <UiIcon name="warning" size={16} aria-hidden="true" />
+                Cash went below $0. Player may be bankrupt.
               </div>
             ) : null}
           </dl>
         ) : null}
 
         {isPurchaseDecision && !canBuy ? (
-          <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-xs font-bold text-amber-800">
+          <div className="mt-3 rounded-lg border border-amber-400/40 bg-amber-500/10 p-2.5 text-xs font-bold text-amber-800">
             You do not have enough cash to buy this property. Decline to send it to auction.
           </div>
         ) : null}
@@ -98,7 +97,7 @@ export function LandingActionPanel({ state, dispatch, isMyTurn = true }: Landing
               type="button"
               disabled={!canBuy || !isMyTurn}
               onClick={() => dispatch({ type: "BUY_PROPERTY" })}
-              className="rounded-lg bg-emerald-600 px-3 py-2.5 text-sm font-black text-white transition-all duration-100 hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+              className="wc-button wc-button-primary min-h-11 rounded-lg px-3 py-2.5 text-sm font-black disabled:cursor-not-allowed"
             >
               Buy ${space.price}
             </button>
@@ -106,7 +105,7 @@ export function LandingActionPanel({ state, dispatch, isMyTurn = true }: Landing
               type="button"
               disabled={!isMyTurn}
               onClick={() => dispatch({ type: "DECLINE_PROPERTY" })}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-black text-slate-700 transition-all duration-100 hover:bg-slate-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+              className="wc-button wc-button-secondary min-h-11 rounded-lg px-3 py-2.5 text-sm font-black disabled:cursor-not-allowed"
             >
               Decline
             </button>
@@ -129,10 +128,10 @@ function Stat({
   warn?: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-2">
-      <dt className="text-[10px] font-black uppercase tracking-wide text-slate-400">{label}</dt>
+    <div className="rounded-lg border border-[var(--wc-paper-border)] bg-[var(--wc-ivory)] p-2">
+      <dt className="text-[10px] font-black uppercase tracking-wide text-slate-600">{label}</dt>
       <dd
-        className={`mt-0.5 font-black ${highlight ? "text-red-700" : warn ? "text-red-600" : "text-slate-950"}`}
+        className={`wc-numeric mt-0.5 font-black ${highlight || warn ? "text-rose-700" : "text-[var(--wc-text-on-light)]"}`}
       >
         {value}
       </dd>

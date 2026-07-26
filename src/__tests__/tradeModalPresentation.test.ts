@@ -31,8 +31,8 @@ describe("TradePanel — layout source assertions", () => {
     expect(src).toMatch(/TwoSideLayout/);
   });
 
-  it("uses grid two-column layout (sm:grid-cols-2)", () => {
-    expect(src).toMatch(/sm:grid-cols-2/);
+  it("uses a vertical mobile sequence and switches to two columns at xl", () => {
+    expect(src).toMatch(/xl:grid-cols-2/);
   });
 
   it("renders ⇄ exchange symbol between sides", () => {
@@ -42,6 +42,20 @@ describe("TradePanel — layout source assertions", () => {
   it("renders PropertyChip with color strip", () => {
     expect(src).toMatch(/PropertyChip/);
     expect(src).toMatch(/colorHex/);
+  });
+
+  it("uses full-width, labelled property rows below xl while retaining compact desktop chips", () => {
+    expect(src).toMatch(/min-h-11 w-full/);
+    expect(src).toMatch(/xl:min-h-0 xl:w-auto/);
+    expect(src).toMatch(/Mortgaged/);
+    expect(src).toMatch(/house\{card\.houses === 1 \? "" : "s"\}/);
+    expect(src).toMatch(/Hotel/);
+  });
+
+  it("uses the shared contrast helper for selected property rows", () => {
+    expect(src).toMatch(/getDesignReadableTextColor/);
+    expect(src).toMatch(/color:\s*selectedTextColor/);
+    expect(src).not.toContain('selected ? "text-white"');
   });
 
   it("shows a clear empty deal-tray message", () => {
@@ -68,6 +82,9 @@ describe("TradePanel — layout source assertions", () => {
   it("cash input uses text type with inputMode numeric (no browser spinner)", () => {
     expect(src).toMatch(/type="text"/);
     expect(src).toMatch(/inputMode="numeric"/);
+    expect(src).toMatch(/min-h-11 items-center/);
+    expect(src).toMatch(/min-h-11 min-w-0 flex-1/);
+    expect(src).toMatch(/min-h-11 w-full rounded-lg/);
   });
 
   it("imports getTradeSideListedValue from tradeHelpers", () => {

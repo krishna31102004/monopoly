@@ -8,21 +8,28 @@ function makeDrawnCard(deck: "chance" | "community-chest", text: string, resolve
 }
 
 describe("getCardRevealTone", () => {
-  it("gives Chance cards a distinct gold/orange tone", () => {
+  it("gives Chance cards a paper surface with a gold/orange accent", () => {
     const tone = getCardRevealTone("chance");
     expect(tone.label).toBe("Chance");
-    expect(tone.border).toContain("amber");
+    expect(tone.bg).toBe("bg-[var(--wc-paper)]");
+    expect(tone.header).toContain("amber");
+    expect(tone.accent).toContain("amber");
   });
 
-  it("gives Community Chest cards a distinct warm brown/cream tone", () => {
+  it("gives Community Chest cards a paper surface with a teal accent", () => {
     const tone = getCardRevealTone("community-chest");
     expect(tone.label).toBe("Community Chest");
+    expect(tone.bg).toBe("bg-[var(--wc-paper)]");
+    expect(tone.header).toContain("cyan");
+    expect(tone.accent).toContain("cyan");
   });
 
-  it("Chance and Community Chest tones are visually distinct", () => {
+  it("Chance and Community Chest share a readable information surface while retaining distinct identities", () => {
     const chance = getCardRevealTone("chance");
     const chest = getCardRevealTone("community-chest");
-    expect(chance.bg).not.toBe(chest.bg);
+    expect(chance.bg).toBe(chest.bg);
+    expect(chance.header).not.toBe(chest.header);
+    expect(chance.accent).not.toBe(chest.accent);
     expect(chance.icon).not.toBe(chest.icon);
   });
 });

@@ -14,6 +14,8 @@ import {
   type TradeResultKind,
 } from "@/lib/game/tradeHelpers";
 import { TokenIcon } from "@/components/board/TokenIcon";
+import { UiIcon } from "@/components/ui/UiIcon";
+import { getDesignReadableTextColor } from "@/lib/ui/designTokens";
 import type { GameAction, GameState, PropertyOwnership, TradeOffer } from "@/types/game";
 import type { TradeDraftState, TradeDraftUpdatePayload } from "@/types/multiplayer";
 import type { Player } from "@/types/player";
@@ -71,7 +73,7 @@ function TradeResultStamp({ kind, onDismiss }: { kind: TradeResultKind; onDismis
   const cfg = STAMP_CONFIGS[kind];
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-[2px]"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/80 backdrop-blur-[2px]"
       role="status"
       aria-live="assertive"
     >
@@ -103,34 +105,36 @@ function PropertyChip({
 }) {
   const card = getTradePropertyCardPresentation(spaceIndex, ownerships);
   if (!card) return null;
+  const selectedBackgroundColor = card.colorHex ?? "#94a3b8";
+  const selectedTextColor = getDesignReadableTextColor(selectedBackgroundColor);
 
   return (
     <button
       type="button"
       onClick={onToggle}
       disabled={disabled}
-      className={`relative flex items-center gap-0 rounded-md border text-left text-xs font-semibold transition-all duration-100 overflow-hidden ${
+      className={`relative flex min-h-11 w-full items-center gap-0 overflow-hidden rounded-md border text-left text-xs font-semibold transition-all duration-100 xl:min-h-0 xl:w-auto ${
         selected
           ? "border-transparent shadow-sm ring-1 ring-white/50"
           : "border-slate-600 bg-[#182235] text-slate-100 hover:border-[#C6A15B]/70 hover:bg-[#202C42]"
       } ${disabled ? "cursor-default opacity-70" : "cursor-pointer"}`}
-      style={selected ? { backgroundColor: card.colorHex ?? "#94a3b8" } : undefined}
+      style={selected ? { backgroundColor: selectedBackgroundColor, color: selectedTextColor } : undefined}
       title={`${card.name}${card.isMortgaged ? " — mortgaged" : ""}`}
     >
       <span
         className="inline-block w-1.5 shrink-0 self-stretch"
         style={{ backgroundColor: selected ? "rgba(255,255,255,0.4)" : (card.colorHex ?? "#94a3b8") }}
       />
-      <span className={`flex items-center gap-1 px-2 py-1 ${selected ? "text-white" : "text-slate-100"}`}>
-        <span className="truncate max-w-[72px] leading-tight">{card.name}</span>
+      <span className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1">
+        <span className="min-w-0 flex-1 truncate leading-tight xl:max-w-[72px]">{card.name}</span>
         {card.isMortgaged && (
-          <span className={`text-[9px] font-black ${selected ? "text-white/60" : "text-amber-500"}`}>M</span>
+          <span className={`shrink-0 text-[9px] font-black ${selected ? "" : "text-amber-300"}`}>Mortgaged</span>
         )}
         {card.houses > 0 && card.houses < 5 && (
-          <span className={`text-[9px] ${selected ? "text-white/70" : "text-emerald-600"}`}>{"▪".repeat(card.houses)}</span>
+          <span className={`shrink-0 text-[9px] ${selected ? "" : "text-emerald-300"}`}>{card.houses} house{card.houses === 1 ? "" : "s"}</span>
         )}
         {card.houses >= 5 && (
-          <span className={`text-[9px] ${selected ? "text-white/70" : "text-red-500"}`}>★</span>
+          <span className={`shrink-0 text-[9px] ${selected ? "" : "text-rose-300"}`}>Hotel</span>
         )}
       </span>
     </button>
@@ -160,7 +164,7 @@ function MoneyCounter({
   return (
     <div className="space-y-1.5">
       <div
-        className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 transition-colors ${
+        className={`flex min-h-11 items-center gap-1 rounded-lg border px-2.5 py-0 transition-colors xl:min-h-0 xl:py-1.5 ${
           invalid
           ? "border-rose-400/70 bg-rose-500/10"
             : disabled
@@ -179,7 +183,7 @@ function MoneyCounter({
             const raw = e.target.value.replace(/\D/g, "");
             onChange(raw === "" ? 0 : Math.max(0, parseInt(raw, 10)));
           }}
-          className="min-w-0 flex-1 bg-transparent text-sm font-black text-slate-100 outline-none placeholder:font-normal placeholder:text-slate-500 disabled:text-slate-500"
+          className="min-h-11 min-w-0 flex-1 bg-transparent text-sm font-black text-slate-100 outline-none placeholder:font-normal placeholder:text-slate-500 disabled:text-slate-500 xl:min-h-0"
         />
       </div>
       <div className="flex items-center justify-between text-[10px] leading-tight">
@@ -322,7 +326,7 @@ function TradeSidePanel({
               const raw = e.target.value.replace(/\D/g, "");
               onGOJFChange(raw === "" ? 0 : Math.max(0, parseInt(raw, 10)));
             }}
-            className="w-full rounded-lg border border-slate-600 bg-[#182235] px-2.5 py-1.5 text-sm font-semibold text-slate-100 outline-none focus:border-[#C6A15B] disabled:bg-slate-900 disabled:text-slate-500"
+            className="min-h-11 w-full rounded-lg border border-slate-600 bg-[#182235] px-2.5 py-1.5 text-sm font-semibold text-slate-100 outline-none focus:border-[#C6A15B] disabled:bg-slate-900 disabled:text-slate-500 xl:min-h-0"
           />
         </div>
       )}
@@ -339,7 +343,7 @@ function TradeSidePanel({
           <p className="mb-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400">
             {editable ? "Properties — tap to add/remove" : "Properties"}
           </p>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="grid gap-2 xl:flex xl:flex-wrap xl:gap-1.5">
             {ownedIndices.map((idx) => (
               <PropertyChip
                 key={idx}
@@ -463,14 +467,14 @@ function TradeModalShell({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 p-3 backdrop-blur-[2px] sm:items-center"
+      className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/70 p-0 backdrop-blur-[2px] xl:items-center xl:p-3"
       role="presentation"
     >
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby="trade-title"
-        className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-t-2xl border border-[#C6A15B]/45 bg-[#0F172A] shadow-[0_24px_80px_rgba(0,0,0,0.58)] sm:rounded-2xl"
+        className="flex max-h-[92dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-[var(--wc-radius-large)] border border-[#C6A15B]/45 bg-[#0F172A] shadow-[0_24px_80px_rgba(0,0,0,0.58)] xl:max-h-[94vh] xl:rounded-[var(--wc-radius-large)]"
       >
         <div className="shrink-0 border-b border-[#C6A15B]/45 bg-gradient-to-b from-[#312E81] to-[#0F172A] px-4 py-3">
           <div className="flex items-center justify-between gap-2">
@@ -489,9 +493,10 @@ function TradeModalShell({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-md border border-slate-500/50 bg-slate-950/35 px-2 py-1 text-[11px] font-bold text-slate-200 hover:bg-slate-800"
+                  aria-label="Close trade"
+                  className="wc-icon-button rounded-md border border-slate-500/50 bg-slate-950/35 text-[11px] font-bold text-slate-200 hover:bg-slate-800"
                 >
-                  ✕
+                  <UiIcon name="close" size={18} aria-hidden="true" />
                 </button>
               ) : null}
             </div>
@@ -499,7 +504,7 @@ function TradeModalShell({
         </div>
         <div className="flex-1 overflow-y-auto">{children}</div>
         {footer ? (
-          <div className="shrink-0 border-t border-slate-700 bg-[#182235] px-4 py-3">{footer}</div>
+          <div className="wc-sticky-footer shrink-0 border-slate-700 bg-[#182235] px-4 py-3">{footer}</div>
         ) : null}
       </section>
     </div>
@@ -510,9 +515,9 @@ function TradeModalShell({
 
 function TwoSideLayout({ left, right }: { left: React.ReactNode; right: React.ReactNode }) {
   return (
-    <div className="relative grid grid-cols-1 divide-y divide-slate-700 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+    <div className="relative grid grid-cols-1 divide-y divide-slate-700 xl:grid-cols-2 xl:divide-x xl:divide-y-0">
       <div className="min-w-0">{left}</div>
-      <div className="absolute left-1/2 top-4 -translate-x-1/2 z-10 hidden sm:flex">
+      <div className="absolute left-1/2 top-4 z-10 hidden -translate-x-1/2 xl:flex">
         <span className="rounded-full border border-[#C6A15B]/55 bg-[#0F172A] px-1.5 py-0.5 text-[11px] font-black text-[#D8BA72] shadow-sm">
           ⇄
         </span>

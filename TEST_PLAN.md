@@ -1,5 +1,37 @@
 # TEST_PLAN.md — World Cities Monopoly
 
+## Premium entry and lobby experience (Phase 2)
+
+- Verify the home links retain `/create`, `/join`, and `/play` navigation.
+- Verify all six existing token IDs have a visual medallion mapping; no new playable tokens are introduced.
+- Verify create and join retain the existing identity payload field names and token values.
+- Manually verify boarding-pass copy feedback, host-only controls, connected/reconnecting labels, room refresh/reconnect, and Start Game with two players.
+- Verify non-hosts do not see local default rules as host-selected pending rules, and each token picker uses an independent native radio group.
+
+## Premium desktop shell (Phase 3)
+
+- Verify local and multiplayer retain one `GameBoard` and one `MobileActionBar` each.
+- Verify board grid, property indicators, conditional action panels, action dispatches, and multiplayer authorization remain covered by existing regression tests.
+- Verify the command dock retains readable dice/status text, dark landing and game-log surfaces, compact player rosters, and the accessible dark leave dialog.
+- Verify multiplayer reconnect, disconnect, sync, and error presentations retain their existing callbacks and rendering conditions.
+- Manually review the `xl` board-stage/command-dock presentation while checking mobile scrolling remains unchanged.
+
+## Premium mobile information architecture (Phase 4)
+
+- Verify Board is the default destination and the dock order is Board, Actions, Players, Log.
+- Verify only Roll Dice and End Turn dispatch directly from the mobile dock; purchase, jail, and debt decisions route to Actions.
+- Verify local and multiplayer layouts retain one board, action bar, controls, log, and property modal instance each.
+- Verify player detail and property detail sheets have labelled dialogs, Escape close behavior, reachable close controls, and 44px actions.
+- Verify auction hides the dock; trade preserves Send Offer, Accept, Decline, Cancel Offer, RAISE CASH, and SWAP ASSETS.
+- Manually review safe-area spacing, board panning/zoom, action priority, no overflow, and two-browser synchronization across the specified mobile and desktop widths.
+
+## Premium presentation (Phase 5)
+
+- Verify presentation events derive from factual state transitions, deduplicate stable transition keys, and do not dispatch gameplay actions.
+- Verify sound defaults to muted and its browser-local preference is not stored in GameState or synchronized.
+- Verify the travel ledger, country-set stamps, airport route treatment, and end-game summary remain factual.
+- Manually review local and two-browser multiplayer flows, including reconnect, reduced motion, auction, trade, jail, bankruptcy, and game-over feedback.
+
 ## Test Framework
 
 - **Tool:** Vitest 4.1.8 (ESM mode, node environment)

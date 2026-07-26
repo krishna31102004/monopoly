@@ -123,6 +123,7 @@ export type TradeResultKind = "accepted" | "declined" | "cancelled";
 export function classifyTradeResultFromLogMessage(message: string | undefined): TradeResultKind | null {
   if (!message) return null;
   if (message.startsWith("Trade accepted")) return "accepted";
+  if (message.startsWith("Trade cancelled:")) return "cancelled";
   if (message.includes("declined the trade")) return "declined";
   if (message.includes("cancelled the trade")) return "cancelled";
   return null;

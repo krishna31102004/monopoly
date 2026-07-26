@@ -11,6 +11,7 @@ import {
   canUnmortgageProperty,
 } from "@/lib/game/propertyDevelopment";
 import { canMortgageNow } from "@/lib/game/turnTimingRules";
+import { UiIcon } from "@/components/ui/UiIcon";
 import type { CityColorGroup, OwnableSpace } from "@/types/board";
 import type { GameAction, GameState, PropertyOwnership } from "@/types/game";
 import type { Player } from "@/types/player";
@@ -141,7 +142,7 @@ export function PropertyCardModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 p-3 backdrop-blur-[2px] sm:items-center"
+      className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/70 p-0 backdrop-blur-[2px] xl:items-center xl:p-3"
       role="presentation"
       onMouseDown={onClose}
     >
@@ -149,12 +150,12 @@ export function PropertyCardModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="property-card-title"
-        className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-[0_32px_100px_rgba(15,23,42,0.3)]"
+        className="flex max-h-[90dvh] w-full max-w-md flex-col overflow-hidden rounded-t-[var(--wc-radius-large)] border border-slate-200 bg-white shadow-[0_32px_100px_rgba(15,23,42,0.3)] xl:max-h-[92vh] xl:rounded-[var(--wc-radius-large)]"
         onMouseDown={(e) => e.stopPropagation()}
       >
         {/* City color header */}
         {space.kind === "city" ? (
-          <div className={`relative px-5 pt-5 pb-4 ${colorBarClasses[space.colorGroup]}`}>
+          <div className={`sticky top-0 z-10 shrink-0 px-5 pt-5 pb-4 ${colorBarClasses[space.colorGroup]}`}>
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className={`text-[10px] font-black uppercase tracking-[0.2em] opacity-80 ${colorTextClasses[space.colorGroup]}`}>
@@ -174,9 +175,10 @@ export function PropertyCardModal({
                 ref={closeButtonRef}
                 type="button"
                 onClick={onClose}
-                className={`shrink-0 rounded-lg border px-3 py-1.5 text-sm font-bold transition hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-white/50 ${colorTextClasses[space.colorGroup]} border-current opacity-70`}
+                aria-label="Close property details"
+                className={`wc-icon-button shrink-0 rounded-lg border text-sm font-bold transition hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-white/50 ${colorTextClasses[space.colorGroup]} border-current opacity-70`}
               >
-                ✕
+                <UiIcon name="close" aria-hidden="true" />
               </button>
             </div>
             <div className="mt-3 flex items-baseline gap-3">
@@ -191,7 +193,7 @@ export function PropertyCardModal({
             </div>
           </div>
         ) : (
-          <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 pt-5 pb-4">
+          <div className="sticky top-0 z-10 flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-white px-5 pt-5 pb-4">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
                 {space.kind === "airport" ? "Airport" : "Utility"}
@@ -204,14 +206,15 @@ export function PropertyCardModal({
               ref={closeButtonRef}
               type="button"
               onClick={onClose}
-              className="shrink-0 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-950"
+              aria-label="Close property details"
+              className="wc-icon-button shrink-0 rounded-lg border border-slate-200 text-sm font-bold text-slate-600 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-950"
             >
-              ✕
+              <UiIcon name="close" aria-hidden="true" />
             </button>
           </div>
         )}
 
-        <div className="p-5">
+        <div className="min-h-0 overflow-y-auto p-5 pb-[calc(var(--wc-safe-bottom)+1.25rem)] xl:pb-5">
           {/* Owner banner */}
           <div className={`mb-4 flex items-center gap-2 rounded-xl px-4 py-2.5 ${owner ? "bg-emerald-50 border border-emerald-200" : "bg-slate-50 border border-slate-200"}`}>
             <span className="text-sm">
@@ -469,7 +472,7 @@ function ManageButton({
       disabled={disabled}
       title={title}
       onClick={onClick}
-      className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+      className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
     >
       {label}
     </button>

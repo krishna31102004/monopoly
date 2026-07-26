@@ -60,8 +60,8 @@ export function GameSaveControls({ state, dispatch }: Props) {
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-      <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+    <div className="rounded-[var(--wc-radius-medium)] border border-[var(--wc-paper-border)] bg-[var(--wc-paper)] p-3 shadow-[var(--wc-shadow-card)]">
+      <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">
         Game Controls
       </p>
 
@@ -69,7 +69,7 @@ export function GameSaveControls({ state, dispatch }: Props) {
         <button
           type="button"
           onClick={handleExport}
-          className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-white hover:border-slate-300"
+          className="min-h-11 rounded-lg border border-[var(--wc-paper-border)] bg-[var(--wc-ivory)] px-3 py-1.5 text-xs font-bold text-slate-700 hover:border-slate-300 hover:bg-[var(--wc-paper)]"
         >
           Export Save
         </button>
@@ -80,14 +80,14 @@ export function GameSaveControls({ state, dispatch }: Props) {
             setImportError(null);
             setImportText("");
           }}
-          className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-white hover:border-slate-300"
+          className="min-h-11 rounded-lg border border-[var(--wc-paper-border)] bg-[var(--wc-ivory)] px-3 py-1.5 text-xs font-bold text-slate-700 hover:border-slate-300 hover:bg-[var(--wc-paper)]"
         >
           Import Save
         </button>
         <button
           type="button"
           onClick={() => setShowResetConfirm(true)}
-          className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-100"
+          className="min-h-11 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-100"
         >
           New Game
         </button>
@@ -109,7 +109,7 @@ export function GameSaveControls({ state, dispatch }: Props) {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-white"
+            className="min-h-11 rounded-lg border border-[var(--wc-paper-border)] bg-[var(--wc-ivory)] px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-[var(--wc-paper)]"
           >
             Choose File…
           </button>
@@ -131,7 +131,7 @@ export function GameSaveControls({ state, dispatch }: Props) {
               type="button"
               onClick={handleImport}
               disabled={!importText.trim()}
-              className="rounded-lg bg-slate-950 px-3 py-1.5 text-xs font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+              className="min-h-11 rounded-lg bg-slate-950 px-3 py-1.5 text-xs font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Load
             </button>
@@ -142,7 +142,7 @@ export function GameSaveControls({ state, dispatch }: Props) {
                 setImportText("");
                 setImportError(null);
               }}
-              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50"
+              className="min-h-11 rounded-lg border border-[var(--wc-paper-border)] px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-[var(--wc-ivory)]"
             >
               Cancel
             </button>
@@ -160,14 +160,14 @@ export function GameSaveControls({ state, dispatch }: Props) {
             <button
               type="button"
               onClick={handleReset}
-              className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700"
+              className="min-h-11 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700"
             >
               Yes, New Game
             </button>
             <button
               type="button"
               onClick={() => setShowResetConfirm(false)}
-              className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-100"
+              className="min-h-11 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-100"
             >
               Cancel
             </button>

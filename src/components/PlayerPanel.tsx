@@ -1,16 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { getBoardSpaceByIndex } from "@/data/board";
 import { getOwnedSpaceIds } from "@/lib/game/ownership";
+import { getDesignReadableTextColor } from "@/lib/ui/designTokens";
 import { CITY_COLOR_HEX } from "@/lib/ui/propertyColors";
 import { TokenIcon } from "@/components/board/TokenIcon";
+import { UiIcon } from "@/components/ui/UiIcon";
+import { useIsBelowXl } from "@/hooks/useIsBelowXl";
 import {
   getJailDisplay,
   getOwnedPropertyChips,
   getPlayerStatusChips,
-  getWealthBarPercent,
   PLAYER_CARD_DEFAULT_EXPANDED,
   type PlayerStatusChip,
 } from "@/lib/game/playerPanelHelpers";
@@ -28,16 +30,19 @@ type PlayerPanelProps = {
   isInActiveTrade?: boolean;
   isInActiveAuction?: boolean;
   isInDebt?: boolean;
+  mobileSheetOpen?: boolean;
+  onMobileDetailsOpen?: (playerId: string) => void;
+  onMobileDetailsClose?: () => void;
 };
 
 const STATUS_CHIP_STYLES: Record<PlayerStatusChip, string> = {
-  TURN: "bg-white/90 text-slate-950",
-  ONLINE: "bg-emerald-100 text-emerald-700",
-  "IN JAIL": "bg-red-100 text-red-700",
-  DEBT: "bg-amber-100 text-amber-700",
-  BANKRUPT: "bg-red-100 text-red-700",
-  TRADING: "bg-violet-100 text-violet-700",
-  AUCTION: "bg-blue-100 text-blue-700",
+  TURN: "border border-[var(--wc-gold-border)] bg-[var(--wc-gold-soft)] text-amber-800",
+  ONLINE: "border border-emerald-500/30 bg-emerald-500/10 text-emerald-800",
+  "IN JAIL": "border border-rose-500/30 bg-rose-500/10 text-rose-800",
+  DEBT: "border border-amber-500/30 bg-amber-500/10 text-amber-800",
+  BANKRUPT: "border border-rose-500/30 bg-rose-500/10 text-rose-800",
+  TRADING: "border border-violet-400/30 bg-violet-400/10 text-violet-800",
+  AUCTION: "border border-sky-400/30 bg-sky-800/10 text-sky-800",
 };
 
 function StatusChip({ chip }: { chip: PlayerStatusChip }) {
@@ -55,16 +60,21 @@ export function PlayerPanel({
   spaces,
   ownerships,
   isCurrentPlayer = false,
-  allPlayers,
+  allPlayers: _allPlayers,
   isOnline,
   isInActiveTrade,
   isInActiveAuction,
   isInDebt,
+  mobileSheetOpen = false,
+  onMobileDetailsOpen,
+  onMobileDetailsClose,
 }: PlayerPanelProps) {
   // Every card starts collapsed — current-player emphasis is purely visual
   // (border/glow/badge), never a structural difference, so expand state
   // can't silently diverge between cards.
   const [expanded, setExpanded] = useState(PLAYER_CARD_DEFAULT_EXPANDED);
+  const isBelowXl = useIsBelowXl();
+  const detailsTriggerRef = useRef<HTMLButtonElement>(null);
 
   const position = getBoardSpaceByIndex(player.position);
   const ownedSpaceIds = getOwnedSpaceIds(ownerships, player.id);
@@ -96,39 +106,53 @@ export function PlayerPanel({
     isInActiveAuction,
     isInDebt,
   });
-  const wealthPercent = allPlayers ? getWealthBarPercent(player, allPlayers) : null;
 
+  useEffect(() => {
+    if (!mobileSheetOpen || !isBelowXl) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onMobileDetailsClose?.();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isBelowXl, mobileSheetOpen, onMobileDetailsClose]);
+
+  const closeMobileSheet = () => {
+    onMobileDetailsClose?.();
+    requestAnimationFrame(() => detailsTriggerRef.current?.focus());
+  };
   return (
     <article
-      className={`overflow-hidden rounded-2xl border transition-all ${
+      className={`overflow-hidden rounded-[var(--wc-radius-medium)] border border-slate-200 bg-white transition-colors ${
         isCurrentPlayer
-          ? "border-transparent shadow-[0_0_0_2px_var(--turn-glow),0_18px_44px_-12px_var(--turn-glow)]"
-          : "border-slate-200 bg-white shadow-sm"
+          ? "shadow-[var(--wc-shadow-card)]"
+          : "shadow-[var(--wc-shadow-card)]"
       } ${player.isBankrupt ? "opacity-50" : ""}`}
-      style={
-        isCurrentPlayer
-          ? ({
+      style={{
+        borderLeftWidth: 3,
+        borderLeftColor: player.color,
+        ...(isCurrentPlayer
+          ? {
               background: `linear-gradient(155deg, ${player.color}14, #ffffff 55%)`,
-              "--turn-glow": `${player.color}55`,
-            } as CSSProperties)
-          : {}
-      }
+              boxShadow: `0 0 0 1px ${player.color}55, var(--wc-shadow-card)`,
+            }
+          : {}),
+      } as CSSProperties}
     >
       {isCurrentPlayer ? (
         <div
-          className="px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white"
-          style={{ backgroundColor: player.color }}
+          className="border-b border-black/10 px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em]"
+          style={{ backgroundColor: player.color, color: getDesignReadableTextColor(player.color) }}
         >
           Now Playing
         </div>
       ) : null}
 
       {/* Header row: token, name, status, cash */}
-      <div className="flex w-full items-center gap-3 px-3 py-3 text-left">
+      <div className="flex w-full items-center gap-2.5 px-3 py-2 text-left">
         <TokenIcon
           token={player.token}
           color={player.color}
-          size={isCurrentPlayer ? 46 : 38}
+          size={isCurrentPlayer ? 42 : 36}
           label={player.tokenLabel}
           badge
         />
@@ -139,43 +163,37 @@ export function PlayerPanel({
               <StatusChip key={chip} chip={chip} />
             ))}
           </div>
-          <p className="truncate text-xs font-semibold text-slate-500">
-            📍 {position.name}
-            <span className="ml-1.5 text-slate-400">· {ownedAssetCount} assets</span>
+          <p className="flex min-w-0 items-center gap-1 truncate text-xs font-semibold text-slate-600">
+            <UiIcon name="home" size={13} aria-hidden="true" />
+            <span className="truncate">{position.name}</span>
+            <span className="shrink-0 text-slate-500">· {ownedAssetCount} assets</span>
           </p>
         </div>
         <div className="shrink-0 text-right">
-          <p className="text-lg font-black tracking-tight text-slate-950">
+          <p className="wc-numeric text-lg font-black tracking-tight text-slate-950">
             ${player.cash.toLocaleString()}
           </p>
-          {wealthPercent !== null ? (
-            <div className="mt-1 h-1.5 w-16 overflow-hidden rounded-full bg-slate-100">
-              <div
-                className="h-full rounded-full transition-all"
-                style={{ width: `${wealthPercent}%`, backgroundColor: player.color }}
-              />
-            </div>
-          ) : null}
         </div>
       </div>
 
       {/* Compact jail status row */}
-      <div className="border-t border-slate-100/80 px-3 py-2">
+      <div className="hidden border-t border-slate-200 px-3 py-1.5 xl:block">
         {jail.inJail ? (
-          <div className="flex items-center justify-between rounded-lg bg-red-50 px-2.5 py-1.5">
-            <span className="text-xs font-black uppercase tracking-wide text-red-700">
-              🚔 In Jail · Attempt {jail.attempt}/{jail.maxAttempts}
+          <div className="flex items-center justify-between gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5">
+            <span className="flex items-center gap-1 text-xs font-black uppercase tracking-wide text-rose-800">
+              <UiIcon name="jail" size={14} aria-hidden="true" />
+              In Jail · Attempt {jail.attempt}/{jail.maxAttempts}
             </span>
-            <span className="text-[10px] font-bold text-red-600">
+            <span className="shrink-0 text-[10px] font-bold text-rose-700">
               {jail.jailCardCount} jail card{jail.jailCardCount === 1 ? "" : "s"}
             </span>
           </div>
         ) : (
           <div className="flex items-center gap-1.5">
-            <span className="rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-500">
+            <span className="rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-600">
               Free
             </span>
-            <span className="rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-500">
+            <span className="rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-600">
               {jail.jailCardCount} jail card{jail.jailCardCount === 1 ? "" : "s"}
             </span>
           </div>
@@ -184,18 +202,21 @@ export function PlayerPanel({
 
       {/* Compact property chip summary (always visible) */}
       {ownedAssetCount > 0 ? (
-        <div className="border-t border-slate-100/80 px-3 py-2">
-          <div className="flex flex-wrap gap-1">
+        <div className="hidden border-t border-slate-200 px-3 py-1.5 xl:block">
+          <div className="flex flex-wrap gap-0.5">
             {cityGroups.map((group) =>
               group.chips.map((chip) => (
                 <span
                   key={chip.spaceIndex}
                   title={chip.name}
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold text-white ${chip.isMortgaged ? "opacity-50" : ""}`}
-                  style={{ backgroundColor: CITY_COLOR_HEX[group.colorGroup] }}
+                  className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold leading-4 ${chip.isMortgaged ? "opacity-50" : ""}`}
+                  style={{
+                    backgroundColor: CITY_COLOR_HEX[group.colorGroup],
+                    color: getDesignReadableTextColor(CITY_COLOR_HEX[group.colorGroup]),
+                  }}
                 >
                   {chip.name}
-                  {group.isFullSet ? " ★" : ""}
+                  {group.isFullSet ? " · Full set" : ""}
                 </span>
               )),
             )}
@@ -203,63 +224,159 @@ export function PlayerPanel({
               <span
                 key={chip.spaceIndex}
                 title={chip.name}
-                className={`rounded-full bg-slate-700 px-2 py-0.5 text-[10px] font-bold text-white ${chip.isMortgaged ? "opacity-50" : ""}`}
+                className={`rounded-full bg-slate-700 px-1.5 py-0.5 text-[9px] font-bold leading-4 text-white ${chip.isMortgaged ? "opacity-50" : ""}`}
               >
-                ✈ {chip.name}
+                <UiIcon name="airport" size={11} aria-hidden="true" /> {chip.name}
               </span>
             ))}
             {utilities.map((chip) => (
               <span
                 key={chip.spaceIndex}
                 title={chip.name}
-                className={`rounded-full bg-cyan-700 px-2 py-0.5 text-[10px] font-bold text-white ${chip.isMortgaged ? "opacity-50" : ""}`}
+                className={`rounded-full bg-cyan-700 px-1.5 py-0.5 text-[9px] font-bold leading-4 text-white ${chip.isMortgaged ? "opacity-50" : ""}`}
               >
-                💧 {chip.name}
+                <UiIcon name="utility" size={11} aria-hidden="true" /> {chip.name}
               </span>
             ))}
           </div>
         </div>
       ) : (
-        <div className="border-t border-slate-100/80 px-3 py-2">
-          <p className="text-xs font-semibold text-slate-400">No properties owned</p>
+        <div className="hidden border-t border-slate-200 px-3 py-1.5 xl:block">
+          <p className="text-xs font-semibold text-slate-500">No properties owned</p>
         </div>
       )}
 
       {/* Explicit expand/collapse affordance — same on every card */}
       <button
+        ref={detailsTriggerRef}
         type="button"
-        onClick={() => setExpanded((v) => !v)}
-        aria-expanded={expanded}
-        className="flex w-full items-center justify-center gap-1 border-t border-slate-100/80 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-600"
+        onClick={() => {
+          if (isBelowXl && onMobileDetailsOpen) onMobileDetailsOpen(player.id);
+          else setExpanded((v) => !v);
+        }}
+        aria-expanded={isBelowXl ? mobileSheetOpen : expanded}
+        aria-controls={isBelowXl ? `player-sheet-${player.id}` : `player-details-${player.id}`}
+        className="flex min-h-11 w-full items-center justify-center gap-1 border-t border-slate-200 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-950 xl:min-h-0 xl:py-1"
       >
         Details {expanded ? "▴" : "▾"}
       </button>
 
       {/* Expanded detail section */}
       {expanded ? (
-        <div className="space-y-2 border-t border-slate-100/80 bg-slate-50/60 px-3 py-2.5">
-          <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Portfolio detail</p>
+        <div id={`player-details-${player.id}`} className="hidden space-y-2 border-t border-slate-200 bg-slate-50 px-3 py-2 xl:block">
+          <p className="text-[10px] font-black uppercase tracking-wide text-slate-600">Portfolio detail</p>
           <div className="grid grid-cols-3 gap-1.5">
             <MiniStat label="Houses" value={String(houseCount)} />
             <MiniStat label="Hotels" value={String(hotelCount)} />
             <MiniStat label="Mortgaged" value={String(mortgagedCount)} warn={mortgagedCount > 0} />
           </div>
           {cityGroups.filter((g) => g.isFullSet).length > 0 ? (
-            <p className="text-[10px] font-bold text-emerald-600">
-              ★ Full set: {cityGroups.filter((g) => g.isFullSet).map((g) => g.colorGroup).join(", ")}
+            <p className="text-[10px] font-bold text-emerald-700">
+              Full set: {cityGroups.filter((g) => g.isFullSet).map((g) => g.colorGroup).join(", ")}
             </p>
           ) : null}
         </div>
+      ) : null}
+      {mobileSheetOpen && isBelowXl ? (
+        <MobilePlayerSheet
+          player={player}
+          positionName={position.name}
+          jail={jail}
+          statusChips={statusChips}
+          cityGroups={cityGroups}
+          airports={airports}
+          utilities={utilities}
+          houseCount={houseCount}
+          hotelCount={hotelCount}
+          mortgagedCount={mortgagedCount}
+          onClose={closeMobileSheet}
+        />
       ) : null}
     </article>
   );
 }
 
+type PlayerSheetProps = {
+  player: Player;
+  positionName: string;
+  jail: ReturnType<typeof getJailDisplay>;
+  statusChips: PlayerStatusChip[];
+  cityGroups: ReturnType<typeof getOwnedPropertyChips>["cityGroups"];
+  airports: ReturnType<typeof getOwnedPropertyChips>["airports"];
+  utilities: ReturnType<typeof getOwnedPropertyChips>["utilities"];
+  houseCount: number;
+  hotelCount: number;
+  mortgagedCount: number;
+  onClose: () => void;
+};
+
+function MobilePlayerSheet({
+  player, positionName, jail, statusChips, cityGroups, airports, utilities,
+  houseCount, hotelCount, mortgagedCount, onClose,
+}: PlayerSheetProps) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end bg-[var(--wc-overlay)] p-0 xl:hidden" onMouseDown={onClose}>
+      <section
+        id={`player-sheet-${player.id}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`player-sheet-title-${player.id}`}
+        className="max-h-[86dvh] w-full overflow-y-auto rounded-t-[var(--wc-radius-large)] border border-slate-200 bg-white p-4 pb-[calc(var(--wc-safe-bottom)+1rem)] text-slate-950 shadow-[var(--wc-shadow-modal)]"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <TokenIcon token={player.token} color={player.color} size={42} label={player.tokenLabel} badge />
+            <div className="min-w-0">
+              <h2 id={`player-sheet-title-${player.id}`} className="truncate text-lg font-black text-slate-950">{player.name}</h2>
+              <p className="wc-numeric text-sm font-black text-amber-800">${player.cash.toLocaleString()}</p>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} aria-label={`Close ${player.name} details`} className="wc-icon-button wc-button-secondary rounded-full">
+            <UiIcon name="close" aria-hidden="true" />
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {statusChips.map((chip) => <StatusChip key={chip} chip={chip} />)}
+          <span className="wc-badge border-slate-200 bg-slate-50 text-slate-700"><UiIcon name="home" size={13} aria-hidden="true" /> {positionName}</span>
+          <span className="wc-badge border-slate-200 bg-slate-50 text-slate-700">{jail.inJail ? `In jail · attempt ${jail.attempt}/${jail.maxAttempts}` : "Free"}</span>
+          <span className="wc-badge border-slate-200 bg-slate-50 text-slate-700">{jail.jailCardCount} jail card{jail.jailCardCount === 1 ? "" : "s"}</span>
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <MiniStat label="Houses" value={String(houseCount)} />
+          <MiniStat label="Hotels" value={String(hotelCount)} />
+          <MiniStat label="Mortgaged" value={String(mortgagedCount)} warn={mortgagedCount > 0} />
+        </div>
+        <h3 className="mt-5 text-[10px] font-black uppercase tracking-[.16em] text-slate-600">Assets</h3>
+        <div className="mt-2 space-y-2">
+          {cityGroups.flatMap((group) => group.chips.map((chip) => (
+            <AssetRow key={chip.spaceIndex} name={chip.name} accent={CITY_COLOR_HEX[group.colorGroup]} mortgaged={chip.isMortgaged} detail={group.isFullSet ? "Full set" : group.colorGroup} />
+          )))}
+          {airports.map((chip) => <AssetRow key={chip.spaceIndex} name={chip.name} accent="#64748b" mortgaged={chip.isMortgaged} detail="Airport" icon="airport" />)}
+          {utilities.map((chip) => <AssetRow key={chip.spaceIndex} name={chip.name} accent="#0891b2" mortgaged={chip.isMortgaged} detail="Utility" icon="utility" />)}
+          {cityGroups.length + airports.length + utilities.length === 0 ? <p className="rounded-[var(--wc-radius-medium)] border border-slate-200 bg-slate-50 p-4 text-center text-sm text-slate-600">No properties owned.</p> : null}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function AssetRow({ name, accent, mortgaged, detail, icon }: { name: string; accent: string; mortgaged: boolean; detail: string; icon?: "airport" | "utility" }) {
+  return (
+    <div className="flex min-h-11 items-center gap-3 rounded-[var(--wc-radius-small)] border border-slate-200 bg-slate-50 px-3">
+      <span className="h-7 w-1 rounded-full" style={{ backgroundColor: accent }} aria-hidden="true" />
+      {icon ? <UiIcon name={icon} size={17} className="text-slate-600" aria-hidden="true" /> : null}
+      <span className="min-w-0 flex-1 truncate text-sm font-bold text-slate-950">{name}</span>
+      <span className={`text-[10px] font-bold ${mortgaged ? "text-amber-800" : "text-slate-600"}`}>{mortgaged ? "Mortgaged" : detail}</span>
+    </div>
+  );
+}
+
 function MiniStat({ label, value, warn = false }: { label: string; value: string; warn?: boolean }) {
   return (
-    <div className="rounded-lg bg-white px-2 py-1.5 shadow-sm">
-      <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">{label}</p>
-      <p className={`text-xs font-black ${warn ? "text-amber-700" : "text-slate-950"}`}>{value}</p>
+    <div className="rounded-lg border border-slate-200 bg-white px-2 py-1.5">
+      <p className="text-[9px] font-black uppercase tracking-wide text-slate-600">{label}</p>
+      <p className={`wc-numeric text-xs font-black ${warn ? "text-amber-800" : "text-slate-950"}`}>{value}</p>
     </div>
   );
 }

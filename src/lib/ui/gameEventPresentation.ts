@@ -139,20 +139,20 @@ export function getCardRevealTone(deck: "chance" | "community-chest" | string): 
   if (deck === "chance") {
     return {
       label: "Chance",
-      border: "border-amber-400",
-      bg: "bg-gradient-to-br from-amber-50 to-orange-100",
+      border: "border-[var(--wc-paper-border)]",
+      bg: "bg-[var(--wc-paper)]",
       header: "text-amber-700",
       accent: "bg-amber-500",
-      icon: "❓",
+      icon: "?",
     };
   }
   return {
     label: "Community Chest",
-    border: "border-amber-800/40",
-    bg: "bg-gradient-to-br from-amber-100 to-yellow-50",
-    header: "text-amber-900",
-    accent: "bg-amber-800",
-    icon: "📦",
+    border: "border-[var(--wc-paper-border)]",
+    bg: "bg-[var(--wc-paper)]",
+    header: "text-cyan-800",
+    accent: "bg-cyan-700",
+    icon: "C",
   };
 }
 

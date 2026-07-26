@@ -5,6 +5,7 @@ import { rollDice } from "@/lib/game/dice";
 import { TokenIcon } from "@/components/board/TokenIcon";
 import { DiceFace } from "@/components/DiceFace";
 import { DICE_ROLL_MS } from "@/lib/animation/timing";
+import { getTurnStatus } from "@/lib/ui/gameControlsPresentation";
 import type { GameAction, GameState } from "@/types/game";
 
 type GameControlsProps = {
@@ -17,39 +18,6 @@ type GameControlsProps = {
   /** When false, the landing message is hidden until the reveal sequence completes */
   showLandingMessage?: boolean;
 };
-
-function getTurnStatus(state: GameState) {
-  if (state.phase === "gameOver") {
-    return { label: "Game over", color: "text-emerald-700" };
-  }
-  if (state.phase === "bankruptcyPending") {
-    const debtorName =
-      state.players.find((p) => p.id === state.bankruptcy?.debtorPlayerId)?.name ?? "Player";
-    return {
-      label: `${debtorName} is resolving bankruptcy — see panel below`,
-      color: "text-red-700",
-    };
-  }
-  if (state.phase === "awaitingJailDecision") {
-    return { label: "In Jail — choose an option below", color: "text-amber-700" };
-  }
-  if (state.phase === "awaitingPurchaseDecision") {
-    return { label: "Make a decision below", color: "text-amber-700" };
-  }
-  if (state.phase === "auction") {
-    return { label: "Auction in progress", color: "text-amber-700" };
-  }
-  if (state.phase === "turnComplete") {
-    return { label: "Ready to end turn", color: "text-emerald-700" };
-  }
-  if (state.doublesCount > 0) {
-    return {
-      label: `${state.doublesCount} double${state.doublesCount === 1 ? "" : "s"} — roll again`,
-      color: "text-blue-700",
-    };
-  }
-  return { label: "Roll the dice to move", color: "text-slate-500" };
-}
 
 // Dummy die values shown while rolling animation plays
 let rollingTick = 1;
@@ -91,28 +59,28 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
   }
 
   return (
-    <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <section className="overflow-hidden rounded-[var(--wc-radius-medium)] border border-[var(--wc-paper-border)] bg-[var(--wc-paper)] text-[var(--wc-text-on-light)] shadow-[var(--wc-shadow-card)]">
       {/* Header strip */}
       <div
-        className="flex items-center gap-3 border-b border-slate-100 px-4 py-3"
+        className="flex items-center gap-3 border-b border-[var(--wc-paper-border)] px-4 py-3"
         style={{ borderLeftWidth: 4, borderLeftColor: currentPlayer.color }}
       >
         <TokenIcon token={currentPlayer.token} color={currentPlayer.color} size={36} label={currentPlayer.tokenLabel} badge />
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-600">
             {isGameOver ? "Winner" : "Current Turn"}
           </p>
-          <h2 className="truncate text-lg font-black leading-tight text-slate-950">
+          <h2 className="truncate text-lg font-black leading-tight text-[var(--wc-text-on-light)]">
             {currentPlayer.name}
           </h2>
         </div>
-        <span className="shrink-0 text-sm font-black text-slate-400">
+        <span className="wc-numeric shrink-0 text-sm font-black text-[var(--wc-text-on-light)]">
           ${currentPlayer.cash.toLocaleString()}
         </span>
       </div>
 
       <div className="p-4">
-        <p className={`text-xs font-bold ${presentationStatus ? "text-slate-500" : status.color}`}>
+        <p className={`text-xs font-bold ${presentationStatus ? "text-slate-700" : status.color}`}>
           {presentationStatus ?? status.label}
         </p>
 
@@ -129,11 +97,11 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
               <DiceFace value={state.diceRoll.die1} size={44} />
               <DiceFace value={state.diceRoll.die2} size={44} />
               <div className="min-w-0">
-                <p className="text-xl font-black leading-none text-slate-950">
+                <p className="wc-numeric text-xl font-black leading-none text-[var(--wc-text-on-light)]">
                   = {state.diceRoll.total}
                 </p>
                 {state.diceRoll.isDouble ? (
-                  <p className="mt-0.5 text-[10px] font-black uppercase tracking-wide text-blue-600">
+                  <p className="mt-0.5 text-[10px] font-black uppercase tracking-wide text-sky-700">
                     Doubles!
                   </p>
                 ) : null}
@@ -149,17 +117,17 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
 
         {/* Landing message — gated on presentation reveal */}
         {state.landingMessage && showLandingMessage && state.phase !== "auction" && state.phase !== "awaitingJailDecision" ? (
-          <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold leading-5 text-emerald-900">
+          <div className="mt-3 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-3 py-2 text-sm font-semibold leading-5 text-emerald-800">
             {state.landingMessage}
           </div>
         ) : null}
 
         {/* Free Parking pot */}
         {state.rules?.freeParkingCash && (state.freeParkingPot ?? 0) > 0 ? (
-          <div className="mt-2 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600">
+          <div className="mt-2 flex items-center gap-2 rounded-lg border border-[var(--wc-paper-border)] bg-[var(--wc-ivory)] px-3 py-1.5 text-xs font-semibold text-slate-700">
             <span>🅿️</span>
             <span>Free Parking pot:</span>
-            <span className="font-black text-slate-900">${(state.freeParkingPot ?? 0).toLocaleString()}</span>
+            <span className="wc-numeric font-black text-[var(--wc-text-on-light)]">${(state.freeParkingPot ?? 0).toLocaleString()}</span>
           </div>
         ) : null}
 
@@ -170,7 +138,7 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
               type="button"
               disabled={!canRoll || isGameOver || diceRolling || !!presentationStatus}
               onClick={handleRoll}
-              className="w-full rounded-lg bg-slate-950 px-4 py-3 text-sm font-black tracking-wide text-white transition-all duration-100 hover:bg-slate-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+              className="wc-button wc-button-primary w-full"
             >
               {diceRolling ? "Rolling…" : isAnimating ? "Moving…" : "Roll Dice"}
             </button>
@@ -180,8 +148,8 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
               onClick={() => { setEndTurnReminder(false); dispatch({ type: "END_TURN" }); }}
               className={`w-full rounded-lg border px-4 py-2.5 text-sm font-bold transition-all duration-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30 ${
                 endTurnReminder
-                  ? "animate-pulse border-amber-400 bg-amber-50 text-amber-800 hover:bg-amber-100"
-                  : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white hover:border-slate-300"
+                  ? "border-amber-400 bg-amber-500/10 text-amber-800 hover:bg-amber-500/20"
+                  : "border-[var(--wc-paper-border)] bg-[var(--wc-ivory)] text-slate-800 hover:bg-white"
               }`}
             >
               End Turn{endTurnReminder ? " ↩" : ""}

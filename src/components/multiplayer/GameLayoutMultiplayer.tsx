@@ -16,12 +16,14 @@ import { PropertyCardModal } from "@/components/PropertyCardModal";
 import { BankruptcyPanel } from "@/components/BankruptcyPanel";
 import { TradePanel } from "@/components/TradePanel";
 import { MobileActionBar } from "@/components/MobileActionBar";
+import { GamePresentationLayer } from "@/components/presentation/GamePresentationLayer";
 import { boardSpaces } from "@/data/board";
 import {
   isPlayerInActiveAuction,
   isPlayerInActiveTrade,
   isPlayerInDebt,
 } from "@/lib/game/playerPanelHelpers";
+import { getMobileTabAttention, type MobileGameTab } from "@/lib/ui/mobileGameNavigation";
 import type { GameAction, GameState } from "@/types/game";
 import type { GameActionIntent, RoomPublicView, TradeDraftState, TradeDraftStartPayload, TradeDraftUpdatePayload } from "@/types/multiplayer";
 import type { OwnableSpace } from "@/types/board";
@@ -43,6 +45,8 @@ type Props = {
   updateTradeDraft: (payload: TradeDraftUpdatePayload) => void;
   cancelTradeDraft: () => void;
   submitTradeDraft: () => void;
+  showStartSequence?: boolean;
+  onStartSequenceShown?: () => void;
 };
 
 // Determine which player ID should be acting right now
@@ -67,8 +71,12 @@ export function GameLayoutMultiplayer({
   updateTradeDraft,
   cancelTradeDraft,
   submitTradeDraft,
+  showStartSequence = false,
+  onStartSequenceShown,
 }: Props) {
   const [selectedSpace, setSelectedSpace] = useState<OwnableSpace | null>(null);
+  const [mobileTab, setMobileTab] = useState<MobileGameTab>("board");
+  const [mobilePlayerId, setMobilePlayerId] = useState<string | null>(null);
   const diceKey =
     gameState.diceRoll && gameState.currentPlayerHasRolled
       ? `${gameState.currentPlayerIndex}:${gameState.doublesCount}:${gameState.diceRoll.die1}:${gameState.diceRoll.die2}`
@@ -121,40 +129,24 @@ export function GameLayoutMultiplayer({
     [sendAction, isMyTurn],
   );
 
-  const winner = gameState.winnerId
-    ? gameState.players.find((p) => p.id === gameState.winnerId)
-    : null;
-
   const currentActor = gameState.players.find((p) => p.id === actorId);
+  const actionAttention = getMobileTabAttention(gameState, myPlayerId);
 
   return (
-    <main className="min-h-screen px-2 py-3 pb-20 sm:pb-5 sm:px-4 sm:py-5 lg:px-6">
-      {/* Game-over banner */}
-      {gameState.phase === "gameOver" && winner ? (
-        <div className="mx-auto mb-4 max-w-[1560px] overflow-hidden rounded-xl border border-emerald-300 bg-emerald-50 px-6 py-4 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">
-            Game Over
-          </p>
-          <h1 className="mt-0.5 text-2xl font-black text-slate-950">
-            🏆 {winner.name} wins!
-          </h1>
-          <p className="mt-1 text-sm font-semibold text-slate-600">
-            All other players have gone bankrupt. Congratulations!
-          </p>
-        </div>
-      ) : null}
+    <main className="min-h-screen px-2 py-3 sm:px-4 sm:py-5 xl:pb-5 xl:bg-[radial-gradient(circle_at_top_left,rgba(198,161,91,.10),transparent_35rem)]">
+      <GamePresentationLayer state={gameState} showStart={showStartSequence} onStartShown={onStartSequenceShown} onNavigate={setMobileTab} />
 
       {/* Connection status banner */}
       {connectionStatus === "reconnecting" ? (
-        <div className="mx-auto mb-2 max-w-[1560px] rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800">
+        <div className="mx-auto mb-2 max-w-[1560px] rounded-[var(--wc-radius-medium)] border border-amber-400/40 bg-[var(--wc-navy)] px-4 py-2 text-sm font-semibold text-amber-100 shadow-[var(--wc-shadow-card)]">
           Reconnecting to server…
         </div>
       ) : connectionStatus === "disconnected" ? (
-        <div className="mx-auto mb-2 max-w-[1560px] flex items-center gap-3 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-800">
+        <div className="mx-auto mb-2 flex max-w-[1560px] items-center gap-3 rounded-[var(--wc-radius-medium)] border border-rose-500/40 bg-[var(--wc-navy)] px-4 py-2 text-sm font-semibold text-rose-100 shadow-[var(--wc-shadow-card)]">
           <span>Disconnected from server.</span>
           <button
             onClick={onRequestSync}
-            className="ml-auto rounded-md border border-red-300 px-3 py-1 text-xs font-bold hover:bg-red-100"
+            className="wc-button wc-button-danger ml-auto min-h-11 px-3 py-1 text-xs font-bold xl:min-h-9"
           >
             Request Sync
           </button>
@@ -174,7 +166,7 @@ export function GameLayoutMultiplayer({
           onForfeit={onForfeit}
         />
         {!isMyTurn ? (
-          <p className="mt-1 px-1 text-xs font-semibold text-slate-500">
+          <p className="mt-1 px-1 text-xs font-semibold text-slate-300">
             Waiting for {currentActor?.name ?? "another player"}…
           </p>
         ) : null}
@@ -182,14 +174,14 @@ export function GameLayoutMultiplayer({
 
       {/* Server error display */}
       {error ? (
-        <div className="mx-auto mb-3 max-w-[1560px] rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700">
+        <div className="mx-auto mb-3 max-w-[1560px] rounded-[var(--wc-radius-medium)] border border-rose-500/40 bg-[var(--wc-navy)] px-4 py-2 text-sm font-semibold text-rose-100 shadow-[var(--wc-shadow-card)]">
           {error}
         </div>
       ) : null}
 
-      <div className="mx-auto grid max-w-[1560px] gap-4 xl:grid-cols-[minmax(680px,1fr)_370px]">
+      <div className="mobile-game-content mx-auto grid max-w-[1560px] gap-4 xl:grid-cols-[minmax(680px,1fr)_370px]">
         {/* Board */}
-        <section className="min-w-0">
+        <section className={`${mobileTab === "board" ? "block" : "hidden xl:block"} min-w-0 xl:rounded-[var(--wc-radius-large)] xl:bg-[var(--wc-ivory-raised)] xl:p-4 xl:shadow-[var(--wc-shadow-panel)]`}>
           <GameBoard
             spaces={boardSpaces}
             players={gameState.players}
@@ -203,21 +195,21 @@ export function GameLayoutMultiplayer({
         </section>
 
         {/* Sidebar */}
-        <aside className="min-w-0 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto">
-          <div className="mb-3 grid gap-3">
-            <GameControls state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} isAnimating={isAnimating} presentationStatus={presentationStatus} showLandingMessage={showLandingPanel} />
+        <aside className="min-w-0 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto xl:pr-1">
+          {gameState.phase === "auction" ? (
+            <AuctionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} serverAuthoritative />
+          ) : null}
+          <div className={`${mobileTab === "actions" ? "grid" : "hidden xl:grid"} mb-3 gap-3`}>
+            <div className="order-1 xl:order-none"><GameControls state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} isAnimating={isAnimating} presentationStatus={presentationStatus} showLandingMessage={showLandingPanel} /></div>
             {gameState.phase === "awaitingJailDecision" ? (
-              <JailActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} />
-            ) : null}
-            {gameState.phase === "auction" && showLandingPanel ? (
-              <AuctionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} serverAuthoritative />
+              <div className="order-3 xl:order-none"><JailActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} /></div>
             ) : null}
             {gameState.drawnCard && showCardPanel ? (
-              <CardPanel drawnCard={gameState.drawnCard} showResolved={showCardResolved} />
+              <div className="order-2 xl:order-none"><CardPanel drawnCard={gameState.drawnCard} showResolved={showCardResolved} /></div>
             ) : null}
-            {showLandingPanel ? <LandingActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} /> : null}
-            <BankruptcyPanel state={gameState} dispatch={dispatch} />
-            <TradePanel
+            {showLandingPanel ? <div className="order-3 xl:order-none"><LandingActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} /></div> : null}
+            <div className="order-3 xl:order-none"><BankruptcyPanel state={gameState} dispatch={dispatch} /></div>
+            <div className="order-4 xl:order-none"><TradePanel
               state={gameState}
               dispatch={dispatch}
               myPlayerId={myPlayerId}
@@ -226,18 +218,21 @@ export function GameLayoutMultiplayer({
               onDraftUpdate={updateTradeDraft}
               onDraftCancel={cancelTradeDraft}
               onDraftSubmit={submitTradeDraft}
-            />
-            <GameLogDrawer entries={gameState.gameLog} />
+            /></div>
           </div>
 
-          <div className="mb-3">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+          <div className={`${mobileTab === "log" ? "block" : "hidden xl:block"} mb-3`}>
+            <GameLogDrawer entries={gameState.gameLog} forceOpen={mobileTab === "log"} />
+          </div>
+
+          <div className={`${mobileTab === "players" ? "block" : "hidden xl:block"} mb-3`}>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">
               Players
             </p>
-            <h2 className="text-lg font-black text-slate-950">Player Panels</h2>
+            <h2 className="text-lg font-black text-[var(--wc-text-on-light)]">Player Panels</h2>
           </div>
 
-          <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-1">
+          <div className={`${mobileTab === "players" ? "grid" : "hidden xl:grid"} gap-2.5 sm:grid-cols-2 xl:grid-cols-1`}>
             {gameState.players.map((player, index) => (
               <PlayerPanel
                 key={player.id}
@@ -250,6 +245,9 @@ export function GameLayoutMultiplayer({
                 isInActiveTrade={isPlayerInActiveTrade(gameState, player.id)}
                 isInActiveAuction={isPlayerInActiveAuction(gameState, player.id)}
                 isInDebt={isPlayerInDebt(gameState, player.id)}
+                mobileSheetOpen={mobilePlayerId === player.id}
+                onMobileDetailsOpen={setMobilePlayerId}
+                onMobileDetailsClose={() => setMobilePlayerId(null)}
               />
             ))}
           </div>
@@ -273,6 +271,9 @@ export function GameLayoutMultiplayer({
         isMyTurn={isMyTurn}
         isAnimating={isAnimating}
         presentationStatus={presentationStatus}
+        activeTab={mobileTab}
+        onTabChange={setMobileTab}
+        actionAttention={actionAttention}
       />
     </main>
   );

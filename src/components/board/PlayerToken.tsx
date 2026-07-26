@@ -21,6 +21,7 @@ export function PlayerToken({ players, landingPlayerIds }: PlayerTokenProps) {
         return (
           <span
             key={player.id}
+            className={isLanding ? "token-landing-polish" : undefined}
             style={isLanding ? { animation: `token-land 240ms cubic-bezier(0.36,0.07,0.19,0.97)` } : undefined}
           >
             <TokenIcon

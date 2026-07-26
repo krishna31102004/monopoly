@@ -1,73 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { EntryShell } from "@/components/entry/EntryShell";
+import { TokenMedallion } from "@/components/entry/TokenMedallion";
+import { UiIcon } from "@/components/ui/UiIcon";
 
 export function HomeScreen() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-slate-950 px-4 py-12">
-      <div className="w-full max-w-sm text-center">
-        {/* Title */}
-        <div className="mb-2 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
-          Private Board Game
-        </div>
-        <h1 className="mb-1 text-4xl font-black tracking-tight text-white">
-          World Cities
-        </h1>
-        <p className="mb-10 text-sm text-slate-400">
-          A city-themed Monopoly-style game for friends.
-        </p>
-
-        {/* Action cards */}
-        <div className="grid gap-3">
-          {/* Local play */}
-          <Link
-            href="/play"
-            className="block rounded-xl border border-slate-700 bg-slate-900 px-6 py-4 text-left transition hover:border-slate-600 hover:bg-slate-800"
-          >
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-              Pass &amp; Play
-            </p>
-            <p className="mt-0.5 text-lg font-black text-white">Play Local</p>
-            <p className="mt-1 text-xs text-slate-400">
-              One device, multiple players taking turns.
-            </p>
-          </Link>
-
-          {/* Create private room */}
-          <Link
-            href="/create"
-            className="block rounded-xl border border-emerald-700 bg-emerald-950 px-6 py-4 text-left transition hover:border-emerald-500 hover:bg-emerald-900"
-          >
-            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">
-              Multiplayer
-            </p>
-            <p className="mt-0.5 text-lg font-black text-emerald-100">
-              Create Private Room
-            </p>
-            <p className="mt-1 text-xs text-emerald-400">
-              Get a room code and invite up to 5 friends.
-            </p>
-          </Link>
-
-          {/* Join room */}
-          <Link
-            href="/join"
-            className="block rounded-xl border border-slate-700 bg-slate-900 px-6 py-4 text-left transition hover:border-slate-600 hover:bg-slate-800"
-          >
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-              Multiplayer
-            </p>
-            <p className="mt-0.5 text-lg font-black text-white">Join a Room</p>
-            <p className="mt-1 text-xs text-slate-400">
-              Enter a room code shared by the host.
-            </p>
-          </Link>
-        </div>
-
-        <p className="mt-10 text-xs text-slate-600">
-          Private rooms only. No accounts. No strangers.
-        </p>
-      </div>
-    </main>
-  );
+  return <EntryShell><section className="grid items-center gap-10 pb-8 lg:min-h-[calc(100vh-7rem)] lg:grid-cols-[1.05fr_.95fr]">
+    <div className="max-w-xl"><p className="wc-section-label text-[var(--wc-gold)]">Private world tour</p><h1 className="wc-display mt-3 text-white">World Cities</h1><p className="mt-4 max-w-lg text-lg leading-relaxed text-slate-300">Build a global property empire with up to six friends.</p><div className="mt-7 flex max-w-md flex-col gap-3"><Link className="wc-button wc-button-primary w-full" href="/create"><UiIcon name="players" size={18} />Create Private Room</Link><Link className="wc-button wc-button-secondary w-full" href="/join"><UiIcon name="door" size={18} />Join with Code</Link><Link className="wc-button wc-button-ghost w-full" href="/play"><UiIcon name="home" size={18} />Play locally on this device</Link></div><div className="mt-8 grid grid-cols-2 gap-2 text-xs text-slate-300 sm:grid-cols-4"><span className="wc-card text-center">2–6 players</span><span className="wc-card text-center">Private rooms</span><span className="wc-card text-center">No account</span><span className="wc-card text-center">Local + online</span></div></div>
+    <aside aria-hidden="true" className="relative overflow-hidden rounded-[var(--wc-radius-large)] border border-[var(--wc-gold-border)] bg-[var(--wc-navy)] p-5 shadow-[var(--wc-shadow-panel)]"><div className="absolute inset-x-0 top-0 h-1 bg-[var(--wc-gold)]" /><p className="wc-section-label">Your departure lounge</p><div className="mt-5 grid grid-cols-2 gap-3"><article className="wc-paper-card rotate-[-2deg]"><div className="wc-property-band bg-[#6ec6ea]" /><p className="wc-caption mt-3">INDIA</p><p className="wc-property-heading">Bengaluru</p><p className="wc-numeric mt-3 text-lg font-bold">$120</p></article><article className="wc-paper-card translate-y-6 rotate-[2deg]"><div className="wc-property-band bg-[#f97316]" /><p className="wc-caption mt-3">UAE</p><p className="wc-property-heading">Dubai</p><p className="wc-numeric mt-3 text-lg font-bold">$200</p></article></div><div className="mt-10 flex items-center justify-between border-t border-[var(--wc-border)] pt-4"><div className="flex -space-x-2"><span className="rounded-full bg-[var(--wc-navy-elevated)] p-1"><TokenMedallion compact token="car" /></span><span className="rounded-full bg-[var(--wc-navy-elevated)] p-1"><TokenMedallion compact token="ship" /></span></div><span className="wc-badge wc-badge-gold"><UiIcon name="airport" size={14} />World route</span></div></aside>
+  </section></EntryShell>;
 }

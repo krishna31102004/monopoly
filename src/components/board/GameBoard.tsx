@@ -52,6 +52,7 @@ export function GameBoard({
     groups[pos] = [...(groups[pos] ?? []), player];
     return groups;
   }, {});
+  const ownedAirportCount = ownerships.filter((ownership) => ownership.ownerId && spaces[ownership.spaceIndex]?.kind === "airport").length;
 
   // ── Scroll helper ──────────────────────────────────────────────────────────
 
@@ -162,7 +163,7 @@ export function GameBoard({
           className={innerBoardClass}
           style={innerBoardStyle}
         >
-          <div className="board-hero-frame relative">
+          <div className="board-hero-frame relative rounded-[14px] bg-[var(--wc-board-frame)] p-2 shadow-[0_18px_40px_rgba(52,41,28,.28)] xl:p-3">
             <div
               className="relative grid aspect-square grid-cols-11 grid-rows-11 overflow-hidden rounded-[10px] border-[3px] border-[var(--board-border)] bg-[var(--board-line)] shadow-[inset_0_2px_6px_rgba(0,0,0,0.35)]"
               aria-label="World Cities game board"
@@ -175,11 +176,9 @@ export function GameBoard({
                 <h1 className="mt-0.5 text-xl font-black leading-none tracking-tight text-slate-950 sm:text-3xl lg:text-[2.6rem]">
                   World Cities
                 </h1>
-                <div className="mt-1 flex gap-1 sm:gap-1.5">
-                  {["🇲🇽","🇮🇳","🇩🇪","🇦🇪","🇮🇹","🇦🇺","🇬🇧","🇺🇸"].map((flag) => (
-                    <span key={flag} className="text-sm sm:text-lg lg:text-xl" aria-hidden="true">{flag}</span>
-                  ))}
-                </div>
+                <svg aria-hidden="true" className="world-route-overlay mt-2 h-10 w-28 text-[var(--wc-gold-dark)] opacity-40" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 120 40"><path d="M6 28c18-22 31 8 49-8s30-24 59-5" /><circle cx="6" cy="28" r="2" fill="currentColor" /><circle cx="55" cy="20" r="2" fill="currentColor" /><circle cx="114" cy="15" r="2" fill="currentColor" /></svg>
+
+                {ownedAirportCount > 0 ? <div className="mt-1 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wide text-slate-500" aria-label={`${ownedAirportCount} airports are owned`}><svg aria-hidden="true" className="h-3 w-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 40 12"><path d="M3 8 16 3l9 5 12-5" /><circle cx="3" cy="8" r="1.5" fill="currentColor" /><circle cx="16" cy="3" r="1.5" fill="currentColor" /><circle cx="25" cy="8" r="1.5" fill="currentColor" /><circle cx="37" cy="3" r="1.5" fill="currentColor" /></svg>{ownedAirportCount} airport{ownedAirportCount === 1 ? "" : "s"} linked</div> : null}
 
                 <p className="mt-1 hidden text-[10px] font-semibold leading-5 text-slate-500 sm:block sm:text-xs">
                   Buy cities · Collect rent · Win the world
