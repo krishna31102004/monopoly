@@ -18,6 +18,7 @@ const turnStatusPresentation = read("../lib/ui/gameControlsPresentation.ts");
 const landingPanel = read("../components/LandingActionPanel.tsx");
 const logDrawer = read("../components/GameLogDrawer.tsx");
 const playerPanel = read("../components/PlayerPanel.tsx");
+const cardPanel = read("../components/CardPanel.tsx");
 const saveControls = read("../components/GameSaveControls.tsx");
 const statusStrip = read("../components/GameStatusStrip.tsx");
 
@@ -74,7 +75,7 @@ describe("responsive command-dock presentation safeguards", () => {
     expect(logDrawer).toContain("bg-[var(--wc-paper)]");
     expect(logDrawer).not.toContain("xl:bg-[var(--wc-navy-raised)]");
     expect(logDrawer).toContain('<UiIcon name="log"');
-    expect(playerPanel).toContain("bg-[var(--wc-paper)]");
+    expect(playerPanel).toContain("bg-white");
     expect(playerPanel).not.toContain("xl:bg-[var(--wc-navy-raised)]");
     expect(playerPanel).toContain("linear-gradient(155deg");
     expect(playerPanel).toContain("borderLeftColor: player.color");
@@ -99,6 +100,40 @@ describe("responsive command-dock presentation safeguards", () => {
     expect(saveControls).toContain("Import Save");
     expect(saveControls).toContain("New Game");
     expect(saveControls).toContain("min-h-11");
+  });
+});
+
+describe("crisp player-card presentation safeguards", () => {
+  it("uses a clean white and cool-slate PlayerPanel without changing warm card surfaces", () => {
+    expect(playerPanel).toContain("border border-slate-200 bg-white");
+    expect(playerPanel).toContain("bg-slate-50");
+    expect(playerPanel).toContain("text-slate-950");
+    expect(playerPanel).not.toContain("bg-[var(--wc-paper)]");
+    expect(playerPanel).not.toContain("bg-[var(--wc-ivory)]");
+    expect(cardPanel).toContain("wc-paper-shell");
+  });
+
+  it("keeps player identity, a white-resolving current gradient, and compact asset chips", () => {
+    expect(playerPanel).toContain("borderLeftColor: player.color");
+    expect(playerPanel).toContain("backgroundColor: player.color");
+    expect(playerPanel).toContain("linear-gradient(155deg, ${player.color}14, #ffffff 55%)");
+    expect(playerPanel).toContain("getDesignReadableTextColor(player.color)");
+
+    const chipBlock = playerPanel.slice(
+      playerPanel.indexOf("cityGroups.map"),
+      playerPanel.indexOf("{/* Explicit expand/collapse affordance"),
+    );
+    expect(chipBlock).toContain("px-1.5 py-0.5 text-[9px]");
+    expect(chipBlock).toContain('<UiIcon name="airport" size={11}');
+    expect(chipBlock).toContain('<UiIcon name="utility" size={11}');
+    expect(chipBlock).not.toContain("truncate");
+  });
+
+  it("preserves the mobile Details target while allowing a compact desktop details row", () => {
+    expect(playerPanel).toContain("min-h-11");
+    expect(playerPanel).toContain("xl:min-h-0 xl:py-1");
+    expect(playerPanel).toContain("aria-controls={isBelowXl ? `player-sheet-${player.id}`");
+    expect(playerPanel).toContain("aria-expanded={isBelowXl ? mobileSheetOpen : expanded}");
   });
 });
 
