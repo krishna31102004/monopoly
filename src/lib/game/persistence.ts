@@ -16,6 +16,7 @@ const VALID_PHASES = new Set<string>([
   "awaitingJailDecision",
   "awaitingPurchaseDecision",
   "auction",
+  "hiddenAuction",
   "turnComplete",
   "bankruptcyPending",
   "gameOver",
@@ -138,6 +139,9 @@ export function deserializeGame(json: string): GameState | null {
     }
     if (!("turnDeadlineAt" in (state as GameState))) {
       (state as GameState).turnDeadlineAt = null;
+    }
+    if (!("hiddenAuction" in (state as GameState))) {
+      (state as GameState).hiddenAuction = null;
     }
     // consecutiveTurnTimeouts added later — default 0 per player
     for (const p of (state as GameState).players) {

@@ -17,6 +17,7 @@ const RULE_LABELS: Record<BooleanRuleKey, { label: string; description: string }
 const GAME_MODES: ReadonlyArray<{ value: GameMode; label: string; description: string }> = [
   { value: "normal", label: "Normal Game", description: "Buy or decline unowned properties." },
   { value: "auction", label: "Auction Game", description: "Unowned properties go directly to auction." },
+  { value: "hidden-auction", label: "Hidden Auction", description: "Every unowned property enters a 20-second sealed auction. Bids stay hidden until time expires." },
 ];
 
 type Props = { rules: GameRules; onChange: (rules: GameRules) => void; readOnly?: boolean };

@@ -4,6 +4,7 @@ import { useEffect, useReducer, useState } from "react";
 import { usePlayerMovementAnimation } from "@/hooks/usePlayerMovementAnimation";
 import { useGameplayPresentation } from "@/hooks/useGameplayPresentation";
 import { AuctionPanel } from "@/components/AuctionPanel";
+import { HiddenAuctionPanel } from "@/components/HiddenAuctionPanel";
 import { CardPanel } from "@/components/CardPanel";
 import { GameBoard } from "@/components/board/GameBoard";
 import { GameControls } from "@/components/GameControls";
@@ -121,6 +122,9 @@ export function GameLayout() {
         <aside className="min-w-0 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto xl:pr-1">
           {state.phase === "auction" ? (
             <AuctionPanel state={state} dispatch={dispatch} />
+          ) : null}
+          {state.phase === "hiddenAuction" ? (
+            <HiddenAuctionPanel state={state} dispatch={dispatch} />
           ) : null}
           <div className={`${mobileTab === "actions" ? "grid" : "hidden xl:grid"} mb-3 gap-3`}>
             <div className="order-1 xl:order-none"><GameControls state={state} dispatch={dispatch} isAnimating={isAnimating} presentationStatus={presentationStatus} showLandingMessage={showLandingPanel} /></div>

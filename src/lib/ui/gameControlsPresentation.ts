@@ -22,6 +22,9 @@ export function getTurnStatus(state: GameState) {
   if (state.phase === "auction") {
     return { label: "Auction in progress", color: "text-amber-800" };
   }
+  if (state.phase === "hiddenAuction") {
+    return { label: "Hidden auction in progress", color: "text-amber-800" };
+  }
   if (state.phase === "turnComplete") {
     return { label: "Ready to end turn", color: "text-emerald-800" };
   }

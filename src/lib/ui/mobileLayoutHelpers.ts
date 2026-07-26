@@ -21,6 +21,9 @@ export function getMobileBoardFocusTarget(
   if (state.phase === "auction" && state.auction) {
     return state.auction.propertySpaceIndex;
   }
+  if (state.phase === "hiddenAuction" && state.hiddenAuction) {
+    return state.hiddenAuction.propertySpaceIndex;
+  }
   const currentPlayer = state.players[state.currentPlayerIndex];
   if (!currentPlayer) return 0;
   return displayPositions?.[currentPlayer.id] ?? currentPlayer.position;

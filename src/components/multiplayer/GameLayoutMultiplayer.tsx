@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { usePlayerMovementAnimation } from "@/hooks/usePlayerMovementAnimation";
 import { useGameplayPresentation } from "@/hooks/useGameplayPresentation";
 import { AuctionPanel } from "@/components/AuctionPanel";
+import { HiddenAuctionPanel } from "@/components/HiddenAuctionPanel";
 import { CardPanel } from "@/components/CardPanel";
 import { GameBoard } from "@/components/board/GameBoard";
 import { GameControls } from "@/components/GameControls";
@@ -25,7 +26,7 @@ import {
 } from "@/lib/game/playerPanelHelpers";
 import { getMobileTabAttention, type MobileGameTab } from "@/lib/ui/mobileGameNavigation";
 import type { GameAction, GameState } from "@/types/game";
-import type { GameActionIntent, RoomPublicView, TradeDraftState, TradeDraftStartPayload, TradeDraftUpdatePayload } from "@/types/multiplayer";
+import type { GameActionIntent, HiddenAuctionOwnBidPayload, RoomPublicView, TradeDraftState, TradeDraftStartPayload, TradeDraftUpdatePayload } from "@/types/multiplayer";
 import type { OwnableSpace } from "@/types/board";
 
 import type { ConnectionStatus } from "@/hooks/useRoom";
@@ -45,6 +46,7 @@ type Props = {
   updateTradeDraft: (payload: TradeDraftUpdatePayload) => void;
   cancelTradeDraft: () => void;
   submitTradeDraft: () => void;
+  hiddenAuctionOwnBid?: HiddenAuctionOwnBidPayload | null;
   showStartSequence?: boolean;
   onStartSequenceShown?: () => void;
 };
@@ -71,6 +73,7 @@ export function GameLayoutMultiplayer({
   updateTradeDraft,
   cancelTradeDraft,
   submitTradeDraft,
+  hiddenAuctionOwnBid = null,
   showStartSequence = false,
   onStartSequenceShown,
 }: Props) {
@@ -114,6 +117,13 @@ export function GameLayoutMultiplayer({
         sendAction({ type: action.type });
         return;
       }
+      // Every eligible player may place a private sealed bid, independent of
+      // whose normal game turn is active. The server still validates identity,
+      // deadline, eligibility, and available cash.
+      if (action.type === "SUBMIT_HIDDEN_BID") {
+        sendAction({ type: "SUBMIT_HIDDEN_BID", amount: action.amount });
+        return;
+      }
       // Block all other turn-gated actions when it isn't this player's turn
       if (!isMyTurn) return;
       if (action.type === "ROLL_DICE") {
@@ -131,6 +141,10 @@ export function GameLayoutMultiplayer({
 
   const currentActor = gameState.players.find((p) => p.id === actorId);
   const actionAttention = getMobileTabAttention(gameState, myPlayerId);
+  const ownHiddenBid =
+    hiddenAuctionOwnBid && hiddenAuctionOwnBid.auctionId === gameState.hiddenAuction?.id
+      ? hiddenAuctionOwnBid.amount
+      : null;
 
   return (
     <main className="min-h-screen px-2 py-3 sm:px-4 sm:py-5 xl:pb-5 xl:bg-[radial-gradient(circle_at_top_left,rgba(198,161,91,.10),transparent_35rem)]">
@@ -165,7 +179,7 @@ export function GameLayoutMultiplayer({
           onLeave={onLeave}
           onForfeit={onForfeit}
         />
-        {!isMyTurn ? (
+        {!isMyTurn && gameState.phase !== "hiddenAuction" ? (
           <p className="mt-1 px-1 text-xs font-semibold text-slate-300">
             Waiting for {currentActor?.name ?? "another player"}…
           </p>
@@ -253,6 +267,16 @@ export function GameLayoutMultiplayer({
           </div>
         </aside>
       </div>
+
+      {gameState.phase === "hiddenAuction" ? (
+        <HiddenAuctionPanel
+          state={gameState}
+          dispatch={dispatch}
+          myPlayerId={myPlayerId}
+          ownBid={ownHiddenBid}
+          serverAuthoritative
+        />
+      ) : null}
 
       <PropertyCardModal
         space={selectedSpace}

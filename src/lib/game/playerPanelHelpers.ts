@@ -186,6 +186,7 @@ export function isPlayerInActiveTrade(state: GameState, playerId: string): boole
 }
 
 export function isPlayerInActiveAuction(state: GameState, playerId: string): boolean {
+  if (state.hiddenAuction?.status === "bidding") return state.hiddenAuction.eligiblePlayerIds.includes(playerId);
   if (!state.auction) return false;
   return state.auction.activePlayerIds.includes(playerId) && !state.auction.passedPlayerIds.includes(playerId);
 }

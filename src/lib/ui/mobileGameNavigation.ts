@@ -52,6 +52,7 @@ export function getMobilePhaseLabel(state: GameState): string {
     case "awaitingJailDecision": return "Jail decision";
     case "bankruptcyPending": return "Payment required";
     case "auction": return "Auction";
+    case "hiddenAuction": return "Hidden auction";
     case "gameOver": return "Game over";
     default: return "In progress";
   }

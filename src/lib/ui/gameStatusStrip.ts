@@ -18,6 +18,8 @@ export function getGameStatusPhaseLabel(state: GameState): GameStatusPhaseLabel 
       return "Payment Required";
     case "auction":
       return "Auction";
+    case "hiddenAuction":
+      return "Auction";
     case "awaitingPurchaseDecision":
     case "awaitingJailDecision":
       return "Action";

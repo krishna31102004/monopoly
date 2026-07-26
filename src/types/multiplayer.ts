@@ -74,6 +74,12 @@ export type GameStatePayload = {
   gameState: GameState;
 };
 
+/** Delivered only to the owning socket while a sealed auction is open. */
+export type HiddenAuctionOwnBidPayload = {
+  auctionId: string;
+  amount: number | null;
+};
+
 export type GameErrorPayload = {
   message: string;
 };
@@ -97,6 +103,7 @@ export type GameActionIntent =
   | { type: "DECLINE_PROPERTY" }
   | { type: "PLACE_BID"; amount: number }
   | { type: "PASS_AUCTION" }
+  | { type: "SUBMIT_HIDDEN_BID"; amount: number }
   | { type: "END_TURN" }
   | { type: "PAY_JAIL_FEE" }
   | { type: "USE_JAIL_CARD" }

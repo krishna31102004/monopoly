@@ -6,6 +6,7 @@ import { checkBankruptcy } from "@/lib/game/bankruptcy";
 import { getGoAward, getGoAwardLogMessage } from "@/lib/game/goSalary";
 import { getBoardSpaceByIndex } from "@/data/board";
 import { applyAuctionGameIntercept } from "@/lib/game/auctionHelpers";
+import { applyHiddenAuctionIntercept } from "@/lib/game/hiddenAuction";
 import type { DrawnCard, GameState } from "@/types/game";
 import type { Player } from "@/types/player";
 
@@ -51,6 +52,12 @@ function applyCardLandingResolution(
     spaceIndex,
   );
   if (intercepted) return intercepted;
+  const hiddenIntercepted = applyHiddenAuctionIntercept(
+    { ...baseWithPot, players: resolution.players, gameLog: resolution.gameLog, doublesCount: resolution.doublesCount },
+    resolution.phase,
+    spaceIndex,
+  );
+  if (hiddenIntercepted) return hiddenIntercepted;
   return {
     ...baseWithPot,
     players: resolution.players,

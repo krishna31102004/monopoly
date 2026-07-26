@@ -1,5 +1,6 @@
-import { createInitialGameState } from "@/lib/game/createInitialGameState";
+import { addLogEntry, createInitialGameState } from "@/lib/game/createInitialGameState";
 import { gameReducer } from "@/lib/game/gameReducer";
+import { completeHiddenAuctionReveal, settleHiddenAuction } from "@/lib/game/hiddenAuction";
 import { validateTrade } from "@/lib/game/trade";
 import { generateRoomCode } from "@/lib/multiplayer/roomCode";
 import {
@@ -47,6 +48,8 @@ type InternalRoom = {
   lastActivityAt: number;
   maxPlayers: number;
   tradeDraft: TradeDraftState | null;
+  /** Server-private sealed bids. Never serialized into GameState or RoomPublicView. */
+  hiddenAuctionBids: { auctionId: string; bids: Record<string, number> } | null;
 };
 
 export type CreateRoomInput = {
@@ -86,6 +89,17 @@ export class RoomManager {
 
   private touch(room: InternalRoom): void {
     room.lastActivityAt = Date.now();
+  }
+
+  private syncHiddenAuctionBook(room: InternalRoom): void {
+    const auction = room.gameState?.hiddenAuction;
+    if (!auction || auction.status !== "bidding") {
+      room.hiddenAuctionBids = null;
+      return;
+    }
+    if (room.hiddenAuctionBids?.auctionId !== auction.id) {
+      room.hiddenAuctionBids = { auctionId: auction.id, bids: {} };
+    }
   }
 
   private toPublicView(room: InternalRoom): RoomPublicView {
@@ -146,6 +160,7 @@ export class RoomManager {
       lastActivityAt: now,
       maxPlayers: MAX_PLAYERS,
       tradeDraft: null,
+      hiddenAuctionBids: null,
     };
 
     this.rooms.set(roomCode, room);
@@ -397,6 +412,9 @@ export class RoomManager {
     if (!room.gameState) return { ok: false, error: "No game state found." };
 
     const gs = room.gameState;
+    if (intent.type === "SUBMIT_HIDDEN_BID") {
+      return this.submitHiddenBid(roomCode, playerId, intent.amount);
+    }
     const currentPlayer = gs.players[gs.currentPlayerIndex];
 
     // During auction, the current bidder acts; during bankruptcy, the debtor acts;
@@ -483,7 +501,12 @@ export class RoomManager {
       return { ok: false, error: "Internal error: negative cash detected. Please report this bug." };
     }
 
-    room.gameState = newState;
+    // Local pass-and-play stores bids in this optional field. A multiplayer
+    // room must never retain or broadcast even an otherwise-empty bid map.
+    room.gameState = newState.hiddenAuctionLocalBids
+      ? { ...newState, hiddenAuctionLocalBids: undefined }
+      : newState;
+    this.syncHiddenAuctionBook(room);
     this.touch(room);
 
     // Drop a stale draft if the turn/phase moved on without it being submitted.
@@ -493,7 +516,78 @@ export class RoomManager {
       room.tradeDraft = null;
     }
 
-    return { ok: true, value: newState };
+    return { ok: true, value: room.gameState };
+  }
+
+  /** Validates and stores only the submitting player's latest sealed bid. */
+  submitHiddenBid(roomCode: string, playerId: string, amount: number, now = Date.now()): RoomResult<GameState> {
+    const room = this.rooms.get(roomCode);
+    if (!room?.gameState) return { ok: false, error: "No game state found." };
+    const auction = room.gameState.hiddenAuction;
+    if (room.gameState.phase !== "hiddenAuction" || !auction || auction.status !== "bidding") {
+      return { ok: false, error: "No hidden auction is accepting bids." };
+    }
+    if (now >= auction.bidDeadlineAt) return { ok: false, error: "Hidden auction bidding has closed." };
+    const bidder = room.gameState.players.find((player) => player.id === playerId);
+    if (!bidder || bidder.isBankrupt || !auction.eligiblePlayerIds.includes(playerId)) {
+      return { ok: false, error: "You are not eligible to bid in this auction." };
+    }
+    if (!Number.isInteger(amount) || amount < 0 || amount > bidder.cash) {
+      return { ok: false, error: "Bid must be a whole amount within your available cash." };
+    }
+    this.syncHiddenAuctionBook(room);
+    if (!room.hiddenAuctionBids || room.hiddenAuctionBids.auctionId !== auction.id) {
+      return { ok: false, error: "Hidden auction bid book is unavailable." };
+    }
+    room.hiddenAuctionBids.bids[playerId] = amount;
+    room.gameState = {
+      ...room.gameState,
+      hiddenAuctionLocalBids: undefined,
+      gameLog: addLogEntry(room.gameState.gameLog, `${bidder.name} submitted a hidden bid.`),
+    };
+    this.touch(room);
+    return { ok: true, value: room.gameState };
+  }
+
+  /** Server-only close path; private bids are consumed once and never broadcast. */
+  closeHiddenAuction(roomCode: string, deadlineAt: number, tieBreaker: number, now = Date.now()): RoomResult<GameState> {
+    const room = this.rooms.get(roomCode);
+    if (!room?.gameState) return { ok: false, error: "No game state found." };
+    const auction = room.gameState.hiddenAuction;
+    if (!auction || auction.status !== "bidding" || auction.bidDeadlineAt !== deadlineAt) {
+      return { ok: false, error: "Hidden auction is no longer active." };
+    }
+    if (now < deadlineAt) return { ok: false, error: "Hidden auction deadline has not elapsed." };
+    this.syncHiddenAuctionBook(room);
+    const bids = room.hiddenAuctionBids?.auctionId === auction.id ? room.hiddenAuctionBids.bids : {};
+    room.gameState = settleHiddenAuction(room.gameState, bids, tieBreaker, now);
+    this.syncHiddenAuctionBook(room);
+    this.touch(room);
+    return { ok: true, value: room.gameState };
+  }
+
+  /** Server-only end of the public 3-2-1 presentation window. */
+  completeHiddenAuctionReveal(roomCode: string, revealDeadlineAt: number, now = Date.now()): RoomResult<GameState> {
+    const room = this.rooms.get(roomCode);
+    if (!room?.gameState) return { ok: false, error: "No game state found." };
+    const auction = room.gameState.hiddenAuction;
+    if (!auction || auction.status !== "reveal" || auction.revealDeadlineAt !== revealDeadlineAt || now < revealDeadlineAt) {
+      return { ok: false, error: "Hidden auction reveal is not ready to complete." };
+    }
+    const completedState = completeHiddenAuctionReveal(room.gameState);
+    room.gameState = completedState.hiddenAuctionLocalBids
+      ? { ...completedState, hiddenAuctionLocalBids: undefined }
+      : completedState;
+    this.syncHiddenAuctionBook(room);
+    this.touch(room);
+    return { ok: true, value: room.gameState };
+  }
+
+  getHiddenAuctionOwnBid(roomCode: string, playerId: string): { auctionId: string; amount: number | null } | null {
+    const room = this.rooms.get(roomCode);
+    const auction = room?.gameState?.hiddenAuction;
+    if (!room || !auction || auction.status !== "bidding" || room.hiddenAuctionBids?.auctionId !== auction.id) return null;
+    return { auctionId: auction.id, amount: room.hiddenAuctionBids.bids[playerId] ?? null };
   }
 
   // ── Live trade draft (room-level, ephemeral) ──────────────────────────────
@@ -638,6 +732,11 @@ export class RoomManager {
       }
     }
     return null;
+  }
+
+  /** Returns the current socket for a player without exposing any room internals. */
+  getSocketIdByPlayerId(roomCode: string, playerId: string): string | null {
+    return this.rooms.get(roomCode)?.socketIds.get(playerId) ?? null;
   }
 
   // ── Cleanup ────────────────────────────────────────────────────────────────

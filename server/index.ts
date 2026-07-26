@@ -59,12 +59,35 @@ const rooms = new RoomManager();
 
 // ── Auction turn timers (server-authoritative) ───────────────────────────────
 const auctionTimers = new Map<string, NodeJS.Timeout>();
+const hiddenAuctionTimers = new Map<string, NodeJS.Timeout>();
 
 function clearAuctionTimer(roomCode: string): void {
   const existing = auctionTimers.get(roomCode);
   if (existing) {
     clearTimeout(existing);
     auctionTimers.delete(roomCode);
+  }
+}
+
+function clearHiddenAuctionTimer(roomCode: string): void {
+  const existing = hiddenAuctionTimers.get(roomCode);
+  if (existing) {
+    clearTimeout(existing);
+    hiddenAuctionTimers.delete(roomCode);
+  }
+}
+
+/** Sends the public state, then privately restores each bidder's own sealed bid. */
+function emitGameState(roomCode: string, gameState: GameState): void {
+  io.to(roomCode).emit("game:state", { gameState });
+  const auction = gameState.hiddenAuction;
+  if (gameState.phase !== "hiddenAuction" || !auction || auction.status !== "bidding") return;
+
+  for (const playerId of auction.eligiblePlayerIds) {
+    const socketId = rooms.getSocketIdByPlayerId(roomCode, playerId);
+    if (!socketId) continue;
+    const ownBid = rooms.getHiddenAuctionOwnBid(roomCode, playerId);
+    io.to(socketId).emit("hiddenAuction:ownBid", ownBid ?? { auctionId: auction.id, amount: null });
   }
 }
 
@@ -98,8 +121,9 @@ function scheduleTurnTimer(roomCode: string, gameState: GameState): void {
       deadlineAt,
     }, null);
     if (result.ok) {
-      io.to(roomCode).emit("game:state", { gameState: result.value });
+      emitGameState(roomCode, result.value);
       scheduleAuctionTimer(roomCode, result.value);
+      scheduleHiddenAuctionTimer(roomCode, result.value);
       scheduleTurnTimer(roomCode, result.value);
       console.log(`[turn] timer expired for ${currentPlayer.id} in ${roomCode}`);
     }
@@ -124,19 +148,57 @@ function scheduleAuctionTimer(roomCode: string, gameState: GameState): void {
 
     const result = rooms.applyGameAction(roomCode, bidderId, { type: "PASS_AUCTION" }, null);
     if (result.ok) {
-      io.to(roomCode).emit("game:state", { gameState: result.value });
+      emitGameState(roomCode, result.value);
       console.log(`[auction] auto-passed ${bidderId} in ${roomCode} (timeout)`);
       scheduleAuctionTimer(roomCode, result.value);
+      scheduleHiddenAuctionTimer(roomCode, result.value);
     }
   }, delay);
 
   auctionTimers.set(roomCode, timer);
 }
 
+/** The server is the sole owner of sealed-bid deadlines, settlement, and tie randomness. */
+function scheduleHiddenAuctionTimer(roomCode: string, gameState: GameState): void {
+  clearHiddenAuctionTimer(roomCode);
+  if (gameState.phase !== "hiddenAuction" || !gameState.hiddenAuction) return;
+
+  const auction = gameState.hiddenAuction;
+  const deadlineAt = auction.status === "bidding" ? auction.bidDeadlineAt : auction.revealDeadlineAt;
+  if (!deadlineAt) return;
+  const expectedAuctionId = auction.id;
+  const expectedStatus = auction.status;
+  const delay = Math.max(0, deadlineAt - Date.now());
+
+  const timer = setTimeout(() => {
+    const latest = rooms.getGameState(roomCode);
+    const latestAuction = latest?.hiddenAuction;
+    if (
+      !latest ||
+      latest.phase !== "hiddenAuction" ||
+      !latestAuction ||
+      latestAuction.id !== expectedAuctionId ||
+      latestAuction.status !== expectedStatus
+    ) return;
+
+    const result = expectedStatus === "bidding"
+      ? rooms.closeHiddenAuction(roomCode, deadlineAt, Math.random())
+      : rooms.completeHiddenAuctionReveal(roomCode, deadlineAt);
+    if (!result.ok) return;
+
+    emitGameState(roomCode, result.value);
+    scheduleAuctionTimer(roomCode, result.value);
+    scheduleHiddenAuctionTimer(roomCode, result.value);
+    scheduleTurnTimer(roomCode, result.value);
+  }, delay);
+
+  hiddenAuctionTimers.set(roomCode, timer);
+}
+
 // ── Inactivity cleanup every 5 minutes ───────────────────────────────────────
 setInterval(() => {
   const removedCodes = rooms.cleanupInactive();
-  for (const code of removedCodes) { clearAuctionTimer(code); clearTurnTimer(code); }
+  for (const code of removedCodes) { clearAuctionTimer(code); clearHiddenAuctionTimer(code); clearTurnTimer(code); }
   if (removedCodes.length > 0) console.log(`[cleanup] Removed ${removedCodes.length} inactive room(s).`);
 }, 5 * 60 * 1000);
 
@@ -205,6 +267,8 @@ io.on("connection", (socket) => {
       const gameState = rooms.getGameState(room.roomCode);
       if (gameState) {
         socket.emit("game:state", { gameState });
+        const ownBid = rooms.getHiddenAuctionOwnBid(room.roomCode, playerId);
+        if (ownBid) socket.emit("hiddenAuction:ownBid", ownBid);
       }
       const draft = rooms.getTradeDraft(room.roomCode);
       if (draft) {
@@ -300,8 +364,11 @@ io.on("connection", (socket) => {
       }
 
       io.to(roomCode).emit("room:update", { room: result.value.room });
-      io.to(roomCode).emit("game:state", { gameState: result.value.gameState });
+      // The shared helper emits the public game:state and, if relevant, each
+      // connected bidder's own sealed value on a private socket event.
+      emitGameState(roomCode, result.value.gameState);
       scheduleAuctionTimer(roomCode, result.value.gameState);
+      scheduleHiddenAuctionTimer(roomCode, result.value.gameState);
       scheduleTurnTimer(roomCode, result.value.gameState);
       console.log(`[room] roll-off game begun in ${roomCode}`);
     } catch (err) {
@@ -325,6 +392,14 @@ io.on("connection", (socket) => {
         return;
       }
 
+      // The socket identity is authoritative. In particular, sealed bids may
+      // never be submitted for another player by forging the payload playerId.
+      const socketPlayerId = rooms.getPlayerIdBySocketId(socket.id);
+      if (!socketPlayerId || socketPlayerId !== playerId) {
+        socket.emit("game:error", { message: "You can only act as your own player." });
+        return;
+      }
+
       // Roll dice server-side for dice actions
       const needsDice = action.type === "ROLL_DICE" || action.type === "ROLL_IN_JAIL";
       const serverDice = needsDice ? rollDice() : null;
@@ -336,8 +411,9 @@ io.on("connection", (socket) => {
       }
 
       // Broadcast updated state to all players in the room
-      io.to(roomCode).emit("game:state", { gameState: result.value });
+      emitGameState(roomCode, result.value);
       scheduleAuctionTimer(roomCode, result.value);
+      scheduleHiddenAuctionTimer(roomCode, result.value);
       scheduleTurnTimer(roomCode, result.value);
       console.log(`[game] ${action.type} by ${playerId} in ${roomCode}`);
     } catch (err) {
@@ -360,8 +436,9 @@ io.on("connection", (socket) => {
         socket.emit("game:error", { message: result.error });
         return;
       }
-      io.to(roomCode).emit("game:state", { gameState: result.value });
+      emitGameState(roomCode, result.value);
       scheduleAuctionTimer(roomCode, result.value);
+      scheduleHiddenAuctionTimer(roomCode, result.value);
       scheduleTurnTimer(roomCode, result.value);
       // Remove the player from the room after forfeit
       rooms.playerLeft(roomCode, playerId);
@@ -455,7 +532,7 @@ io.on("connection", (socket) => {
         return;
       }
       io.to(roomCode).emit("trade:draftState", { draft: null });
-      io.to(roomCode).emit("game:state", { gameState: result.value });
+      emitGameState(roomCode, result.value);
       console.log(`[trade] draft submitted by ${playerId} in ${roomCode}`);
     } catch (err) {
       console.error("[trade:draftSubmit] error:", err);
@@ -497,7 +574,11 @@ io.on("connection", (socket) => {
           displayName: payload.displayName,
         });
         const gameState = rooms.getGameState(room.roomCode);
-        if (gameState) socket.emit("game:state", { gameState });
+        if (gameState) {
+          socket.emit("game:state", { gameState });
+          const ownBid = rooms.getHiddenAuctionOwnBid(room.roomCode, payload.playerId);
+          if (ownBid) socket.emit("hiddenAuction:ownBid", ownBid);
+        }
         console.log(`[room] ${payload.displayName} reconnected to ${room.roomCode}`);
       } catch (err) {
         console.error("[room:reconnect] error:", err);
@@ -516,7 +597,14 @@ io.on("connection", (socket) => {
     const room = rooms.getRoom(roomCode);
     if (room) socket.emit("room:update", { room });
     const gameState = rooms.getGameState(roomCode);
-    if (gameState) socket.emit("game:state", { gameState });
+    if (gameState) {
+      socket.emit("game:state", { gameState });
+      const playerId = rooms.getPlayerIdBySocketId(socket.id);
+      if (playerId) {
+        const ownBid = rooms.getHiddenAuctionOwnBid(roomCode, playerId);
+        if (ownBid) socket.emit("hiddenAuction:ownBid", ownBid);
+      }
+    }
     const draft = rooms.getTradeDraft(roomCode);
     if (draft) socket.emit("trade:draftState", { draft });
   });
@@ -531,6 +619,11 @@ io.on("connection", (socket) => {
     const gameState = rooms.getGameState(roomCode);
     if (gameState) {
       socket.emit("game:state", { gameState });
+      const playerId = rooms.getPlayerIdBySocketId(socket.id);
+      if (playerId) {
+        const ownBid = rooms.getHiddenAuctionOwnBid(roomCode, playerId);
+        if (ownBid) socket.emit("hiddenAuction:ownBid", ownBid);
+      }
     } else {
       socket.emit("game:error", { message: "No game in progress." });
     }
