@@ -31,7 +31,7 @@ describe("Phase 3 desktop shell layout safeguards", () => {
 
   it("preserves local save controls and all conditional gameplay panels", () => {
     expect(localLayout).toContain("<GameSaveControls");
-    expect(localLayout).toContain('state.phase === "auction" && showLandingPanel');
+    expect(localLayout).toContain('state.phase === "auction"');
     expect(localLayout).toContain('state.phase === "awaitingJailDecision"');
     expect(localLayout).toContain("state.drawnCard && showCardPanel");
     expect(localLayout).toContain("<LandingActionPanel");
@@ -53,30 +53,31 @@ describe("Phase 3 desktop shell layout safeguards", () => {
 
 describe("responsive command-dock presentation safeguards", () => {
   it("keeps dice status readable and preserves the original dispatch action types", () => {
-    expect(controls).toContain("text-white");
     expect(controls).toContain("getTurnStatus");
-    expect(turnStatusPresentation).toContain("text-amber-800 xl:text-amber-200");
-    expect(turnStatusPresentation).toContain("text-emerald-800 xl:text-emerald-200");
-    expect(turnStatusPresentation).toContain("text-sky-800 xl:text-sky-200");
-    expect(controls).toContain('presentationStatus ? "text-slate-700 xl:text-slate-300" : status.color');
-    expect(controls).toContain("text-amber-800 hover:bg-amber-500/20 xl:text-amber-200");
+    expect(turnStatusPresentation).toContain("text-amber-800");
+    expect(turnStatusPresentation).toContain("text-emerald-800");
+    expect(turnStatusPresentation).toContain("text-sky-800");
+    expect(controls).toContain('presentationStatus ? "text-slate-700" : status.color');
+    expect(controls).toContain("text-amber-800 hover:bg-amber-500/20");
     expect(controls).toContain('dispatch({ type: "ROLL_DICE", dice: rollDice() })');
     expect(controls).toContain('dispatch({ type: "END_TURN" })');
     expect(controls).toContain('state.phase === "readyToRoll" && isMyTurn && !isAnimating');
     expect(controls).toContain('state.phase === "turnComplete" && state.currentPlayerHasRolled');
   });
 
-  it("keeps dark desktop command surfaces while restoring paper information cards below xl", () => {
+  it("keeps the complete command column on light paper surfaces", () => {
     expect(controls).toContain("bg-[var(--wc-paper)]");
-    expect(controls).toContain("xl:bg-[var(--wc-navy)]");
+    expect(controls).not.toContain("xl:bg-[var(--wc-navy)]");
     expect(landingPanel).toContain("bg-[var(--wc-paper)]");
-    expect(landingPanel).toContain("bg-[var(--wc-navy)]");
+    expect(landingPanel).not.toContain("xl:bg-[var(--wc-navy)]");
     expect(landingPanel).toContain("wc-button-primary");
     expect(logDrawer).toContain("bg-[var(--wc-paper)]");
-    expect(logDrawer).toContain("bg-[var(--wc-navy-raised)]");
+    expect(logDrawer).not.toContain("xl:bg-[var(--wc-navy-raised)]");
     expect(logDrawer).toContain('<UiIcon name="log"');
     expect(playerPanel).toContain("bg-[var(--wc-paper)]");
-    expect(playerPanel).toContain("bg-[var(--wc-navy-raised)]");
+    expect(playerPanel).not.toContain("xl:bg-[var(--wc-navy-raised)]");
+    expect(playerPanel).toContain("linear-gradient(155deg");
+    expect(playerPanel).toContain("borderLeftColor: player.color");
     expect(playerPanel).not.toContain("getWealthBarPercent");
     expect(playerPanel).toContain("getDesignReadableTextColor");
     expect(playerPanel).toContain("min-h-11");

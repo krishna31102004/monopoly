@@ -36,13 +36,13 @@ type PlayerPanelProps = {
 };
 
 const STATUS_CHIP_STYLES: Record<PlayerStatusChip, string> = {
-  TURN: "border border-[var(--wc-gold-border)] bg-[var(--wc-gold-soft)] text-amber-800 xl:text-amber-100",
-  ONLINE: "border border-emerald-500/30 bg-emerald-500/10 text-emerald-800 xl:text-emerald-200",
-  "IN JAIL": "border border-rose-500/30 bg-rose-500/10 text-rose-800 xl:text-rose-200",
-  DEBT: "border border-amber-500/30 bg-amber-500/10 text-amber-800 xl:text-amber-100",
-  BANKRUPT: "border border-rose-500/30 bg-rose-500/10 text-rose-800 xl:text-rose-200",
-  TRADING: "border border-violet-400/30 bg-violet-400/10 text-violet-800 xl:text-violet-200",
-  AUCTION: "border border-sky-400/30 bg-sky-400/10 text-sky-800 xl:text-sky-200",
+  TURN: "border border-[var(--wc-gold-border)] bg-[var(--wc-gold-soft)] text-amber-800",
+  ONLINE: "border border-emerald-500/30 bg-emerald-500/10 text-emerald-800",
+  "IN JAIL": "border border-rose-500/30 bg-rose-500/10 text-rose-800",
+  DEBT: "border border-amber-500/30 bg-amber-500/10 text-amber-800",
+  BANKRUPT: "border border-rose-500/30 bg-rose-500/10 text-rose-800",
+  TRADING: "border border-violet-400/30 bg-violet-400/10 text-violet-800",
+  AUCTION: "border border-sky-400/30 bg-sky-800/10 text-sky-800",
 };
 
 function StatusChip({ chip }: { chip: PlayerStatusChip }) {
@@ -122,15 +122,27 @@ export function PlayerPanel({
   };
   return (
     <article
-      className={`overflow-hidden rounded-[var(--wc-radius-medium)] border border-[var(--wc-paper-border)] bg-[var(--wc-paper)] transition-colors xl:border-[var(--wc-border)] xl:bg-[var(--wc-navy-raised)] ${
+      className={`overflow-hidden rounded-[var(--wc-radius-medium)] border border-[var(--wc-paper-border)] bg-[var(--wc-paper)] transition-colors ${
         isCurrentPlayer
-          ? "border-[var(--wc-gold-border)] shadow-[0_0_0_1px_var(--wc-gold-soft),var(--wc-shadow-card)]"
-          : "xl:border-[var(--wc-border)] shadow-[var(--wc-shadow-card)]"
+          ? "shadow-[var(--wc-shadow-card)]"
+          : "shadow-[var(--wc-shadow-card)]"
       } ${player.isBankrupt ? "opacity-50" : ""}`}
-      style={{ borderLeftWidth: 3, borderLeftColor: player.color } as CSSProperties}
+      style={{
+        borderLeftWidth: 3,
+        borderLeftColor: player.color,
+        ...(isCurrentPlayer
+          ? {
+              background: `linear-gradient(155deg, ${player.color}14, var(--wc-paper) 55%)`,
+              boxShadow: `0 0 0 1px ${player.color}55, var(--wc-shadow-card)`,
+            }
+          : {}),
+      } as CSSProperties}
     >
       {isCurrentPlayer ? (
-        <div className="border-b border-[var(--wc-gold-border)] bg-[var(--wc-gold-soft)] px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-amber-800 xl:text-amber-100">
+        <div
+          className="border-b border-black/10 px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em]"
+          style={{ backgroundColor: player.color, color: getDesignReadableTextColor(player.color) }}
+        >
           Now Playing
         </div>
       ) : null}
@@ -146,42 +158,42 @@ export function PlayerPanel({
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1">
-            <h3 className="truncate text-[15px] font-black text-[var(--wc-text-on-light)] xl:text-white">{player.name}</h3>
+            <h3 className="truncate text-[15px] font-black text-[var(--wc-text-on-light)]">{player.name}</h3>
             {statusChips.map((chip) => (
               <StatusChip key={chip} chip={chip} />
             ))}
           </div>
-          <p className="flex min-w-0 items-center gap-1 truncate text-xs font-semibold text-slate-600 xl:text-slate-400">
+          <p className="flex min-w-0 items-center gap-1 truncate text-xs font-semibold text-slate-600">
             <UiIcon name="home" size={13} aria-hidden="true" />
             <span className="truncate">{position.name}</span>
             <span className="shrink-0 text-slate-500">· {ownedAssetCount} assets</span>
           </p>
         </div>
         <div className="shrink-0 text-right">
-          <p className="wc-numeric text-lg font-black tracking-tight text-[var(--wc-text-on-light)] xl:text-white">
+          <p className="wc-numeric text-lg font-black tracking-tight text-[var(--wc-text-on-light)]">
             ${player.cash.toLocaleString()}
           </p>
         </div>
       </div>
 
       {/* Compact jail status row */}
-      <div className="hidden border-t border-[var(--wc-border-subtle)] px-3 py-2 xl:block">
+      <div className="hidden border-t border-[var(--wc-paper-border)] px-3 py-2 xl:block">
         {jail.inJail ? (
           <div className="flex items-center justify-between gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5">
-            <span className="flex items-center gap-1 text-xs font-black uppercase tracking-wide text-rose-200">
+            <span className="flex items-center gap-1 text-xs font-black uppercase tracking-wide text-rose-800">
               <UiIcon name="jail" size={14} aria-hidden="true" />
               In Jail · Attempt {jail.attempt}/{jail.maxAttempts}
             </span>
-            <span className="shrink-0 text-[10px] font-bold text-rose-200">
+            <span className="shrink-0 text-[10px] font-bold text-rose-700">
               {jail.jailCardCount} jail card{jail.jailCardCount === 1 ? "" : "s"}
             </span>
           </div>
         ) : (
           <div className="flex items-center gap-1.5">
-            <span className="rounded-full bg-[var(--wc-navy-elevated)] px-2 py-0.5 text-[10px] font-bold text-slate-300">
+            <span className="rounded-full bg-[var(--wc-ivory)] px-2 py-0.5 text-[10px] font-bold text-slate-600">
               Free
             </span>
-            <span className="rounded-full bg-[var(--wc-navy-elevated)] px-2 py-0.5 text-[10px] font-bold text-slate-300">
+            <span className="rounded-full bg-[var(--wc-ivory)] px-2 py-0.5 text-[10px] font-bold text-slate-600">
               {jail.jailCardCount} jail card{jail.jailCardCount === 1 ? "" : "s"}
             </span>
           </div>
@@ -190,7 +202,7 @@ export function PlayerPanel({
 
       {/* Compact property chip summary (always visible) */}
       {ownedAssetCount > 0 ? (
-        <div className="hidden border-t border-[var(--wc-border-subtle)] px-3 py-2 xl:block">
+        <div className="hidden border-t border-[var(--wc-paper-border)] px-3 py-2 xl:block">
           <div className="flex flex-wrap gap-1">
             {cityGroups.map((group) =>
               group.chips.map((chip) => (
@@ -229,8 +241,8 @@ export function PlayerPanel({
           </div>
         </div>
       ) : (
-        <div className="hidden border-t border-[var(--wc-border-subtle)] px-3 py-2 xl:block">
-          <p className="text-xs font-semibold text-slate-400">No properties owned</p>
+        <div className="hidden border-t border-[var(--wc-paper-border)] px-3 py-2 xl:block">
+          <p className="text-xs font-semibold text-slate-500">No properties owned</p>
         </div>
       )}
 
@@ -244,22 +256,22 @@ export function PlayerPanel({
         }}
         aria-expanded={isBelowXl ? mobileSheetOpen : expanded}
         aria-controls={isBelowXl ? `player-sheet-${player.id}` : `player-details-${player.id}`}
-        className="flex min-h-11 w-full items-center justify-center gap-1 border-t border-[var(--wc-paper-border)] py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-600 transition-colors hover:bg-[var(--wc-ivory)] hover:text-[var(--wc-text-on-light)] xl:border-[var(--wc-border-subtle)] xl:text-slate-400 xl:hover:bg-[var(--wc-navy-hover)] xl:hover:text-white"
+        className="flex min-h-11 w-full items-center justify-center gap-1 border-t border-[var(--wc-paper-border)] py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-600 transition-colors hover:bg-[var(--wc-ivory)] hover:text-[var(--wc-text-on-light)]"
       >
         Details {expanded ? "▴" : "▾"}
       </button>
 
       {/* Expanded detail section */}
       {expanded ? (
-        <div id={`player-details-${player.id}`} className="hidden space-y-2 border-t border-[var(--wc-border-subtle)] bg-[var(--wc-navy-elevated)]/60 px-3 py-2.5 xl:block">
-          <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Portfolio detail</p>
+        <div id={`player-details-${player.id}`} className="hidden space-y-2 border-t border-[var(--wc-paper-border)] bg-[var(--wc-ivory)] px-3 py-2.5 xl:block">
+          <p className="text-[10px] font-black uppercase tracking-wide text-slate-600">Portfolio detail</p>
           <div className="grid grid-cols-3 gap-1.5">
             <MiniStat label="Houses" value={String(houseCount)} />
             <MiniStat label="Hotels" value={String(hotelCount)} />
             <MiniStat label="Mortgaged" value={String(mortgagedCount)} warn={mortgagedCount > 0} />
           </div>
           {cityGroups.filter((g) => g.isFullSet).length > 0 ? (
-            <p className="text-[10px] font-bold text-emerald-200">
+            <p className="text-[10px] font-bold text-emerald-700">
               Full set: {cityGroups.filter((g) => g.isFullSet).map((g) => g.colorGroup).join(", ")}
             </p>
           ) : null}
@@ -362,9 +374,9 @@ function AssetRow({ name, accent, mortgaged, detail, icon }: { name: string; acc
 
 function MiniStat({ label, value, warn = false }: { label: string; value: string; warn?: boolean }) {
   return (
-    <div className="rounded-lg border border-[var(--wc-paper-border)] bg-[var(--wc-ivory)] px-2 py-1.5 xl:border-[var(--wc-border-subtle)] xl:bg-[var(--wc-navy)]">
-      <p className="text-[9px] font-black uppercase tracking-wide text-slate-600 xl:text-slate-400">{label}</p>
-      <p className={`wc-numeric text-xs font-black ${warn ? "text-amber-800 xl:text-amber-200" : "text-[var(--wc-text-on-light)] xl:text-white"}`}>{value}</p>
+    <div className="rounded-lg border border-[var(--wc-paper-border)] bg-[var(--wc-paper)] px-2 py-1.5">
+      <p className="text-[9px] font-black uppercase tracking-wide text-slate-600">{label}</p>
+      <p className={`wc-numeric text-xs font-black ${warn ? "text-amber-800" : "text-[var(--wc-text-on-light)]"}`}>{value}</p>
     </div>
   );
 }

@@ -118,11 +118,11 @@ export function GameLayout() {
         </section>
 
         {/* Sidebar */}
-        <aside className="min-w-0 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto xl:rounded-[var(--wc-radius-large)] xl:border xl:border-[var(--wc-border)] xl:bg-[var(--wc-navy)] xl:p-3 xl:shadow-[var(--wc-shadow-panel)]">
+        <aside className="min-w-0 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto xl:pr-1">
+          {state.phase === "auction" ? (
+            <AuctionPanel state={state} dispatch={dispatch} />
+          ) : null}
           <div className={`${mobileTab === "actions" ? "grid" : "hidden xl:grid"} mb-3 gap-3`}>
-            {state.phase === "auction" && showLandingPanel ? (
-              <div className="order-3 xl:order-none"><AuctionPanel state={state} dispatch={dispatch} /></div>
-            ) : null}
             <div className="order-1 xl:order-none"><GameControls state={state} dispatch={dispatch} isAnimating={isAnimating} presentationStatus={presentationStatus} showLandingMessage={showLandingPanel} /></div>
             {state.phase === "awaitingJailDecision" ? (
               <div className="order-3 xl:order-none"><JailActionPanel state={state} dispatch={dispatch} /></div>
@@ -142,12 +142,12 @@ export function GameLayout() {
 
           <div className={`${mobileTab === "players" ? "block" : "hidden xl:block"} mb-3 flex items-end justify-between gap-3`}>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 xl:text-slate-400">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">
                 Players
               </p>
-              <h2 className="text-lg font-black text-[var(--wc-text-on-light)] xl:text-white">Player Panels</h2>
+              <h2 className="text-lg font-black text-[var(--wc-text-on-light)]">Player Panels</h2>
             </div>
-            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-800 xl:text-emerald-200">
+            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-800">
               Live
             </span>
           </div>

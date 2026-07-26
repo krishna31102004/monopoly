@@ -59,28 +59,28 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
   }
 
   return (
-    <section className="overflow-hidden rounded-[var(--wc-radius-medium)] border border-[var(--wc-paper-border)] bg-[var(--wc-paper)] text-[var(--wc-text-on-light)] shadow-[var(--wc-shadow-card)] xl:border-[var(--wc-border)] xl:bg-[var(--wc-navy)] xl:text-slate-100">
+    <section className="overflow-hidden rounded-[var(--wc-radius-medium)] border border-[var(--wc-paper-border)] bg-[var(--wc-paper)] text-[var(--wc-text-on-light)] shadow-[var(--wc-shadow-card)]">
       {/* Header strip */}
       <div
-        className="flex items-center gap-3 border-b border-[var(--wc-paper-border)] px-4 py-3 xl:border-[var(--wc-border-subtle)]"
+        className="flex items-center gap-3 border-b border-[var(--wc-paper-border)] px-4 py-3"
         style={{ borderLeftWidth: 4, borderLeftColor: currentPlayer.color }}
       >
         <TokenIcon token={currentPlayer.token} color={currentPlayer.color} size={36} label={currentPlayer.tokenLabel} badge />
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-600 xl:text-slate-400">
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-600">
             {isGameOver ? "Winner" : "Current Turn"}
           </p>
-          <h2 className="truncate text-lg font-black leading-tight text-[var(--wc-text-on-light)] xl:text-white">
+          <h2 className="truncate text-lg font-black leading-tight text-[var(--wc-text-on-light)]">
             {currentPlayer.name}
           </h2>
         </div>
-        <span className="wc-numeric shrink-0 text-sm font-black text-[var(--wc-text-on-light)] xl:text-white">
+        <span className="wc-numeric shrink-0 text-sm font-black text-[var(--wc-text-on-light)]">
           ${currentPlayer.cash.toLocaleString()}
         </span>
       </div>
 
       <div className="p-4">
-        <p className={`text-xs font-bold ${presentationStatus ? "text-slate-700 xl:text-slate-300" : status.color}`}>
+        <p className={`text-xs font-bold ${presentationStatus ? "text-slate-700" : status.color}`}>
           {presentationStatus ?? status.label}
         </p>
 
@@ -97,11 +97,11 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
               <DiceFace value={state.diceRoll.die1} size={44} />
               <DiceFace value={state.diceRoll.die2} size={44} />
               <div className="min-w-0">
-                <p className="wc-numeric text-xl font-black leading-none text-[var(--wc-text-on-light)] xl:text-white">
+                <p className="wc-numeric text-xl font-black leading-none text-[var(--wc-text-on-light)]">
                   = {state.diceRoll.total}
                 </p>
                 {state.diceRoll.isDouble ? (
-                  <p className="mt-0.5 text-[10px] font-black uppercase tracking-wide text-sky-700 xl:text-sky-200">
+                  <p className="mt-0.5 text-[10px] font-black uppercase tracking-wide text-sky-700">
                     Doubles!
                   </p>
                 ) : null}
@@ -117,17 +117,17 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
 
         {/* Landing message — gated on presentation reveal */}
         {state.landingMessage && showLandingMessage && state.phase !== "auction" && state.phase !== "awaitingJailDecision" ? (
-          <div className="mt-3 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-3 py-2 text-sm font-semibold leading-5 text-emerald-800 xl:text-emerald-100">
+          <div className="mt-3 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-3 py-2 text-sm font-semibold leading-5 text-emerald-800">
             {state.landingMessage}
           </div>
         ) : null}
 
         {/* Free Parking pot */}
         {state.rules?.freeParkingCash && (state.freeParkingPot ?? 0) > 0 ? (
-          <div className="mt-2 flex items-center gap-2 rounded-lg border border-[var(--wc-paper-border)] bg-[var(--wc-ivory)] px-3 py-1.5 text-xs font-semibold text-slate-700 xl:border-[var(--wc-border)] xl:bg-[var(--wc-navy-raised)] xl:text-slate-300">
+          <div className="mt-2 flex items-center gap-2 rounded-lg border border-[var(--wc-paper-border)] bg-[var(--wc-ivory)] px-3 py-1.5 text-xs font-semibold text-slate-700">
             <span>🅿️</span>
             <span>Free Parking pot:</span>
-            <span className="wc-numeric font-black text-[var(--wc-text-on-light)] xl:text-white">${(state.freeParkingPot ?? 0).toLocaleString()}</span>
+            <span className="wc-numeric font-black text-[var(--wc-text-on-light)]">${(state.freeParkingPot ?? 0).toLocaleString()}</span>
           </div>
         ) : null}
 
@@ -148,8 +148,8 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
               onClick={() => { setEndTurnReminder(false); dispatch({ type: "END_TURN" }); }}
               className={`w-full rounded-lg border px-4 py-2.5 text-sm font-bold transition-all duration-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30 ${
                 endTurnReminder
-                  ? "border-amber-400 bg-amber-500/10 text-amber-800 hover:bg-amber-500/20 xl:text-amber-200"
-                  : "border-[var(--wc-paper-border)] bg-[var(--wc-ivory)] text-slate-800 hover:bg-white xl:border-[var(--wc-border)] xl:bg-[var(--wc-navy-raised)] xl:text-slate-200 xl:hover:bg-[var(--wc-navy-hover)]"
+                  ? "border-amber-400 bg-amber-500/10 text-amber-800 hover:bg-amber-500/20"
+                  : "border-[var(--wc-paper-border)] bg-[var(--wc-ivory)] text-slate-800 hover:bg-white"
               }`}
             >
               End Turn{endTurnReminder ? " ↩" : ""}

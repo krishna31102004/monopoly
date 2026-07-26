@@ -39,7 +39,7 @@ describe("Phase 4 responsive layout safeguards", () => {
     expect(localLayout).toContain('mobileTab === "actions"');
     expect(localLayout).toContain('mobileTab === "players"');
     expect(localLayout).toContain('mobileTab === "log"');
-    expect(localLayout).toContain('state.phase === "auction" && showLandingPanel');
+    expect(localLayout).toContain('state.phase === "auction"');
     expect(localLayout).toContain('state.phase === "awaitingJailDecision"');
     expect(localLayout).toContain("<GameSaveControls");
     expect(multiplayerLayout).toContain("function getActorId");
@@ -51,15 +51,23 @@ describe("Phase 4 responsive layout safeguards", () => {
     for (const source of [localLayout, multiplayerLayout]) {
       expect(source).toContain('className="order-1 xl:order-none"><GameControls');
       expect(source).toContain('className="order-2 xl:order-none"><CardPanel');
-      expect(source).toContain('className="order-3 xl:order-none"><AuctionPanel');
       expect(source).toContain('className="order-3 xl:order-none"><JailActionPanel');
       expect(source).toContain('className="order-3 xl:order-none"><LandingActionPanel');
       expect(source).toContain('className="order-3 xl:order-none"><BankruptcyPanel');
       expect(source).toContain('className="order-4 xl:order-none"><TradePanel');
     }
     expect(localLayout).toContain('className="order-5 xl:order-none"><GameSaveControls');
-    expect(localLayout.indexOf("<AuctionPanel")).toBeLessThan(localLayout.indexOf("<GameControls"));
-    expect(multiplayerLayout.indexOf("<AuctionPanel")).toBeLessThan(multiplayerLayout.indexOf("<GameControls"));
+    expect(localLayout.indexOf("<AuctionPanel")).toBeLessThan(localLayout.indexOf("mb-3 gap-3"));
+    expect(multiplayerLayout.indexOf("<AuctionPanel")).toBeLessThan(multiplayerLayout.indexOf("mb-3 gap-3"));
+  });
+
+  it("keeps the single mandatory auction overlay outside tab-gated Actions content", () => {
+    for (const source of [localLayout, multiplayerLayout]) {
+      expect((source.match(/<AuctionPanel\b/g) ?? [])).toHaveLength(1);
+      expect(source).toContain('phase === "auction"');
+      expect(source.indexOf("<AuctionPanel")).toBeLessThan(source.indexOf("mb-3 gap-3"));
+    }
+    expect(multiplayerLayout).toContain("serverAuthoritative");
   });
 
   it("keeps the dock beneath xl, exposes labelled tabs, and hides during auction", () => {

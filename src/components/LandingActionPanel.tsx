@@ -37,38 +37,35 @@ export function LandingActionPanel({ state, dispatch, isMyTurn = true }: Landing
     : isRent
       ? "var(--wc-danger)"
       : "var(--wc-gold)";
-  const headerColor = isPurchaseDecision
-    ? "text-amber-700 xl:text-amber-200"
-    : isRent
+  const headerColor = isRent
       ? "text-rose-700"
       : "text-amber-700";
 
   return (
     <section
-      className={`overflow-hidden rounded-[var(--wc-radius-medium)] border border-[var(--wc-paper-border)] bg-[var(--wc-paper)] text-[var(--wc-text-on-light)] shadow-[var(--wc-shadow-card)] ${isPurchaseDecision ? "xl:border-[var(--wc-border)] xl:bg-[var(--wc-navy)] xl:text-slate-100" : ""}`}
+      className="overflow-hidden rounded-[var(--wc-radius-medium)] border border-[var(--wc-paper-border)] bg-[var(--wc-paper)] text-[var(--wc-text-on-light)] shadow-[var(--wc-shadow-card)]"
       style={{ borderLeftWidth: 4, borderLeftColor: accentColor }}
     >
-      <div className={`border-b border-[var(--wc-paper-border)] px-4 py-3 ${isPurchaseDecision ? "xl:border-[var(--wc-border-subtle)]" : ""}`}>
+      <div className="border-b border-[var(--wc-paper-border)] px-4 py-3">
         <p className={`text-[10px] font-black uppercase tracking-[0.18em] ${headerColor}`}>
           {isPurchaseDecision ? "Purchase Decision" : isRent ? "Rent Payment" : "Landing"}
         </p>
-        <h2 className={`mt-0.5 text-lg font-black text-[var(--wc-text-on-light)] ${isPurchaseDecision ? "xl:text-white" : ""}`}>{space.name}</h2>
+        <h2 className="mt-0.5 text-lg font-black text-[var(--wc-text-on-light)]">{space.name}</h2>
       </div>
 
       <div className="p-4">
-        <p className={`text-sm font-semibold leading-5 text-slate-700 ${isPurchaseDecision ? "xl:text-slate-300" : ""}`}>
+        <p className="text-sm font-semibold leading-5 text-slate-700">
           {state.landingAction.message}
         </p>
 
         {isOwnableSpace(space) && isPurchaseDecision ? (
           <dl className="mt-3 grid grid-cols-2 gap-2">
-            <Stat label="Type" value={getSpaceTypeLabel(space.kind)} darkAtDesktop />
-            <Stat label="List price" value={`$${space.price}`} darkAtDesktop />
-            <Stat label="Your cash" value={`$${currentPlayer.cash.toLocaleString()}`} darkAtDesktop />
+            <Stat label="Type" value={getSpaceTypeLabel(space.kind)} />
+            <Stat label="List price" value={`$${space.price}`} />
+            <Stat label="Your cash" value={`$${currentPlayer.cash.toLocaleString()}`} />
             <Stat
               label="Owner"
               value={owner?.name ?? (ownership?.ownerId ? "Owned" : "Unowned")}
-              darkAtDesktop
             />
           </dl>
         ) : null}
@@ -89,7 +86,7 @@ export function LandingActionPanel({ state, dispatch, isMyTurn = true }: Landing
         ) : null}
 
         {isPurchaseDecision && !canBuy ? (
-          <div className="mt-3 rounded-lg border border-amber-400/40 bg-amber-500/10 p-2.5 text-xs font-bold text-amber-800 xl:text-amber-100">
+          <div className="mt-3 rounded-lg border border-amber-400/40 bg-amber-500/10 p-2.5 text-xs font-bold text-amber-800">
             You do not have enough cash to buy this property. Decline to send it to auction.
           </div>
         ) : null}
@@ -124,19 +121,17 @@ function Stat({
   value,
   highlight = false,
   warn = false,
-  darkAtDesktop = false,
 }: {
   label: string;
   value: string;
   highlight?: boolean;
   warn?: boolean;
-  darkAtDesktop?: boolean;
 }) {
   return (
-    <div className={`rounded-lg border border-[var(--wc-paper-border)] bg-[var(--wc-ivory)] p-2 ${darkAtDesktop ? "xl:border-[var(--wc-border-subtle)] xl:bg-[var(--wc-navy-raised)]" : ""}`}>
-      <dt className={`text-[10px] font-black uppercase tracking-wide text-slate-600 ${darkAtDesktop ? "xl:text-slate-400" : ""}`}>{label}</dt>
+    <div className="rounded-lg border border-[var(--wc-paper-border)] bg-[var(--wc-ivory)] p-2">
+      <dt className="text-[10px] font-black uppercase tracking-wide text-slate-600">{label}</dt>
       <dd
-        className={`wc-numeric mt-0.5 font-black ${highlight || warn ? `text-rose-700 ${darkAtDesktop ? "xl:text-rose-200" : ""}` : `text-[var(--wc-text-on-light)] ${darkAtDesktop ? "xl:text-white" : ""}`}`}
+        className={`wc-numeric mt-0.5 font-black ${highlight || warn ? "text-rose-700" : "text-[var(--wc-text-on-light)]"}`}
       >
         {value}
       </dd>

@@ -195,11 +195,11 @@ export function GameLayoutMultiplayer({
         </section>
 
         {/* Sidebar */}
-        <aside className="min-w-0 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto xl:rounded-[var(--wc-radius-large)] xl:border xl:border-[var(--wc-border)] xl:bg-[var(--wc-navy)] xl:p-3 xl:shadow-[var(--wc-shadow-panel)]">
+        <aside className="min-w-0 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto xl:pr-1">
+          {gameState.phase === "auction" ? (
+            <AuctionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} serverAuthoritative />
+          ) : null}
           <div className={`${mobileTab === "actions" ? "grid" : "hidden xl:grid"} mb-3 gap-3`}>
-            {gameState.phase === "auction" && showLandingPanel ? (
-              <div className="order-3 xl:order-none"><AuctionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} serverAuthoritative /></div>
-            ) : null}
             <div className="order-1 xl:order-none"><GameControls state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} isAnimating={isAnimating} presentationStatus={presentationStatus} showLandingMessage={showLandingPanel} /></div>
             {gameState.phase === "awaitingJailDecision" ? (
               <div className="order-3 xl:order-none"><JailActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} /></div>
@@ -226,10 +226,10 @@ export function GameLayoutMultiplayer({
           </div>
 
           <div className={`${mobileTab === "players" ? "block" : "hidden xl:block"} mb-3`}>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 xl:text-slate-400">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">
               Players
             </p>
-            <h2 className="text-lg font-black text-[var(--wc-text-on-light)] xl:text-white">Player Panels</h2>
+            <h2 className="text-lg font-black text-[var(--wc-text-on-light)]">Player Panels</h2>
           </div>
 
           <div className={`${mobileTab === "players" ? "grid" : "hidden xl:grid"} gap-2.5 sm:grid-cols-2 xl:grid-cols-1`}>
