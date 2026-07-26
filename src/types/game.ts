@@ -1,7 +1,7 @@
 import type { CardDefinition } from "@/data/cards";
 import type { Player } from "@/types/player";
 
-export type GameMode = "normal" | "auction";
+export type GameMode = "normal" | "auction" | "hidden-auction";
 
 export type GameRules = {
   doubleRentOnFullSet: boolean;
@@ -31,6 +31,7 @@ export type GamePhase =
   | "awaitingJailDecision"
   | "awaitingPurchaseDecision"
   | "auction"
+  | "hiddenAuction"
   | "turnComplete"
   | "bankruptcyPending"
   | "gameOver";
@@ -50,6 +51,22 @@ export type AuctionState = {
   turnStartedAt: number;
   turnDeadlineAt: number;
   status: "active";
+};
+
+/** Public, non-secret state for a sealed Hidden Auction. Never contains bids. */
+export type HiddenAuctionState = {
+  id: string;
+  propertySpaceIndex: number;
+  eligiblePlayerIds: string[];
+  bidStartedAt: number;
+  bidDeadlineAt: number;
+  status: "bidding" | "reveal";
+  revealDeadlineAt: number | null;
+  result: {
+    winnerId: string | null;
+    winningBid: number;
+    tieResolved: boolean;
+  } | null;
 };
 
 export type DiceRoll = {
@@ -145,6 +162,10 @@ export type GameState = {
   landingMessage: string | null;
   landingAction: LandingAction | null;
   auction: AuctionState | null;
+  /** Public Hidden Auction metadata only. Bid amounts stay in local/server-private storage. */
+  hiddenAuction: HiddenAuctionState | null;
+  /** Local pass-and-play bid book. This field is never set in multiplayer room state. */
+  hiddenAuctionLocalBids?: Record<string, number>;
   drawnCard: DrawnCard | null;
   winnerId: string | null;
   chanceDeck: string[];
@@ -193,6 +214,20 @@ export type GameAction =
     }
   | {
       type: "PASS_AUCTION";
+    }
+  | {
+      type: "SUBMIT_HIDDEN_BID";
+      actorPlayerId: string;
+      amount: number;
+    }
+  | {
+      type: "CLOSE_HIDDEN_AUCTION";
+      deadlineAt: number;
+      tieBreaker: number;
+    }
+  | {
+      type: "COMPLETE_HIDDEN_AUCTION_REVEAL";
+      revealDeadlineAt: number;
     }
   | {
       type: "END_TURN";

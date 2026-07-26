@@ -116,7 +116,7 @@ export function GameControls({ state, dispatch, isMyTurn = true, isAnimating = f
         </div>
 
         {/* Landing message — gated on presentation reveal */}
-        {state.landingMessage && showLandingMessage && state.phase !== "auction" && state.phase !== "awaitingJailDecision" ? (
+        {state.landingMessage && showLandingMessage && state.phase !== "auction" && state.phase !== "hiddenAuction" && state.phase !== "awaitingJailDecision" ? (
           <div className="mt-3 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-3 py-2 text-sm font-semibold leading-5 text-emerald-800">
             {state.landingMessage}
           </div>

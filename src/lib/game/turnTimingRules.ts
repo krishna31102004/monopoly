@@ -14,7 +14,7 @@ function isDebtor(state: GameState, playerId: string): boolean {
 export function canMortgageNow(state: GameState, playerId: string): PreconditionResult {
   if (state.phase === "gameOver") return { ok: false, reason: "The game has ended." };
   if (state.phase === "awaitingPurchaseDecision") return { ok: false, reason: PURCHASE_REASON };
-  if (state.phase === "auction") return { ok: false, reason: AUCTION_REASON };
+  if (state.phase === "auction" || state.phase === "hiddenAuction") return { ok: false, reason: AUCTION_REASON };
   if (state.phase === "bankruptcyPending") {
     return isDebtor(state, playerId)
       ? { ok: true }
@@ -27,7 +27,7 @@ export function canMortgageNow(state: GameState, playerId: string): Precondition
 export function canOpenTradeNow(state: GameState, playerId: string): PreconditionResult {
   if (state.phase === "gameOver") return { ok: false, reason: "The game has ended." };
   if (state.phase === "awaitingPurchaseDecision") return { ok: false, reason: PURCHASE_REASON };
-  if (state.phase === "auction") return { ok: false, reason: AUCTION_REASON };
+  if (state.phase === "auction" || state.phase === "hiddenAuction") return { ok: false, reason: AUCTION_REASON };
   if (state.phase === "bankruptcyPending") {
     const debt = state.bankruptcy;
     const debtor = debt ? state.players.find((player) => player.id === debt.debtorPlayerId) : undefined;

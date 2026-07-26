@@ -7,6 +7,7 @@ import type {
   GameActionIntent,
   GameErrorPayload,
   GameStatePayload,
+  HiddenAuctionOwnBidPayload,
   JoinRoomPayload,
   PlayerEventPayload,
   RoomCreatedPayload,
@@ -39,6 +40,8 @@ export type RoomHookState = {
   error: string | null;
   lastPlayerEvent: PlayerEventPayload | null;
   tradeDraft: TradeDraftState | null;
+  /** The only sealed-bid value this browser ever receives. */
+  hiddenAuctionOwnBid: HiddenAuctionOwnBidPayload | null;
   rollOff: import("@/types/multiplayer").RollOffPublicView | null;
 };
 
@@ -53,6 +56,7 @@ export function useRoom() {
     error: null,
     lastPlayerEvent: null,
     tradeDraft: null,
+    hiddenAuctionOwnBid: null,
     rollOff: null,
   });
 
@@ -133,7 +137,19 @@ export function useRoom() {
     });
 
     socket.on("game:state", (data: GameStatePayload) => {
-      setState((s) => ({ ...s, gameState: data.gameState }));
+      setState((s) => ({
+        ...s,
+        gameState: data.gameState,
+        hiddenAuctionOwnBid:
+          data.gameState.hiddenAuction?.status === "bidding" &&
+          s.hiddenAuctionOwnBid?.auctionId === data.gameState.hiddenAuction.id
+            ? s.hiddenAuctionOwnBid
+            : null,
+      }));
+    });
+
+    socket.on("hiddenAuction:ownBid", (data: HiddenAuctionOwnBidPayload) => {
+      setState((s) => ({ ...s, hiddenAuctionOwnBid: data }));
     });
 
     socket.on("game:error", (data: GameErrorPayload) => {
@@ -153,7 +169,7 @@ export function useRoom() {
     });
 
     socket.on("room:ended", () => {
-      setState((s) => ({ ...s, room: null, gameState: null, tradeDraft: null }));
+      setState((s) => ({ ...s, room: null, gameState: null, tradeDraft: null, hiddenAuctionOwnBid: null }));
       sessionStorage.removeItem(SESSION_PLAYER_ID);
       sessionStorage.removeItem(SESSION_ROOM_CODE);
       sessionStorage.removeItem(SESSION_PLAYER_NAME);
@@ -172,6 +188,7 @@ export function useRoom() {
       socket.off("room:joined");
       socket.off("room:update");
       socket.off("game:state");
+      socket.off("hiddenAuction:ownBid");
       socket.off("game:error");
       socket.off("trade:draftState");
       socket.off("player:connected");
@@ -203,7 +220,7 @@ export function useRoom() {
 
   const leaveRoom = useCallback(() => {
     getSocket().emit("room:leave");
-    setState((s) => ({ ...s, room: null, gameState: null }));
+    setState((s) => ({ ...s, room: null, gameState: null, hiddenAuctionOwnBid: null }));
     sessionStorage.removeItem(SESSION_PLAYER_ID);
     sessionStorage.removeItem(SESSION_ROOM_CODE);
     sessionStorage.removeItem(SESSION_PLAYER_NAME);

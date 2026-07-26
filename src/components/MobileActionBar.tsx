@@ -47,6 +47,7 @@ export function MobileActionBar({
   // AuctionPanel renders its own full-screen overlay with sticky bid controls —
   // hiding the bottom bar prevents it from overlapping auction content on mobile.
   if (state.phase === "auction") return null;
+  if (state.phase === "hiddenAuction") return null;
 
   const currentPlayer = state.players[state.currentPlayerIndex];
   const primaryAction = getMobilePrimaryAction(

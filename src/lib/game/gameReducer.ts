@@ -19,6 +19,7 @@ import { validateTrade } from "@/lib/game/trade";
 import { AUCTION_TURN_MS } from "@/lib/animation/timing";
 import { getGoAward, getGoAwardLogMessage } from "@/lib/game/goSalary";
 import { startPropertyAuction, applyAuctionGameIntercept } from "@/lib/game/auctionHelpers";
+import { applyHiddenAuctionIntercept, completeHiddenAuctionReveal, settleHiddenAuction, startHiddenPropertyAuction } from "@/lib/game/hiddenAuction";
 import type { AuctionState, BankruptcyCreditor, GameAction, GamePhase, GameState, LandingAction } from "@/types/game";
 
 const AUCTION_STARTING_BID = 10;
@@ -105,6 +106,13 @@ function applyVoluntaryBankruptcy(state: GameState, forfeiter: import("@/types/p
 
 function startForfeitAuction(state: GameState, queue: number[]): GameState {
   const [spaceIndex, ...remaining] = queue;
+  if (state.rules.gameMode === "hidden-auction") {
+    return startHiddenPropertyAuction(
+      { ...state, forfeitAuctionQueue: remaining },
+      spaceIndex,
+      `Hidden auction started for ${getBoardSpaceByIndex(spaceIndex).name}.`,
+    );
+  }
   const activePlayers = state.players.filter((p) => !p.isBankrupt);
   const now = Date.now();
   const auctionState: AuctionState = {
@@ -122,6 +130,7 @@ function startForfeitAuction(state: GameState, queue: number[]): GameState {
     ...state,
     phase: "auction",
     auction: auctionState,
+    hiddenAuction: null,
     forfeitAuctionQueue: remaining,
   };
 }
@@ -163,6 +172,7 @@ function resolveAuctionWin(
     players: nextPlayers,
     ownerships: nextOwnerships,
     auction: null,
+    hiddenAuction: null,
     landingMessage: winMessage,
     landingAction: { kind: "message" as const, spaceIndex: auction.propertySpaceIndex, message: winMessage },
     gameLog: nextLog,
@@ -211,6 +221,7 @@ function withNextTurn(state: GameState, logMessage?: string): GameState {
     landingMessage: null,
     landingAction: null,
     auction: null,
+    hiddenAuction: null,
     drawnCard: null,
     forfeitAuctionQueue: [],
     turnDeadlineAt: Date.now() + TURN_LIMIT_MS,
@@ -262,6 +273,13 @@ function applyLandingResolution(
     spaceIndex,
   );
   if (auctionIntercepted) return auctionIntercepted;
+
+  const hiddenAuctionIntercepted = applyHiddenAuctionIntercept(
+    { ...base, players: resolution.players, gameLog: resolution.gameLog, doublesCount: resolution.doublesCount },
+    resolution.phase,
+    spaceIndex,
+  );
+  if (hiddenAuctionIntercepted) return hiddenAuctionIntercepted;
 
   if (landedSpaceKind === "chance") {
     finalState = drawAndApplyCard(finalState, "chance", rolledDouble, { fromDiceRoll: true });
@@ -587,8 +605,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case "BUY_PROPERTY": {
       if (state.phase !== "awaitingPurchaseDecision" || !state.landingAction) return state;
-      // Auction Game: purchase decision never enters this phase; reject as a safety guard
-      if (state.rules.gameMode === "auction") return state;
+      // Auto-auction modes never enter a purchase decision; reject as a safety guard.
+      if (state.rules.gameMode === "auction" || state.rules.gameMode === "hidden-auction") return state;
 
       const space = getBoardSpaceByIndex(state.landingAction.spaceIndex);
       if (!isOwnableSpace(space)) return state;
@@ -764,6 +782,34 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, auction: updatedAuction, gameLog: nextLog };
     }
 
+    case "SUBMIT_HIDDEN_BID": {
+      const hiddenAuction = state.hiddenAuction;
+      if (state.phase !== "hiddenAuction" || !hiddenAuction || hiddenAuction.status !== "bidding") return state;
+      if (Date.now() >= hiddenAuction.bidDeadlineAt) return state;
+      const bidder = state.players.find((player) => player.id === action.actorPlayerId);
+      if (!bidder || bidder.isBankrupt || !hiddenAuction.eligiblePlayerIds.includes(bidder.id)) return state;
+      if (!Number.isInteger(action.amount) || action.amount < 0 || action.amount > bidder.cash) return state;
+      return {
+        ...state,
+        hiddenAuctionLocalBids: { ...(state.hiddenAuctionLocalBids ?? {}), [bidder.id]: action.amount },
+        gameLog: addLogEntry(state.gameLog, `${bidder.name} submitted a hidden bid.`),
+      };
+    }
+
+    case "CLOSE_HIDDEN_AUCTION": {
+      const hiddenAuction = state.hiddenAuction;
+      if (!hiddenAuction || hiddenAuction.status !== "bidding" || action.deadlineAt !== hiddenAuction.bidDeadlineAt) return state;
+      if (Date.now() < hiddenAuction.bidDeadlineAt) return state;
+      return settleHiddenAuction(state, state.hiddenAuctionLocalBids ?? {}, action.tieBreaker);
+    }
+
+    case "COMPLETE_HIDDEN_AUCTION_REVEAL": {
+      const hiddenAuction = state.hiddenAuction;
+      if (!hiddenAuction || hiddenAuction.status !== "reveal" || action.revealDeadlineAt !== hiddenAuction.revealDeadlineAt) return state;
+      if (Date.now() < action.revealDeadlineAt) return state;
+      return completeHiddenAuctionReveal(state);
+    }
+
     case "END_TURN": {
       if (state.phase !== "turnComplete" || !state.currentPlayerHasRolled) return state;
       const currentPlayer = state.players[state.currentPlayerIndex];
@@ -782,7 +828,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         state.phase === "gameOver" ||
         state.phase === "bankruptcyPending" ||
         state.phase === "awaitingPurchaseDecision" ||
-        state.phase === "auction"
+        state.phase === "auction" ||
+        state.phase === "hiddenAuction"
       ) return state;
       const player = state.players[state.currentPlayerIndex];
       const check = canBuyHouse(state, action.spaceIndex, player);
@@ -813,7 +860,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (
         state.phase === "gameOver" ||
         state.phase === "awaitingPurchaseDecision" ||
-        state.phase === "auction"
+        state.phase === "auction" ||
+        state.phase === "hiddenAuction"
       ) return state;
       const player = state.players[state.currentPlayerIndex];
       const check = canSellHouse(state, action.spaceIndex, player);
@@ -846,7 +894,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         state.phase === "gameOver" ||
         state.phase === "bankruptcyPending" ||
         state.phase === "awaitingPurchaseDecision" ||
-        state.phase === "auction"
+        state.phase === "auction" ||
+        state.phase === "hiddenAuction"
       ) return state;
       const player = state.players[state.currentPlayerIndex];
       const check = canBuyHotel(state, action.spaceIndex, player);
@@ -878,7 +927,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (
         state.phase === "gameOver" ||
         state.phase === "awaitingPurchaseDecision" ||
-        state.phase === "auction"
+        state.phase === "auction" ||
+        state.phase === "hiddenAuction"
       ) return state;
       const player = state.players[state.currentPlayerIndex];
       const check = canSellHotel(state, action.spaceIndex, player);
@@ -911,7 +961,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (
         state.phase === "gameOver" ||
         state.phase === "awaitingPurchaseDecision" ||
-        state.phase === "auction"
+        state.phase === "auction" ||
+        state.phase === "hiddenAuction"
       ) return state;
       if (!state.rules.mortgages) return state;
       const player = state.players[state.currentPlayerIndex];
@@ -942,7 +993,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         state.phase === "gameOver" ||
         state.phase === "bankruptcyPending" ||
         state.phase === "awaitingPurchaseDecision" ||
-        state.phase === "auction"
+        state.phase === "auction" ||
+        state.phase === "hiddenAuction"
       ) return state;
       if (!state.rules.mortgages) return state;
       const player = state.players[state.currentPlayerIndex];
@@ -973,6 +1025,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (
         state.phase === "gameOver" ||
         state.phase === "auction" ||
+        state.phase === "hiddenAuction" ||
         state.phase === "awaitingPurchaseDecision"
       ) return state;
       if (state.trade) return state;
@@ -1389,7 +1442,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case "TURN_TIMER_EXPIRED": {
       // Ignore if game is in a phase that manages its own timing
-      const blockedPhases: GamePhase[] = ["gameOver", "setup", "auction", "bankruptcyPending"];
+      const blockedPhases: GamePhase[] = ["gameOver", "setup", "auction", "hiddenAuction", "bankruptcyPending"];
       if (blockedPhases.includes(state.phase as GamePhase)) return state;
 
       const currentPlayer = state.players[state.currentPlayerIndex];

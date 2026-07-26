@@ -21,7 +21,7 @@ function getSpaceTypeLabel(kind: string) {
 
 export function LandingActionPanel({ state, dispatch, isMyTurn = true }: LandingActionPanelProps) {
   if (!state.landingAction) return null;
-  if (state.phase === "auction") return null;
+  if (state.phase === "auction" || state.phase === "hiddenAuction") return null;
 
   const currentPlayer = state.players[state.currentPlayerIndex];
   const space = getBoardSpaceByIndex(state.landingAction.spaceIndex);
