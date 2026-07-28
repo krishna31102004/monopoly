@@ -135,6 +135,12 @@ describe("useGameplayPresentation — sequencing source assertions", () => {
     expect(src).toMatch(/landing/);
     expect(src).toMatch(/LANDING_REVEAL_DELAY_MS/);
   });
+
+  it("synchronously conceals landing-dependent panels on the render that observes a new roll", () => {
+    expect(src).toMatch(/const isNewDiceRoll = diceKey !== null && diceKey !== prevDiceKeyRef\.current/);
+    expect(src).toMatch(/showLandingPanel: isNewDiceRoll \? false : showLandingPanel/);
+    expect(src).toMatch(/showCardPanel: isNewDiceRoll \? false : showCardPanel/);
+  });
 });
 
 // ── Source-text assertions for GameLayout wiring ─────────────────────────────
@@ -156,6 +162,12 @@ describe("GameLayout — diceKey wiring source assertions", () => {
     const presIdx = src.indexOf("useGameplayPresentation");
     expect(movIdx).toBeLessThan(presIdx);
   });
+
+  it("keeps auction, hidden auction, and bankruptcy actions behind the landing reveal gate", () => {
+    expect(src).toMatch(/state\.phase === "auction" && showLandingPanel/);
+    expect(src).toMatch(/state\.phase === "hiddenAuction" && showLandingPanel/);
+    expect(src).toMatch(/showLandingPanel \? <div className="order-3 xl:order-none"><BankruptcyPanel/);
+  });
 });
 
 describe("GameLayoutMultiplayer — diceKey wiring source assertions", () => {
@@ -168,5 +180,11 @@ describe("GameLayoutMultiplayer — diceKey wiring source assertions", () => {
 
   it("passes diceKey to usePlayerMovementAnimation", () => {
     expect(src).toMatch(/usePlayerMovementAnimation.*diceKey|usePlayerMovementAnimation\(.*players.*diceKey/);
+  });
+
+  it("keeps all landing action overlays behind the same reveal gate", () => {
+    expect(src).toMatch(/gameState\.phase === "auction" && showLandingPanel/);
+    expect(src).toMatch(/gameState\.phase === "hiddenAuction" && showLandingPanel/);
+    expect(src).toMatch(/showLandingPanel \? <div className="order-3 xl:order-none"><BankruptcyPanel/);
   });
 });

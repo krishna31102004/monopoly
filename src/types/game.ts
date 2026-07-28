@@ -58,15 +58,17 @@ export type HiddenAuctionState = {
   id: string;
   propertySpaceIndex: number;
   eligiblePlayerIds: string[];
+  /** One-based sealed-bid round number. Tie breaks advance only tied bidders. */
+  round: number;
   bidStartedAt: number;
   bidDeadlineAt: number;
   status: "bidding" | "reveal";
   revealDeadlineAt: number | null;
-  result: {
-    winnerId: string | null;
-    winningBid: number;
-    tieResolved: boolean;
-  } | null;
+  result:
+    | { kind: "winner"; winnerId: string; winningBid: number }
+    | { kind: "no-bid"; winnerId: null; winningBid: 0 }
+    | { kind: "tie"; winnerId: null; winningBid: number; tiedPlayerIds: string[] }
+    | null;
 };
 
 export type DiceRoll = {
@@ -223,7 +225,6 @@ export type GameAction =
   | {
       type: "CLOSE_HIDDEN_AUCTION";
       deadlineAt: number;
-      tieBreaker: number;
     }
   | {
       type: "COMPLETE_HIDDEN_AUCTION_REVEAL";

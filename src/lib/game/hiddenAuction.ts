@@ -1,9 +1,33 @@
 import { getBoardSpaceByIndex } from "@/data/board";
+import { DICE_RESULT_HOLD_MS, DICE_ROLL_MS, LANDING_REVEAL_DELAY_MS, TOKEN_STEP_MS } from "@/lib/animation/timing";
 import { addLogEntry } from "@/lib/game/createInitialGameState";
 import type { GameState, HiddenAuctionState } from "@/types/game";
 
 export const HIDDEN_AUCTION_BID_MS = 20_000;
-export const HIDDEN_AUCTION_REVEAL_MS = 3_000;
+/** Three visible countdown steps followed by a short result presentation. */
+export const HIDDEN_AUCTION_REVEAL_MS = 4_000;
+export const HIDDEN_AUCTION_COUNTDOWN_MS = 3_000;
+export const HIDDEN_AUCTION_RESULT_MS = HIDDEN_AUCTION_REVEAL_MS - HIDDEN_AUCTION_COUNTDOWN_MS;
+
+/**
+ * Matches the dice/movement/landing presentation gate before a landed property
+ * action becomes visible. This is applied only to the first landed-property
+ * round; tie-break rounds are already actionable and start immediately.
+ */
+export function getHiddenAuctionLandingPresentationMs(diceTotal: number): number {
+  if (!Number.isInteger(diceTotal) || diceTotal <= 0) return 0;
+  return DICE_ROLL_MS + DICE_RESULT_HOLD_MS + Math.max(0, diceTotal - 1) * TOKEN_STEP_MS + LANDING_REVEAL_DELAY_MS;
+}
+
+/**
+ * Returns the visible countdown step, or null while the result is displayed.
+ * The result state deliberately replaces (rather than displays) a zero.
+ */
+export function getHiddenAuctionRevealStep(revealDeadlineAt: number, now: number): 1 | 2 | 3 | null {
+  const remainingMs = Math.max(0, revealDeadlineAt - now);
+  if (remainingMs <= HIDDEN_AUCTION_RESULT_MS) return null;
+  return Math.min(3, Math.max(1, Math.ceil((remainingMs - HIDDEN_AUCTION_RESULT_MS) / 1_000))) as 1 | 2 | 3;
+}
 
 /** Starts a sealed auction. The returned public state intentionally contains no bids. */
 export function startHiddenPropertyAuction(
@@ -11,13 +35,19 @@ export function startHiddenPropertyAuction(
   spaceIndex: number,
   logMessage: string,
   now = Date.now(),
+  options: { eligiblePlayerIds?: string[]; round?: number; startDelayMs?: number } = {},
 ): GameState {
+  const eligiblePlayerIds = (options.eligiblePlayerIds ?? state.players.filter((player) => !player.isBankrupt).map((player) => player.id))
+    .filter((playerId) => state.players.some((player) => player.id === playerId && !player.isBankrupt));
+  const round = options.round ?? 1;
+  const bidStartedAt = now + Math.max(0, options.startDelayMs ?? 0);
   const hiddenAuction: HiddenAuctionState = {
-    id: `hidden-${spaceIndex}-${now}`,
+    id: `hidden-${spaceIndex}-${now}-round-${round}`,
     propertySpaceIndex: spaceIndex,
-    eligiblePlayerIds: state.players.filter((player) => !player.isBankrupt).map((player) => player.id),
-    bidStartedAt: now,
-    bidDeadlineAt: now + HIDDEN_AUCTION_BID_MS,
+    eligiblePlayerIds,
+    round,
+    bidStartedAt,
+    bidDeadlineAt: bidStartedAt + HIDDEN_AUCTION_BID_MS,
     status: "bidding",
     revealDeadlineAt: null,
     result: null,
@@ -42,7 +72,6 @@ export function startHiddenPropertyAuction(
 export function settleHiddenAuction(
   state: GameState,
   bids: Readonly<Record<string, number>>,
-  tieBreaker: number,
   now = Date.now(),
 ): GameState {
   const auction = state.hiddenAuction;
@@ -57,25 +86,18 @@ export function settleHiddenAuction(
   });
   const highestBid = Math.max(0, ...validBids.map((bid) => bid.amount));
   const tied = highestBid > 0 ? validBids.filter((bid) => bid.amount === highestBid) : [];
-  const winnerBid = tied.length > 0
-    ? tied[Math.min(tied.length - 1, Math.floor(Math.max(0, Math.min(0.999999, tieBreaker)) * tied.length))]
-    : null;
   const space = getBoardSpaceByIndex(auction.propertySpaceIndex);
-  const tieResolved = tied.length > 1;
   const closeLog = addLogEntry(state.gameLog, `Hidden auction bidding closed for ${space.name}.`);
 
   const resultAuction: HiddenAuctionState = {
     ...auction,
     status: "reveal",
     revealDeadlineAt: now + HIDDEN_AUCTION_REVEAL_MS,
-    result: {
-      winnerId: winnerBid?.playerId ?? null,
-      winningBid: winnerBid?.amount ?? 0,
-      tieResolved,
-    },
+    result: null,
   };
 
-  if (!winnerBid) {
+  if (highestBid === 0) {
+    resultAuction.result = { kind: "no-bid", winnerId: null, winningBid: 0 };
     const message = `No winning bid for ${space.name}. It remains unowned.`;
     return {
       ...state,
@@ -86,6 +108,26 @@ export function settleHiddenAuction(
       gameLog: addLogEntry(closeLog, message),
     };
   }
+
+  if (tied.length > 1) {
+    resultAuction.result = { kind: "tie", winnerId: null, winningBid: highestBid, tiedPlayerIds: tied.map((bid) => bid.playerId) };
+    const tiedNames = tied
+      .map((bid) => state.players.find((player) => player.id === bid.playerId)?.name)
+      .filter((name): name is string => Boolean(name))
+      .join(" and ");
+    const message = `${tiedNames} tied at $${highestBid} for ${space.name}. Tie-break auction next.`;
+    return {
+      ...state,
+      hiddenAuction: resultAuction,
+      hiddenAuctionLocalBids: undefined,
+      landingAction: { kind: "message", spaceIndex: space.index, message },
+      landingMessage: message,
+      gameLog: addLogEntry(closeLog, message),
+    };
+  }
+
+  const winnerBid = tied[0];
+  resultAuction.result = { kind: "winner", winnerId: winnerBid.playerId, winningBid: winnerBid.amount };
 
   const winner = state.players.find((player) => player.id === winnerBid.playerId);
   if (!winner) return state;
@@ -109,9 +151,19 @@ export function settleHiddenAuction(
 }
 
 /** Starts the next queued forfeit auction after the prior sealed reveal completes. */
-export function completeHiddenAuctionReveal(state: GameState): GameState {
+export function completeHiddenAuctionReveal(state: GameState, now = Date.now()): GameState {
   const auction = state.hiddenAuction;
   if (state.phase !== "hiddenAuction" || !auction || auction.status !== "reveal") return state;
+  if (auction.result?.kind === "tie") {
+    const currentRound = auction.round ?? 1;
+    return startHiddenPropertyAuction(
+      { ...state, hiddenAuction: null, hiddenAuctionLocalBids: undefined },
+      auction.propertySpaceIndex,
+      `Tie-break hidden auction started for ${getBoardSpaceByIndex(auction.propertySpaceIndex).name}.`,
+      now,
+      { eligiblePlayerIds: auction.result.tiedPlayerIds, round: currentRound + 1 },
+    );
+  }
   if (state.forfeitAuctionQueue.length > 0) {
     const [spaceIndex, ...remaining] = state.forfeitAuctionQueue;
     return startHiddenPropertyAuction({ ...state, forfeitAuctionQueue: remaining, hiddenAuction: null }, spaceIndex, `Hidden auction started for ${getBoardSpaceByIndex(spaceIndex).name}.`);
@@ -166,5 +218,7 @@ export function applyHiddenAuctionIntercept(
     base,
     spaceIndex,
     `${currentPlayer.name} landed on ${space.name}. Hidden auction started.`,
+    Date.now(),
+    { startDelayMs: base.currentPlayerHasRolled ? getHiddenAuctionLandingPresentationMs(base.diceRoll?.total ?? 0) : 0 },
   );
 }

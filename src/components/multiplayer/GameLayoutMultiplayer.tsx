@@ -210,7 +210,7 @@ export function GameLayoutMultiplayer({
 
         {/* Sidebar */}
         <aside className="min-w-0 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto xl:pr-1">
-          {gameState.phase === "auction" ? (
+          {gameState.phase === "auction" && showLandingPanel ? (
             <AuctionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} serverAuthoritative />
           ) : null}
           <div className={`${mobileTab === "actions" ? "grid" : "hidden xl:grid"} mb-3 gap-3`}>
@@ -222,7 +222,7 @@ export function GameLayoutMultiplayer({
               <div className="order-2 xl:order-none"><CardPanel drawnCard={gameState.drawnCard} showResolved={showCardResolved} /></div>
             ) : null}
             {showLandingPanel ? <div className="order-3 xl:order-none"><LandingActionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} /></div> : null}
-            <div className="order-3 xl:order-none"><BankruptcyPanel state={gameState} dispatch={dispatch} /></div>
+            {showLandingPanel ? <div className="order-3 xl:order-none"><BankruptcyPanel state={gameState} dispatch={dispatch} /></div> : null}
             <div className="order-4 xl:order-none"><TradePanel
               state={gameState}
               dispatch={dispatch}
@@ -268,7 +268,7 @@ export function GameLayoutMultiplayer({
         </aside>
       </div>
 
-      {gameState.phase === "hiddenAuction" ? (
+      {gameState.phase === "hiddenAuction" && showLandingPanel ? (
         <HiddenAuctionPanel
           state={gameState}
           dispatch={dispatch}

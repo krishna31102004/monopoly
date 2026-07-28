@@ -158,7 +158,7 @@ function scheduleAuctionTimer(roomCode: string, gameState: GameState): void {
   auctionTimers.set(roomCode, timer);
 }
 
-/** The server is the sole owner of sealed-bid deadlines, settlement, and tie randomness. */
+/** The server is the sole owner of sealed-bid deadlines and settlement. */
 function scheduleHiddenAuctionTimer(roomCode: string, gameState: GameState): void {
   clearHiddenAuctionTimer(roomCode);
   if (gameState.phase !== "hiddenAuction" || !gameState.hiddenAuction) return;
@@ -182,7 +182,7 @@ function scheduleHiddenAuctionTimer(roomCode: string, gameState: GameState): voi
     ) return;
 
     const result = expectedStatus === "bidding"
-      ? rooms.closeHiddenAuction(roomCode, deadlineAt, Math.random())
+      ? rooms.closeHiddenAuction(roomCode, deadlineAt)
       : rooms.completeHiddenAuctionReveal(roomCode, deadlineAt);
     if (!result.ok) return;
 
