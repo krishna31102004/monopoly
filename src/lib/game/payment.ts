@@ -7,6 +7,7 @@
  */
 
 import { addLogEntry } from "@/lib/game/createInitialGameState";
+import { FREE_PARKING_POT_CAP, hasCappedFreeParkingPot } from "@/lib/game/freeParking";
 import type { BankruptcyCreditor, GamePhase, GameState } from "@/types/game";
 
 function creditorName(state: GameState, creditor: BankruptcyCreditor): string {
@@ -61,7 +62,9 @@ export function applyPayment(
       options?.potEligible &&
       state.rules.freeParkingCash
     ) {
-      newPot += amount;
+      newPot = hasCappedFreeParkingPot(state.rules.gameMode)
+        ? Math.min(FREE_PARKING_POT_CAP, newPot + amount)
+        : newPot + amount;
     }
 
     return {

@@ -90,10 +90,15 @@ describe("Hidden Auction mode isolation and local sealed bids", () => {
     const winner = state.players[1];
     const result = settleHiddenAuction(
       state,
-      { [state.players[0].id]: 100, [winner.id]: 247, [state.players[2].id]: 200 },
+      { [state.players[0].id]: 100, [winner.id]: 247, [state.players[2].id]: 0 },
       START + HIDDEN_AUCTION_BID_MS,
     );
-    expect(result.hiddenAuction?.result).toEqual({ kind: "winner", winnerId: winner.id, winningBid: 247 });
+    expect(result.hiddenAuction?.result).toMatchObject({ kind: "winner", winnerId: winner.id, winningBid: 247 });
+    expect(result.hiddenAuction?.result?.kind === "winner" && result.hiddenAuction.result.finalBids).toEqual([
+      { playerId: winner.id, playerName: winner.name, amount: 247, isWinner: true },
+      { playerId: state.players[0].id, playerName: state.players[0].name, amount: 100, isWinner: false },
+      { playerId: state.players[2].id, playerName: state.players[2].name, amount: 0, isWinner: false },
+    ]);
     expect(result.hiddenAuction?.revealDeadlineAt).toBe(START + HIDDEN_AUCTION_BID_MS + HIDDEN_AUCTION_REVEAL_MS);
     expect(result.players.find((player) => player.id === winner.id)?.cash).toBe(winner.cash - 247);
     expect(result.ownerships.find((ownership) => ownership.spaceIndex === 1)?.ownerId).toBe(winner.id);
@@ -119,10 +124,12 @@ describe("Hidden Auction mode isolation and local sealed bids", () => {
   it("leaves the property unowned for zero/no bids and starts a fresh tie-break without settlement", () => {
     const state = hiddenState(2);
     const noBid = settleHiddenAuction(state, { [state.players[0].id]: 0 }, START + HIDDEN_AUCTION_BID_MS);
-    expect(noBid.hiddenAuction?.result).toEqual({ kind: "no-bid", winnerId: null, winningBid: 0 });
+    expect(noBid.hiddenAuction?.result).toMatchObject({ kind: "no-bid", winnerId: null, winningBid: 0 });
+    expect(noBid.hiddenAuction?.result?.kind === "no-bid" && noBid.hiddenAuction.result.finalBids.every((bid) => bid.amount === 0)).toBe(true);
     expect(noBid.ownerships.find((ownership) => ownership.spaceIndex === 1)?.ownerId).toBeNull();
 
     const tied = settleHiddenAuction(state, { [state.players[0].id]: 200, [state.players[1].id]: 200 }, START + HIDDEN_AUCTION_BID_MS);
+    expect(tied.hiddenAuction?.result?.kind === "tie" && "finalBids" in tied.hiddenAuction.result).toBe(false);
     expect(tied.hiddenAuction?.result).toEqual({ kind: "tie", winnerId: null, winningBid: 200, tiedPlayerIds: [state.players[0].id, state.players[1].id] });
     expect(tied.ownerships.find((ownership) => ownership.spaceIndex === 1)?.ownerId).toBeNull();
     expect(tied.players.map((player) => player.cash)).toEqual(state.players.map((player) => player.cash));
@@ -141,7 +148,11 @@ describe("Hidden Auction mode isolation and local sealed bids", () => {
     const secondTie = settleHiddenAuction(firstTieBreak, { [state.players[0].id]: 300, [state.players[1].id]: 300 }, firstTieBreak.hiddenAuction!.bidDeadlineAt);
     const secondTieBreak = completeHiddenAuctionReveal(secondTie, secondTie.hiddenAuction!.revealDeadlineAt!);
     const final = settleHiddenAuction(secondTieBreak, { [state.players[0].id]: 325, [state.players[1].id]: 340 }, secondTieBreak.hiddenAuction!.bidDeadlineAt);
-    expect(final.hiddenAuction?.result).toEqual({ kind: "winner", winnerId: state.players[1].id, winningBid: 340 });
+    expect(final.hiddenAuction?.result).toMatchObject({ kind: "winner", winnerId: state.players[1].id, winningBid: 340 });
+    expect(final.hiddenAuction?.result?.kind === "winner" && final.hiddenAuction.result.finalBids).toEqual([
+      { playerId: state.players[1].id, playerName: state.players[1].name, amount: 340, isWinner: true },
+      { playerId: state.players[0].id, playerName: state.players[0].name, amount: 325, isWinner: false },
+    ]);
     expect(final.players[1].cash).toBe(state.players[1].cash - 340);
   });
 
@@ -150,7 +161,7 @@ describe("Hidden Auction mode isolation and local sealed bids", () => {
     const tied = settleHiddenAuction(state, { [state.players[0].id]: 200, [state.players[1].id]: 200 }, START + HIDDEN_AUCTION_BID_MS);
     const tieBreak = completeHiddenAuctionReveal(tied, tied.hiddenAuction!.revealDeadlineAt!);
     const noBid = settleHiddenAuction(tieBreak, { [state.players[0].id]: 0, [state.players[1].id]: 0 }, tieBreak.hiddenAuction!.bidDeadlineAt);
-    expect(noBid.hiddenAuction?.result).toEqual({ kind: "no-bid", winnerId: null, winningBid: 0 });
+    expect(noBid.hiddenAuction?.result).toMatchObject({ kind: "no-bid", winnerId: null, winningBid: 0 });
     expect(noBid.ownerships.find((ownership) => ownership.spaceIndex === 1)?.ownerId).toBeNull();
   });
 
@@ -301,7 +312,12 @@ describe("Hidden Auction multiplayer privacy and authority", () => {
     const final = manager.closeHiddenAuction(roomCode, tieBreak.bidDeadlineAt, tieBreak.bidDeadlineAt);
     expect(final.ok).toBe(true);
     if (final.ok) {
-      expect(final.value.hiddenAuction?.result).toEqual({ kind: "winner", winnerId: bobId, winningBid: 310 });
+      expect(final.value.hiddenAuction?.result).toMatchObject({ kind: "winner", winnerId: bobId, winningBid: 310 });
+      expect(final.value.hiddenAuction?.result?.kind === "winner" && final.value.hiddenAuction.result.finalBids).toEqual([
+        { playerId: bobId, playerName: "Bob", amount: 310, isWinner: true },
+        { playerId: aliceId, playerName: "Alice", amount: 275, isWinner: false },
+      ]);
+      expect(manager.getGameState(roomCode)?.hiddenAuction?.result).toEqual(final.value.hiddenAuction?.result);
       expect(final.value.players.find((player) => player.id === bobId)?.cash).toBe(1190);
     }
   });

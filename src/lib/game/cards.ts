@@ -5,6 +5,7 @@ import { moveAroundBoard } from "@/lib/game/movement";
 import { checkBankruptcy } from "@/lib/game/bankruptcy";
 import { getGoAward, getGoAwardLogMessage } from "@/lib/game/goSalary";
 import { getBoardSpaceByIndex } from "@/data/board";
+import { FREE_PARKING_POT_CAP, hasCappedFreeParkingPot } from "@/lib/game/freeParking";
 import { applyAuctionGameIntercept } from "@/lib/game/auctionHelpers";
 import { applyHiddenAuctionIntercept } from "@/lib/game/hiddenAuction";
 import type { DrawnCard, GameState } from "@/types/game";
@@ -13,7 +14,7 @@ import type { Player } from "@/types/player";
 function applyFreeParkingDelta(state: GameState, delta: number): number {
   if (!state.rules.freeParkingCash || delta === 0) return state.freeParkingPot;
   const next = state.freeParkingPot + delta;
-  return state.rules.gameMode === "auction" ? Math.min(500, Math.max(0, next)) : Math.max(0, next);
+  return hasCappedFreeParkingPot(state.rules.gameMode) ? Math.min(FREE_PARKING_POT_CAP, Math.max(0, next)) : Math.max(0, next);
 }
 
 /**
@@ -406,10 +407,10 @@ function applyCardEffect(
         return { state: debtState, resolvedMessage: msg };
       }
       log = addLogEntry(log, msg);
-      // freeParkingCash rule: bank payments from cards go into the pot (Auction Game caps at $500)
+      // freeParkingCash rule: bank payments from cards go into the pot (auction variants cap at $500)
       const newPot = state.rules.freeParkingCash
-        ? state.rules.gameMode === "auction"
-          ? Math.min(500, state.freeParkingPot + amount)
+        ? hasCappedFreeParkingPot(state.rules.gameMode)
+          ? Math.min(FREE_PARKING_POT_CAP, state.freeParkingPot + amount)
           : state.freeParkingPot + amount
         : state.freeParkingPot;
       const nextPlayers = state.players.map((p, i) =>

@@ -55,4 +55,11 @@ describe("Hidden Auction presentation safeguards", () => {
     expect(panel).not.toContain("highestBidder");
     expect(panel).not.toContain("currentBid");
   });
+
+  it("renders an after-close final-bids leaderboard with a visible winner and No bid state", () => {
+    expect(panel).toContain("Final bids");
+    expect(panel).toContain("Winner");
+    expect(panel).toContain("No bid");
+    expect(panel).toContain("HiddenAuctionFinalBids");
+  });
 });

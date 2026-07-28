@@ -14,6 +14,8 @@ import type { GameState, GameRules } from "@/types/game";
 import { makeGameState, makePlayer, dice, withPlayer, withOwnership, withCash, withPosition } from "./helpers/factory";
 import { getBoardSpaceByIndex } from "@/data/board";
 import { resolveLanding } from "@/lib/game/landing";
+import { drawAndApplyCard } from "@/lib/game/cards";
+import { communityChestCards } from "@/data/cards";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -22,6 +24,9 @@ function withRules(state: GameState, patch: Partial<GameRules>): GameState {
 }
 function withAuctionMode(state: GameState): GameState {
   return withRules(state, { gameMode: "auction", freeParkingCash: true });
+}
+function withHiddenAuctionMode(state: GameState): GameState {
+  return withRules(state, { gameMode: "hidden-auction", freeParkingCash: true });
 }
 function withNormalMode(state: GameState): GameState {
   return withRules(state, { gameMode: "normal", freeParkingCash: true });
@@ -41,6 +46,7 @@ function playerAt(state: GameState, idx: number) {
 // Index 4 = Income Tax ($200)
 const LUXURY_TAX_IDX = 38; // $100 tax
 const HEATHROW_IDX = 15;   // Airport
+const payBankCard = communityChestCards.find((card) => card.category === "pay-bank")!;
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Issue 1: Auction Game Free Parking cap
@@ -125,6 +131,56 @@ describe("Issue 1: Auction Game Free Parking cap ($450 + $100 = $500)", () => {
     const resolution = resolveLanding(state, freeParkingSpace, false);
     expect(resolution.players[state.currentPlayerIndex].cash).toBe(cashBefore + 500);
     expect(resolution.freeParkingPotDelta).toBe(-500);
+  });
+});
+
+describe("Hidden Auction: Free Parking pot capped at $500", () => {
+  it("caps $450 + Luxury Tax $100 at $500", () => {
+    let state = withHiddenAuctionMode(makeGameState(2));
+    state = { ...state, freeParkingPot: 450 };
+    state = withCash(state, 5000);
+    state = withPosition(state, 36);
+
+    state = gameReducer(state, { type: "ROLL_DICE", dice: dice(1, 1) });
+
+    expect(state.freeParkingPot).toBe(500);
+  });
+
+  it("never raises a full pot above $500", () => {
+    let state = withHiddenAuctionMode(makeGameState(2));
+    state = { ...state, freeParkingPot: 500 };
+    state = withCash(state, 5000);
+    state = withPosition(state, 36);
+
+    state = gameReducer(state, { type: "ROLL_DICE", dice: dice(1, 1) });
+
+    expect(state.freeParkingPot).toBe(500);
+  });
+
+  it("caps a deferred tax payment when the debt is resolved", () => {
+    let state = withHiddenAuctionMode(makeGameState(2));
+    state = { ...state, freeParkingPot: 450 };
+    state = withCash(state, 10);
+    state = withPosition(state, 2); // roll 2 → Income Tax ($200)
+
+    state = gameReducer(state, { type: "ROLL_DICE", dice: dice(1, 1) });
+    expect(state.phase).toBe("bankruptcyPending");
+    expect(state.bankruptcy?.potEligible).toBe(true);
+
+    state = { ...state, players: state.players.map((player, index) => index === 0 ? { ...player, cash: 500 } : player) };
+    state = gameReducer(state, { type: "RESOLVE_BANKRUPTCY_IF_SOLVENT" });
+
+    expect(state.freeParkingPot).toBe(500);
+  });
+
+  it("caps immediate bank-payment cards at $500", () => {
+    let state = withHiddenAuctionMode(makeGameState(2));
+    state = { ...state, freeParkingPot: 450, communityChestDeck: [payBankCard.id] };
+    state = withCash(state, 5000);
+
+    state = drawAndApplyCard(state, "community-chest", false);
+
+    expect(state.freeParkingPot).toBe(500);
   });
 });
 

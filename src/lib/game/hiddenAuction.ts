@@ -1,7 +1,7 @@
 import { getBoardSpaceByIndex } from "@/data/board";
 import { DICE_RESULT_HOLD_MS, DICE_ROLL_MS, LANDING_REVEAL_DELAY_MS, TOKEN_STEP_MS } from "@/lib/animation/timing";
 import { addLogEntry } from "@/lib/game/createInitialGameState";
-import type { GameState, HiddenAuctionState } from "@/types/game";
+import type { GameState, HiddenAuctionFinalBid, HiddenAuctionState } from "@/types/game";
 
 export const HIDDEN_AUCTION_BID_MS = 20_000;
 /** Three visible countdown steps followed by a short result presentation. */
@@ -27,6 +27,24 @@ export function getHiddenAuctionRevealStep(revealDeadlineAt: number, now: number
   const remainingMs = Math.max(0, revealDeadlineAt - now);
   if (remainingMs <= HIDDEN_AUCTION_RESULT_MS) return null;
   return Math.min(3, Math.max(1, Math.ceil((remainingMs - HIDDEN_AUCTION_RESULT_MS) / 1_000))) as 1 | 2 | 3;
+}
+
+/** Converts the private round bid book into an immutable, public result only after close. */
+function getFinalBidSnapshot(
+  state: GameState,
+  auction: HiddenAuctionState,
+  bids: Readonly<Record<string, number>>,
+  winnerId: string | null,
+): HiddenAuctionFinalBid[] {
+  return auction.eligiblePlayerIds
+    .map((playerId) => {
+      const player = state.players.find((candidate) => candidate.id === playerId);
+      const submitted = bids[playerId] ?? 0;
+      const amount = player && Number.isInteger(submitted) && submitted > 0 && submitted <= player.cash ? submitted : 0;
+      return player ? { playerId, playerName: player.name, amount, isWinner: playerId === winnerId } : null;
+    })
+    .filter((bid): bid is HiddenAuctionFinalBid => bid !== null)
+    .sort((left, right) => right.amount - left.amount || Number(right.isWinner) - Number(left.isWinner) || left.playerName.localeCompare(right.playerName));
 }
 
 /** Starts a sealed auction. The returned public state intentionally contains no bids. */
@@ -97,7 +115,7 @@ export function settleHiddenAuction(
   };
 
   if (highestBid === 0) {
-    resultAuction.result = { kind: "no-bid", winnerId: null, winningBid: 0 };
+    resultAuction.result = { kind: "no-bid", winnerId: null, winningBid: 0, finalBids: getFinalBidSnapshot(state, auction, bids, null) };
     const message = `No winning bid for ${space.name}. It remains unowned.`;
     return {
       ...state,
@@ -127,7 +145,12 @@ export function settleHiddenAuction(
   }
 
   const winnerBid = tied[0];
-  resultAuction.result = { kind: "winner", winnerId: winnerBid.playerId, winningBid: winnerBid.amount };
+  resultAuction.result = {
+    kind: "winner",
+    winnerId: winnerBid.playerId,
+    winningBid: winnerBid.amount,
+    finalBids: getFinalBidSnapshot(state, auction, bids, winnerBid.playerId),
+  };
 
   const winner = state.players.find((player) => player.id === winnerBid.playerId);
   if (!winner) return state;

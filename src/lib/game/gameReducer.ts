@@ -18,6 +18,7 @@ import {
 import { validateTrade } from "@/lib/game/trade";
 import { AUCTION_TURN_MS } from "@/lib/animation/timing";
 import { getGoAward, getGoAwardLogMessage } from "@/lib/game/goSalary";
+import { FREE_PARKING_POT_CAP, hasCappedFreeParkingPot } from "@/lib/game/freeParking";
 import { startPropertyAuction, applyAuctionGameIntercept } from "@/lib/game/auctionHelpers";
 import { applyHiddenAuctionIntercept, completeHiddenAuctionReveal, settleHiddenAuction, startHiddenPropertyAuction } from "@/lib/game/hiddenAuction";
 import type { AuctionState, BankruptcyCreditor, GameAction, GamePhase, GameState, LandingAction } from "@/types/game";
@@ -233,14 +234,14 @@ function phaseAfterPurchaseDecision(state: GameState) {
   return state.diceRoll?.isDouble ? "readyToRoll" : "turnComplete";
 }
 
-/** Cap-aware helper for updating the Free Parking pot. Negative deltas (collections) apply directly; positive additions are capped at $500 in Auction Game. */
+/** Cap-aware helper for updating the Free Parking pot. Negative deltas (collections) apply directly; positive additions are capped in auction variants. */
 function addToFreeParkingPot(state: GameState, delta: number): number {
   if (delta === 0) return state.freeParkingPot;
   // Negative delta = player is collecting the pot — always apply directly
   if (delta < 0) return state.freeParkingPot + delta;
   // Positive delta = money being added to pot
-  if (state.rules.gameMode === "auction") {
-    return Math.min(500, state.freeParkingPot + delta);
+  if (hasCappedFreeParkingPot(state.rules.gameMode)) {
+    return Math.min(FREE_PARKING_POT_CAP, state.freeParkingPot + delta);
   }
   return state.freeParkingPot + delta;
 }

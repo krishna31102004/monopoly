@@ -53,6 +53,14 @@ export type AuctionState = {
   status: "active";
 };
 
+/** Public only after a Hidden Auction round has permanently resolved. */
+export type HiddenAuctionFinalBid = {
+  playerId: string;
+  playerName: string;
+  amount: number;
+  isWinner: boolean;
+};
+
 /** Public, non-secret state for a sealed Hidden Auction. Never contains bids. */
 export type HiddenAuctionState = {
   id: string;
@@ -65,8 +73,8 @@ export type HiddenAuctionState = {
   status: "bidding" | "reveal";
   revealDeadlineAt: number | null;
   result:
-    | { kind: "winner"; winnerId: string; winningBid: number }
-    | { kind: "no-bid"; winnerId: null; winningBid: 0 }
+    | { kind: "winner"; winnerId: string; winningBid: number; finalBids: HiddenAuctionFinalBid[] }
+    | { kind: "no-bid"; winnerId: null; winningBid: 0; finalBids: HiddenAuctionFinalBid[] }
     | { kind: "tie"; winnerId: null; winningBid: number; tiedPlayerIds: string[] }
     | null;
 };
