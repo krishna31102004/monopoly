@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { deriveGamePresentationEvents, enqueuePresentationEvents, getEndGameFacts, type PresentationEvent } from "@/lib/ui/gamePresentationEvents";
+import { deriveGamePresentationEvents, enqueuePresentationEvents, getEndGameFacts, getNextReadyPresentationEvent, type PresentationEvent } from "@/lib/ui/gamePresentationEvents";
 import { classifyTradeResultFromLogMessage } from "@/lib/game/tradeHelpers";
 import { readSoundEnabled, SOUND_PREFERENCE_KEY, writeSoundEnabled } from "@/lib/ui/soundPreferences";
+import { settleHiddenAuction, startHiddenPropertyAuction, HIDDEN_AUCTION_BID_MS } from "@/lib/game/hiddenAuction";
 import { makeGameState, withOwnership } from "./helpers/factory";
 
 describe("game presentation event derivation", () => {
@@ -40,10 +41,41 @@ describe("game presentation event derivation", () => {
     expect(enqueuePresentationEvents([purchase], [purchase, stamp], new Set(["purchase"]))).toEqual([purchase, stamp]);
   });
 
+  it("holds landing, open-auction, hidden-auction, and trade ledger events until their presentation completes", () => {
+    const rent: PresentationEvent = { key: "rent", kind: "rent-paid", title: "Rent", detail: "A", releaseAfter: "landing-complete" };
+    const openAuction: PresentationEvent = { key: "open", kind: "auction-won", title: "Open", detail: "B", releaseAfter: "open-auction-result-complete", releaseAfterVersion: 4 };
+    const hiddenAuction: PresentationEvent = { key: "hidden", kind: "auction-won", title: "Hidden", detail: "C", releaseAfter: "hidden-auction-result-complete" };
+    const trade: PresentationEvent = { key: "trade", kind: "trade-accepted", title: "Trade", detail: "D", releaseAfter: "trade-result-complete", releaseAfterVersion: 7 };
+    const blocked = { landingComplete: false, openAuctionResultVersion: 4, openAuctionResultComplete: false, hiddenAuctionResultComplete: false, tradeResultVersion: 7 };
+
+    expect(getNextReadyPresentationEvent([rent], blocked)).toBeNull();
+    expect(getNextReadyPresentationEvent([openAuction], blocked)).toBeNull();
+    expect(getNextReadyPresentationEvent([hiddenAuction], blocked)).toBeNull();
+    expect(getNextReadyPresentationEvent([trade], blocked)).toBeNull();
+    expect(getNextReadyPresentationEvent([rent, trade], { ...blocked, landingComplete: true, tradeResultVersion: 8 })).toBe(rent);
+    expect(getNextReadyPresentationEvent([openAuction], { ...blocked, openAuctionResultVersion: 5 })).toBe(openAuction);
+    expect(getNextReadyPresentationEvent([openAuction], { ...blocked, openAuctionResultComplete: true })).toBe(openAuction);
+    expect(getNextReadyPresentationEvent([hiddenAuction], { ...blocked, hiddenAuctionResultComplete: true })).toBe(hiddenAuction);
+    expect(getNextReadyPresentationEvent([trade], { ...blocked, tradeResultVersion: 8 })).toBe(trade);
+  });
+
+  it("marks resolved Hidden Auction outcomes for the final reveal gate only", () => {
+    const base = { ...makeGameState(), rules: { ...makeGameState().rules, gameMode: "hidden-auction" as const } };
+    const bidding = startHiddenPropertyAuction(base, 1, "Hidden auction started.", 1_000);
+    const resolved = settleHiddenAuction(bidding, { [base.players[0].id]: 200 }, 1_000 + HIDDEN_AUCTION_BID_MS);
+    const event = deriveGamePresentationEvents(bidding, resolved).find((candidate) => candidate.kind === "auction-won");
+
+    expect(event?.releaseAfter).toBe("hidden-auction-result-complete");
+    expect(getNextReadyPresentationEvent(event ? [event] : [], { landingComplete: true, openAuctionResultVersion: 0, openAuctionResultComplete: false, hiddenAuctionResultComplete: false, tradeResultVersion: 0 })).toBeNull();
+    expect(getNextReadyPresentationEvent(event ? [event] : [], { landingComplete: true, openAuctionResultVersion: 0, openAuctionResultComplete: false, hiddenAuctionResultComplete: true, tradeResultVersion: 0 })).toBe(event);
+  });
+
   it("uses the previous auction bid and exact reducer trade-result messages", () => {
     const before = { ...makeGameState(), auction: { propertySpaceIndex: 1, activePlayerIds: [], passedPlayerIds: [], currentBid: 137, highestBidderId: null, currentBidderIndex: 0, turnStartedAt: 0, turnDeadlineAt: 0, status: "active" as const } };
     const after = withOwnership({ ...before, auction: null }, 1, before.players[0].id);
-    expect(deriveGamePresentationEvents(before, after).find((event) => event.kind === "auction-won")?.detail).toContain("$137");
+    const auctionEvent = deriveGamePresentationEvents(before, after).find((event) => event.kind === "auction-won");
+    expect(auctionEvent?.detail).toContain("$137");
+    expect(auctionEvent?.releaseAfter).toBe("open-auction-result-complete");
     expect(classifyTradeResultFromLogMessage("Trade accepted: A gave $1 to B in exchange for nothing.")).toBe("accepted");
     expect(classifyTradeResultFromLogMessage("B declined the trade.")).toBe("declined");
     expect(classifyTradeResultFromLogMessage("A cancelled the trade.")).toBe("cancelled");
@@ -56,10 +88,12 @@ describe("game presentation event derivation", () => {
     const trade = { initiatorPlayerId: before.players[0].id, recipientPlayerId: before.players[1].id, offerFromInitiator: { cash: 10, propertySpaceIndices: [], getOutOfJailFreeCards: 0 }, offerFromRecipient: { cash: 0, propertySpaceIndices: [], getOutOfJailFreeCards: 0 } };
     for (const [message, kind] of [["Trade accepted: A gave $10 to B in exchange for nothing.", "trade-accepted"], ["B declined the trade.", "trade-declined"], ["Trade cancelled: a party cannot afford mortgage transfer fees.", "trade-cancelled"]] as const) {
       const after = { ...before, trade: null, gameLog: [{ id: `new-${kind}`, message, createdAt: "now" }, ...before.gameLog] };
-      expect(deriveGamePresentationEvents({ ...before, trade }, after).some((event) => event.kind === kind)).toBe(true);
+      const event = deriveGamePresentationEvents({ ...before, trade }, after).find((candidate) => candidate.kind === kind);
+      expect(event?.releaseAfter).toBe("trade-result-complete");
     }
     const rent = (id: string) => ({ ...before, gameLog: [{ id, message: "rent", createdAt: "now" }, ...before.gameLog], landingAction: { kind: "rentPayment" as const, spaceIndex: 1, message: "rent", payerId: before.players[0].id, ownerId: before.players[1].id, rentAmount: 20, payerCashAfter: 1480, ownerCashAfter: 1520, bankruptcyDeferred: false } });
     expect(deriveGamePresentationEvents(before, rent("rent-1")).find((event) => event.kind === "rent-paid")?.key).not.toBe(deriveGamePresentationEvents(before, rent("rent-2")).find((event) => event.kind === "rent-paid")?.key);
+    expect(deriveGamePresentationEvents(before, rent("rent-1")).find((event) => event.kind === "rent-paid")?.releaseAfter).toBe("landing-complete");
   });
 
   it("recognizes a chained no-bid auction without mistaking the next active auction for it", () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { canOpenTradeNow } from "@/lib/game/turnTimingRules";
 import { calculateGuaranteedDebtCapacity, calculateProjectedTradeState, getTradingMode } from "@/lib/game/trade";
 import {
@@ -29,6 +29,8 @@ type Props = {
   onDraftUpdate?: (patch: TradeDraftUpdatePayload) => void;
   onDraftCancel?: () => void;
   onDraftSubmit?: () => void;
+  /** Releases presentation-only ledger feedback after the trade stamp completes. */
+  onResultPresentationComplete?: () => void;
 };
 
 const EMPTY_OFFER: TradeOffer = { cash: 0, propertySpaceIndices: [], getOutOfJailFreeCards: 0 };
@@ -871,7 +873,7 @@ function PendingTradeView({ state, dispatch, myPlayerId }: Props) {
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 export function TradePanel(props: Props) {
-  const { state, dispatch, myPlayerId, tradeDraft, onDraftStart, onDraftUpdate, onDraftCancel, onDraftSubmit } = props;
+  const { state, dispatch, myPlayerId, tradeDraft, onDraftStart, onDraftUpdate, onDraftCancel, onDraftSubmit, onResultPresentationComplete } = props;
 
   // Track when a trade/draft was open and then closed — detect result from newest log entry.
   // Logs are prepended (index 0 = newest), so always use [0].
@@ -880,6 +882,10 @@ export function TradePanel(props: Props) {
   const [resultStamp, setResultStamp] = useState<TradeResultKind | null>(null);
 
   const isOpenNow = Boolean(state.trade) || Boolean(tradeDraft);
+  const dismissResultStamp = useCallback(() => {
+    setResultStamp(null);
+    onResultPresentationComplete?.();
+  }, [onResultPresentationComplete]);
 
   useEffect(() => {
     const wasOpen = wasOpenRef.current;
@@ -899,7 +905,7 @@ export function TradePanel(props: Props) {
   }, [isOpenNow, state.gameLog]);
 
   if (resultStamp) {
-    return <TradeResultStamp kind={resultStamp} onDismiss={() => setResultStamp(null)} />;
+    return <TradeResultStamp kind={resultStamp} onDismiss={dismissResultStamp} />;
   }
 
   if (state.phase === "gameOver") return null;

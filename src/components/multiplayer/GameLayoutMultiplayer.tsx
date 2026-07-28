@@ -80,6 +80,10 @@ export function GameLayoutMultiplayer({
   const [selectedSpace, setSelectedSpace] = useState<OwnableSpace | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileGameTab>("board");
   const [mobilePlayerId, setMobilePlayerId] = useState<string | null>(null);
+  const [openAuctionResultVersion, setOpenAuctionResultVersion] = useState(0);
+  const [tradeResultVersion, setTradeResultVersion] = useState(0);
+  const handleOpenAuctionResultComplete = useCallback(() => setOpenAuctionResultVersion((version) => version + 1), []);
+  const handleTradeResultComplete = useCallback(() => setTradeResultVersion((version) => version + 1), []);
   const diceKey =
     gameState.diceRoll && gameState.currentPlayerHasRolled
       ? `${gameState.currentPlayerIndex}:${gameState.doublesCount}:${gameState.diceRoll.die1}:${gameState.diceRoll.die2}`
@@ -141,6 +145,7 @@ export function GameLayoutMultiplayer({
 
   const currentActor = gameState.players.find((p) => p.id === actorId);
   const actionAttention = getMobileTabAttention(gameState, myPlayerId);
+  const auctionPresentationReady = gameState.phase === "auction" && showLandingPanel;
   const ownHiddenBid =
     hiddenAuctionOwnBid && hiddenAuctionOwnBid.auctionId === gameState.hiddenAuction?.id
       ? hiddenAuctionOwnBid.amount
@@ -148,7 +153,7 @@ export function GameLayoutMultiplayer({
 
   return (
     <main className="min-h-screen px-2 py-3 sm:px-4 sm:py-5 xl:pb-5 xl:bg-[radial-gradient(circle_at_top_left,rgba(198,161,91,.10),transparent_35rem)]">
-      <GamePresentationLayer state={gameState} showStart={showStartSequence} onStartShown={onStartSequenceShown} onNavigate={setMobileTab} />
+      <GamePresentationLayer state={gameState} landingPresentationComplete={showLandingPanel && showCardResolved} openAuctionResultVersion={openAuctionResultVersion} tradeResultVersion={tradeResultVersion} showStart={showStartSequence} onStartShown={onStartSequenceShown} onNavigate={setMobileTab} />
 
       {/* Connection status banner */}
       {connectionStatus === "reconnecting" ? (
@@ -210,9 +215,7 @@ export function GameLayoutMultiplayer({
 
         {/* Sidebar */}
         <aside className="min-w-0 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto xl:pr-1">
-          {gameState.phase === "auction" && showLandingPanel ? (
-            <AuctionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} serverAuthoritative />
-          ) : null}
+          <AuctionPanel state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} isPresentationReady={auctionPresentationReady} onResultPresentationComplete={handleOpenAuctionResultComplete} serverAuthoritative />
           <div className={`${mobileTab === "actions" ? "grid" : "hidden xl:grid"} mb-3 gap-3`}>
             <div className="order-1 xl:order-none"><GameControls state={gameState} dispatch={dispatch} isMyTurn={isMyTurn} isAnimating={isAnimating} presentationStatus={presentationStatus} showLandingMessage={showLandingPanel} /></div>
             {gameState.phase === "awaitingJailDecision" ? (
@@ -232,6 +235,7 @@ export function GameLayoutMultiplayer({
               onDraftUpdate={updateTradeDraft}
               onDraftCancel={cancelTradeDraft}
               onDraftSubmit={submitTradeDraft}
+              onResultPresentationComplete={handleTradeResultComplete}
             /></div>
           </div>
 

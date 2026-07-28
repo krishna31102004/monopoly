@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { UiIcon } from "@/components/ui/UiIcon";
-import { deriveGamePresentationEvents, enqueuePresentationEvents, getEndGameFacts, type PresentationEvent } from "@/lib/ui/gamePresentationEvents";
+import { deriveGamePresentationEvents, enqueuePresentationEvents, getEndGameFacts, getNextReadyPresentationEvent, type PresentationEvent } from "@/lib/ui/gamePresentationEvents";
 import { readSoundEnabled, writeSoundEnabled } from "@/lib/ui/soundPreferences";
 import type { GameState } from "@/types/game";
 
@@ -36,21 +36,34 @@ export function SoundControl() {
 
 type PresentationTab = "board" | "players" | "log";
 
-export function GamePresentationLayer({ state, showStart = false, onStartShown, onNavigate }: { state: GameState; showStart?: boolean; onStartShown?: () => void; onNavigate?: (tab: PresentationTab) => void }) {
+export function GamePresentationLayer({ state, landingPresentationComplete = true, openAuctionResultVersion = 0, tradeResultVersion = 0, showStart = false, onStartShown, onNavigate }: { state: GameState; landingPresentationComplete?: boolean; openAuctionResultVersion?: number; tradeResultVersion?: number; showStart?: boolean; onStartShown?: () => void; onNavigate?: (tab: PresentationTab) => void }) {
   const previous = useRef<GameState | null>(null);
   const seen = useRef(new Set<string>());
   const [queue, setQueue] = useState<PresentationEvent[]>([]);
-  const activeEvent = queue[0] ?? null;
+  const activeEvent = getNextReadyPresentationEvent(queue, {
+    landingComplete: landingPresentationComplete,
+    openAuctionResultVersion,
+    openAuctionResultComplete: Boolean(state.auction),
+    hiddenAuctionResultComplete: !(state.phase === "hiddenAuction" && state.hiddenAuction?.status === "reveal"),
+    tradeResultVersion,
+  });
   useEffect(() => {
     if (!previous.current) { previous.current = state; return; }
-    const incoming = deriveGamePresentationEvents(previous.current, state);
+    const incoming = deriveGamePresentationEvents(previous.current, state).map((event) => ({
+      ...event,
+      releaseAfterVersion: event.releaseAfter === "open-auction-result-complete"
+        ? openAuctionResultVersion
+        : event.releaseAfter === "trade-result-complete"
+          ? tradeResultVersion
+          : event.releaseAfterVersion,
+    }));
     previous.current = state;
     const seenBeforeTransition = new Set(seen.current);
     const unseen = incoming.filter((event) => !seenBeforeTransition.has(event.key));
     if (!unseen.length) return;
     unseen.forEach((event) => seen.current.add(event.key));
     setQueue((current) => enqueuePresentationEvents(current, incoming, seenBeforeTransition));
-  }, [state]);
+  }, [state, openAuctionResultVersion, tradeResultVersion]);
   useEffect(() => {
     if (!activeEvent) return;
     window.dispatchEvent(new CustomEvent("world-cities-presentation", { detail: activeEvent }));

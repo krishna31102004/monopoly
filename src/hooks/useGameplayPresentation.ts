@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   DICE_ROLL_MS,
   DICE_RESULT_HOLD_MS,
+  CARD_REVEAL_MIN_MS,
   LANDING_REVEAL_DELAY_MS,
 } from "@/lib/animation/timing";
 import type { GameState } from "@/types/game";
@@ -78,6 +79,18 @@ export function useGameplayPresentation(state: GameState, isAnimating: boolean):
     sequenceActiveRef.current = false;
   }
 
+  function revealLandingOutcome(hasDrawnCard: boolean) {
+    if (!hasDrawnCard) {
+      revealAll();
+      return;
+    }
+    setShowLandingPanel(false);
+    setShowCardPanel(true);
+    setShowCardResolved(false);
+    setPresentationPhase("revealingCard");
+    addTimer(revealAll, CARD_REVEAL_MIN_MS);
+  }
+
   // Detect new dice roll
   useEffect(() => {
     const prevKey = prevDiceKeyRef.current;
@@ -103,7 +116,7 @@ export function useGameplayPresentation(state: GameState, isAnimating: boolean):
       // Fires after dice roll + result hold + buffer so it clears after the movement
       // gate opens in usePlayerMovementAnimation (DICE_ROLL_MS + DICE_RESULT_HOLD_MS).
       addTimer(() => {
-        if (sequenceActiveRef.current) revealAll();
+        if (sequenceActiveRef.current) revealLandingOutcome(Boolean(state.drawnCard));
       }, DICE_ROLL_MS + DICE_RESULT_HOLD_MS + LANDING_REVEAL_DELAY_MS * 3);
     }
   }, [diceKey]);
@@ -123,7 +136,7 @@ export function useGameplayPresentation(state: GameState, isAnimating: boolean):
       // Movement ended — start the reveal sequence
       clearTimers();
       setPresentationPhase("landing");
-      addTimer(() => revealAll(), LANDING_REVEAL_DELAY_MS);
+      addTimer(() => revealLandingOutcome(Boolean(state.drawnCard)), LANDING_REVEAL_DELAY_MS);
     }
     // isAnimating is the only reactive input
   }, [isAnimating]);

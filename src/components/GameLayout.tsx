@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useReducer, useState } from "react";
+import { useCallback, useEffect, useReducer, useState } from "react";
 import { usePlayerMovementAnimation } from "@/hooks/usePlayerMovementAnimation";
 import { useGameplayPresentation } from "@/hooks/useGameplayPresentation";
 import { AuctionPanel } from "@/components/AuctionPanel";
@@ -41,6 +41,10 @@ export function GameLayout() {
   const [mobilePlayerId, setMobilePlayerId] = useState<string | null>(null);
   const [pendingRollOff, setPendingRollOff] = useState<{ players: StartGamePlayer[]; rules: GameRules } | null>(null);
   const [showStartSequence, setShowStartSequence] = useState(false);
+  const [openAuctionResultVersion, setOpenAuctionResultVersion] = useState(0);
+  const [tradeResultVersion, setTradeResultVersion] = useState(0);
+  const handleOpenAuctionResultComplete = useCallback(() => setOpenAuctionResultVersion((version) => version + 1), []);
+  const handleTradeResultComplete = useCallback(() => setTradeResultVersion((version) => version + 1), []);
   // diceKey: opaque string that changes exactly once per new roll — passed to
   // usePlayerMovementAnimation so it can self-gate movement until dice finish.
   const diceKey =
@@ -94,10 +98,11 @@ export function GameLayout() {
   }
 
   const actionAttention = getMobileTabAttention(state, state.players[state.currentPlayerIndex]?.id);
+  const auctionPresentationReady = state.phase === "auction" && showLandingPanel;
 
   return (
     <main className="min-h-screen px-2 py-3 sm:px-4 sm:py-5 xl:pb-5 xl:bg-[radial-gradient(circle_at_top_left,rgba(198,161,91,.10),transparent_35rem)]">
-      <GamePresentationLayer state={state} showStart={showStartSequence} onStartShown={() => setShowStartSequence(false)} onNavigate={setMobileTab} />
+      <GamePresentationLayer state={state} landingPresentationComplete={showLandingPanel && showCardResolved} openAuctionResultVersion={openAuctionResultVersion} tradeResultVersion={tradeResultVersion} showStart={showStartSequence} onStartShown={() => setShowStartSequence(false)} onNavigate={setMobileTab} />
 
       <div className="mx-auto mb-3 max-w-[1560px]">
         <GameStatusStrip state={state} isMultiplayer={false} />
@@ -120,9 +125,7 @@ export function GameLayout() {
 
         {/* Sidebar */}
         <aside className="min-w-0 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto xl:pr-1">
-          {state.phase === "auction" && showLandingPanel ? (
-            <AuctionPanel state={state} dispatch={dispatch} />
-          ) : null}
+          <AuctionPanel state={state} dispatch={dispatch} isPresentationReady={auctionPresentationReady} onResultPresentationComplete={handleOpenAuctionResultComplete} />
           {state.phase === "hiddenAuction" && showLandingPanel ? (
             <HiddenAuctionPanel state={state} dispatch={dispatch} />
           ) : null}
@@ -136,7 +139,7 @@ export function GameLayout() {
             ) : null}
             {showLandingPanel ? <div className="order-3 xl:order-none"><LandingActionPanel state={state} dispatch={dispatch} /></div> : null}
             {showLandingPanel ? <div className="order-3 xl:order-none"><BankruptcyPanel state={state} dispatch={dispatch} /></div> : null}
-            <div className="order-4 xl:order-none"><TradePanel state={state} dispatch={dispatch} /></div>
+            <div className="order-4 xl:order-none"><TradePanel state={state} dispatch={dispatch} onResultPresentationComplete={handleTradeResultComplete} /></div>
             <div className="order-5 xl:order-none"><GameSaveControls state={state} dispatch={dispatch} /></div>
           </div>
 

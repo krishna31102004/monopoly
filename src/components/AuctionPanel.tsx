@@ -18,6 +18,10 @@ type AuctionPanelProps = {
   state: GameState;
   dispatch: React.Dispatch<GameAction>;
   isMyTurn?: boolean;
+  /** Keeps the panel mounted for its result lifecycle while landing animation is still gated. */
+  isPresentationReady?: boolean;
+  /** Releases presentation-only ledger feedback after the result modal completes. */
+  onResultPresentationComplete?: () => void;
   /** When true, the active bidder's turn timer is enforced server-side and this
    *  component must not dispatch its own timeout PASS_AUCTION (avoids duplicate
    *  actions / desync in multiplayer). Local/offline mode leaves this false so the
@@ -397,7 +401,7 @@ export function AuctionPropertyDetails({ context, theme }: { context: AuctionPro
 
 // ── Main AuctionPanel ─────────────────────────────────────────────────────────
 
-export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthoritative = false }: AuctionPanelProps) {
+export function AuctionPanel({ state, dispatch, isMyTurn = true, isPresentationReady = true, onResultPresentationComplete, serverAuthoritative = false }: AuctionPanelProps) {
   const [now, setNow] = useState(() => Date.now());
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const prevAuctionRef = useRef(state.phase === "auction" ? state.auction : null);
@@ -438,11 +442,14 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
       const message = state.landingAction?.kind === "message" ? state.landingAction.message : null;
       if (message) {
         setResultMessage(message);
-        const id = setTimeout(() => setResultMessage(null), 2200);
+        const id = setTimeout(() => {
+          setResultMessage(null);
+          onResultPresentationComplete?.();
+        }, 2200);
         return () => clearTimeout(id);
       }
     }
-  }, [auction, state.landingAction]);
+  }, [auction, onResultPresentationComplete, state.landingAction]);
 
   if (!auction && resultMessage) {
     return (
@@ -461,7 +468,7 @@ export function AuctionPanel({ state, dispatch, isMyTurn = true, serverAuthorita
     );
   }
 
-  if (!auction) return null;
+  if (!auction || !isPresentationReady) return null;
 
   const space = getBoardSpaceByIndex(auction.propertySpaceIndex);
   const currentBidderId = auction.activePlayerIds[auction.currentBidderIndex];
