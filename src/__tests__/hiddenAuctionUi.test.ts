@@ -7,9 +7,12 @@ const localLayout = fs.readFileSync(path.resolve(__dirname, "../components/GameL
 const multiplayerLayout = fs.readFileSync(path.resolve(__dirname, "../components/multiplayer/GameLayoutMultiplayer.tsx"), "utf8");
 
 describe("Hidden Auction presentation safeguards", () => {
-  it("uses its own modal and never imports the open AuctionPanel", () => {
+  it("uses its own modal while reusing the open auction's public presentation primitives", () => {
     expect(panel).toContain("Hidden Auction");
-    expect(panel).not.toContain('from "@/components/AuctionPanel"');
+    expect(panel).toContain('from "@/components/AuctionPanel"');
+    expect(panel).toContain("AuctionSetOverview");
+    expect(panel).toContain("AuctionPropertyDetails");
+    expect(panel).toContain("PlayerOwnershipCard");
     expect(panel).toContain('aria-modal="true"');
   });
 
@@ -17,9 +20,14 @@ describe("Hidden Auction presentation safeguards", () => {
     expect(panel).toContain("Your bid is secret.");
     expect(panel).toContain("Your hidden bid");
     expect(panel).toContain("Bid saved");
-    expect(panel).toContain("Remaining");
+    expect(panel).toContain("seconds remaining");
     expect(panel).toContain("Revealing the sealed result");
     expect(panel).toContain("No winning bid");
+    expect(panel).toContain("Tie-break round");
+    expect(panel).toContain("Tie-break auction starting with only the tied players.");
+    expect(panel).toContain("You are not in this tie-break.");
+    expect(panel).toContain("HIDDEN_AUCTION_BID_MS");
+    expect(panel).toContain("getHiddenAuctionRevealStep");
   });
 
   it("is mounted outside mobile navigation in local and multiplayer layouts", () => {
@@ -30,6 +38,20 @@ describe("Hidden Auction presentation safeguards", () => {
 
   it("uses an owner-only socket value rather than any public bid list", () => {
     expect(multiplayerLayout).toContain("hiddenAuctionOwnBid");
+    expect(panel).not.toContain("highestBidder");
+    expect(panel).not.toContain("currentBid");
+  });
+
+  it("does not contain open-auction controls or random tie resolution", () => {
+    expect(panel).not.toContain("+$1");
+    expect(panel).not.toContain("Highest Bidder");
+    expect(panel).not.toContain("resolved randomly");
+  });
+
+  it("shows public cash and property context without exposing private bid data", () => {
+    expect(panel).toContain("Your cash:");
+    expect(panel).toContain("Active players · Properties");
+    expect(panel).toContain("hidden-auction-ownership-overview");
     expect(panel).not.toContain("highestBidder");
     expect(panel).not.toContain("currentBid");
   });

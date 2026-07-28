@@ -527,6 +527,7 @@ export class RoomManager {
     if (room.gameState.phase !== "hiddenAuction" || !auction || auction.status !== "bidding") {
       return { ok: false, error: "No hidden auction is accepting bids." };
     }
+    if (now < auction.bidStartedAt) return { ok: false, error: "Hidden auction bidding has not started." };
     if (now >= auction.bidDeadlineAt) return { ok: false, error: "Hidden auction bidding has closed." };
     const bidder = room.gameState.players.find((player) => player.id === playerId);
     if (!bidder || bidder.isBankrupt || !auction.eligiblePlayerIds.includes(playerId)) {
@@ -550,7 +551,7 @@ export class RoomManager {
   }
 
   /** Server-only close path; private bids are consumed once and never broadcast. */
-  closeHiddenAuction(roomCode: string, deadlineAt: number, tieBreaker: number, now = Date.now()): RoomResult<GameState> {
+  closeHiddenAuction(roomCode: string, deadlineAt: number, now = Date.now()): RoomResult<GameState> {
     const room = this.rooms.get(roomCode);
     if (!room?.gameState) return { ok: false, error: "No game state found." };
     const auction = room.gameState.hiddenAuction;
@@ -560,7 +561,7 @@ export class RoomManager {
     if (now < deadlineAt) return { ok: false, error: "Hidden auction deadline has not elapsed." };
     this.syncHiddenAuctionBook(room);
     const bids = room.hiddenAuctionBids?.auctionId === auction.id ? room.hiddenAuctionBids.bids : {};
-    room.gameState = settleHiddenAuction(room.gameState, bids, tieBreaker, now);
+    room.gameState = settleHiddenAuction(room.gameState, bids, now);
     this.syncHiddenAuctionBook(room);
     this.touch(room);
     return { ok: true, value: room.gameState };
@@ -574,7 +575,7 @@ export class RoomManager {
     if (!auction || auction.status !== "reveal" || auction.revealDeadlineAt !== revealDeadlineAt || now < revealDeadlineAt) {
       return { ok: false, error: "Hidden auction reveal is not ready to complete." };
     }
-    const completedState = completeHiddenAuctionReveal(room.gameState);
+    const completedState = completeHiddenAuctionReveal(room.gameState, now);
     room.gameState = completedState.hiddenAuctionLocalBids
       ? { ...completedState, hiddenAuctionLocalBids: undefined }
       : completedState;

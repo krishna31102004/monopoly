@@ -27,7 +27,7 @@ type AuctionPanelProps = {
 
 // ── Status badge ────────────────────────────────────────────────────────────
 
-type ParticipantStatus = "TURN" | "HIGHEST" | "ACTIVE" | "PASSED";
+export type ParticipantStatus = "TURN" | "HIGHEST" | "ACTIVE" | "PASSED";
 
 function getParticipantStatus(
   playerId: string,
@@ -71,7 +71,7 @@ function getSpaceTypeLabel(kind: string) {
 // ── Property chip ─────────────────────────────────────────────────────────────
 
 /** Compact chip for a single owned property during the auction overview. */
-function PropertyChip({ spaceIndex, state }: { spaceIndex: number; state: GameState }) {
+export function PropertyChip({ spaceIndex, state }: { spaceIndex: number; state: GameState }) {
   const space = getBoardSpaceByIndex(spaceIndex);
   const ownership = state.ownerships.find((o) => o.spaceIndex === spaceIndex);
   const isMortgaged = ownership?.isMortgaged ?? false;
@@ -113,7 +113,7 @@ function PropertyChip({ spaceIndex, state }: { spaceIndex: number; state: GameSt
 // ── Per-player portfolio card ─────────────────────────────────────────────────
 
 /** Per-player ownership summary card shown in the overview panel. */
-function PlayerOwnershipCard({
+export function PlayerOwnershipCard({
   playerId,
   state,
   isBidding,
@@ -314,7 +314,7 @@ function BidControls({
 
 type AuctionMobileSection = "set" | "players" | "details";
 
-function AuctionSetOverview({ context, theme }: { context: AuctionPropertyContext; theme: AuctionTheme }) {
+export function AuctionSetOverview({ context, theme }: { context: AuctionPropertyContext; theme: AuctionTheme }) {
   return (
     <section aria-label={`${context.groupName} ownership`} data-testid="auction-set-overview">
       <div className="flex items-baseline justify-between gap-2">
@@ -370,7 +370,7 @@ function AuctionSetOverview({ context, theme }: { context: AuctionPropertyContex
   );
 }
 
-function AuctionPropertyDetails({ context, theme }: { context: AuctionPropertyContext; theme: AuctionTheme }) {
+export function AuctionPropertyDetails({ context, theme }: { context: AuctionPropertyContext; theme: AuctionTheme }) {
   const property = context.auctionedProperty;
   const label = context.groupType === "airport" ? "airport" : context.groupType === "utility" ? "utility" : "group";
   return (

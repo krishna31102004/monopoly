@@ -120,10 +120,10 @@ export function GameLayout() {
 
         {/* Sidebar */}
         <aside className="min-w-0 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto xl:pr-1">
-          {state.phase === "auction" ? (
+          {state.phase === "auction" && showLandingPanel ? (
             <AuctionPanel state={state} dispatch={dispatch} />
           ) : null}
-          {state.phase === "hiddenAuction" ? (
+          {state.phase === "hiddenAuction" && showLandingPanel ? (
             <HiddenAuctionPanel state={state} dispatch={dispatch} />
           ) : null}
           <div className={`${mobileTab === "actions" ? "grid" : "hidden xl:grid"} mb-3 gap-3`}>
@@ -135,7 +135,7 @@ export function GameLayout() {
               <div className="order-2 xl:order-none"><CardPanel drawnCard={state.drawnCard} showResolved={showCardResolved} /></div>
             ) : null}
             {showLandingPanel ? <div className="order-3 xl:order-none"><LandingActionPanel state={state} dispatch={dispatch} /></div> : null}
-            <div className="order-3 xl:order-none"><BankruptcyPanel state={state} dispatch={dispatch} /></div>
+            {showLandingPanel ? <div className="order-3 xl:order-none"><BankruptcyPanel state={state} dispatch={dispatch} /></div> : null}
             <div className="order-4 xl:order-none"><TradePanel state={state} dispatch={dispatch} /></div>
             <div className="order-5 xl:order-none"><GameSaveControls state={state} dispatch={dispatch} /></div>
           </div>

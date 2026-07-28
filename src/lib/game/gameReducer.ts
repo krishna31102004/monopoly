@@ -785,6 +785,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case "SUBMIT_HIDDEN_BID": {
       const hiddenAuction = state.hiddenAuction;
       if (state.phase !== "hiddenAuction" || !hiddenAuction || hiddenAuction.status !== "bidding") return state;
+      if (Date.now() < hiddenAuction.bidStartedAt) return state;
       if (Date.now() >= hiddenAuction.bidDeadlineAt) return state;
       const bidder = state.players.find((player) => player.id === action.actorPlayerId);
       if (!bidder || bidder.isBankrupt || !hiddenAuction.eligiblePlayerIds.includes(bidder.id)) return state;
@@ -800,7 +801,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const hiddenAuction = state.hiddenAuction;
       if (!hiddenAuction || hiddenAuction.status !== "bidding" || action.deadlineAt !== hiddenAuction.bidDeadlineAt) return state;
       if (Date.now() < hiddenAuction.bidDeadlineAt) return state;
-      return settleHiddenAuction(state, state.hiddenAuctionLocalBids ?? {}, action.tieBreaker);
+      return settleHiddenAuction(state, state.hiddenAuctionLocalBids ?? {});
     }
 
     case "COMPLETE_HIDDEN_AUCTION_REVEAL": {

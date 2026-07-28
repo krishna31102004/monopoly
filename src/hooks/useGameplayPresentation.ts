@@ -55,6 +55,10 @@ export function useGameplayPresentation(state: GameState, isAnimating: boolean):
   const [showCardResolved, setShowCardResolved] = useState(true);
   const [diceRolling, setDiceRolling] = useState(false);
   const [presentationPhase, setPresentationPhase] = useState<GameplayPresentationPhase>("idle");
+  // Effects run after the state-driven landing phase renders. Conceal outcome
+  // panels in that one render too, so they cannot flash before the movement
+  // animation starts and the existing reveal sequence takes ownership.
+  const isNewDiceRoll = diceKey !== null && diceKey !== prevDiceKeyRef.current;
 
   function clearTimers() {
     timersRef.current.forEach((id) => clearTimeout(id));
@@ -129,9 +133,9 @@ export function useGameplayPresentation(state: GameState, isAnimating: boolean):
   }, []);
 
   return {
-    showLandingPanel,
-    showCardPanel,
-    showCardResolved,
+    showLandingPanel: isNewDiceRoll ? false : showLandingPanel,
+    showCardPanel: isNewDiceRoll ? false : showCardPanel,
+    showCardResolved: isNewDiceRoll ? false : showCardResolved,
     diceRolling,
     presentationPhase,
   };
